@@ -7,13 +7,11 @@ import {
   Clock,
   XCircle,
   LogOut,
-  Menu,
-  X,
   Bell,
-  MapPin,
   BarChart2,
-  Wrench,
+  ShoppingBag,
 } from 'lucide-react';
+import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
 import './AdminDashboard.css';
 
@@ -80,6 +78,22 @@ export default function AdminDashboard() {
       color: '#ef4444',
       bg: 'rgba(239, 68, 68, 0.15)',
     },
+    {
+      title: 'Total Vendors',
+      value: overview?.totalVendors ?? 0,
+      delta: `${overview?.verifiedVendors ?? 0} verified`,
+      icon: ShoppingBag,
+      color: '#8b5cf6',
+      bg: 'rgba(139, 92, 246, 0.15)',
+    },
+    {
+      title: 'Pending Vendors',
+      value: overview?.pendingVendors ?? 0,
+      delta: 'Awaiting verification',
+      icon: ShoppingBag,
+      color: '#f97316',
+      bg: 'rgba(249, 115, 22, 0.15)',
+    },
   ];
 
   const formatStatValue = (card) => {
@@ -92,43 +106,17 @@ export default function AdminDashboard() {
   const adminName = adminUser ? JSON.parse(adminUser)?.name : 'Admin';
 
   return (
-    <div className="dashboard-container">
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="sidebar-header">
-          <h2>SITELINK</h2>
-          <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        </div>
-        <nav className="sidebar-nav">
-          <button className="nav-item active">
-            <BarChart2 size={20} />
-            {sidebarOpen && <span>Dashboard</span>}
-          </button>
-          <button className="nav-item" onClick={() => navigate('/admin/workers')}>
-            <Clock size={20} />
-            {sidebarOpen && <span>Pending Workers</span>}
-          </button>
-          <button className="nav-item logout" onClick={handleLogout}>
-            <LogOut size={20} />
-            {sidebarOpen && <span>Logout</span>}
-          </button>
-        </nav>
-      </aside>
-
-      <main className="main-content">
+    <div className="dashboard-page">
+      <Sidebar onLogout={handleLogout} />
+      <div className="dashboard-content">
         <header className="dashboard-header">
-          <div className="brand">
-            <div className="brand-logo">
-              <Wrench size={22} />
-            </div>
-            <div>
-              <h1>SITELINK</h1>
-              <p className="role">Admin</p>
+          <div className="header-left">
+            <div className="header-title">
+              <h1>Dashboard</h1>
+              <p>Welcome back, {adminName || 'Admin'}</p>
             </div>
           </div>
-
-          <div className="header-actions">
+          <div className="header-right">
             <button className="icon-btn" aria-label="Notifications">
               <Bell size={18} />
             </button>
@@ -157,37 +145,66 @@ export default function AdminDashboard() {
                   </div>
                   <div className="stat-info">
                     <p className="stat-title">{card.title}</p>
-                    <div className="stat-number">
-                      {formatStatValue(card)}
-                    </div>
+                    <div className="stat-number">{formatStatValue(card)}</div>
                     <p className="stat-delta">{card.delta}</p>
                   </div>
                 </motion.div>
               ))}
             </div>
 
-            <div className="widgets-grid">
+            <section className="widgets-section">
+              <header className="widgets-section-header">
+                <h2>Quick Actions</h2>
+                <p>Review pending items and take action as needed.</p>
+              </header>
+
+              <div className="widgets-grid">
+                <motion.div
+                  className="widget card"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <div className="widget-header">
+                    <div className="widget-header-left">
+                      <div className="widget-icon" style={{ background: 'rgba(245, 158, 11, 0.18)' }}>
+                        <Clock size={18} />
+                      </div>
+                      <div>
+                        <h2>Pending Verifications</h2>
+                        <p className="widget-subtitle">
+                          {overview?.pendingWorkers ?? 0} worker{(overview?.pendingWorkers ?? 0) !== 1 ? 's' : ''} awaiting document review
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button className="action-btn" onClick={() => navigate('/admin/workers')}>
+                    Review Now
+                  </button>
+                </motion.div>
+
               <motion.div
                 className="widget card"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
+                transition={{ delay: 0.25 }}
               >
                 <div className="widget-header">
                   <div className="widget-header-left">
-                    <div className="widget-icon" style={{ background: 'rgba(245, 158, 11, 0.18)' }}>
-                      <Clock size={18} />
+                    <div className="widget-icon" style={{ background: 'rgba(249, 115, 22, 0.18)' }}>
+                      <ShoppingBag size={18} />
                     </div>
                     <div>
-                      <h2>Pending Verifications</h2>
+                      <h2>Pending Vendors</h2>
                       <p className="widget-subtitle">
-                        {overview?.pendingWorkers ?? 0} worker{(overview?.pendingWorkers ?? 0) !== 1 ? 's' : ''} awaiting document review
+                        {overview?.pendingVendors ?? 0} vendor{(overview?.pendingVendors ?? 0) !== 1 ? 's' : ''} awaiting review
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <button className="action-btn" onClick={() => navigate('/admin/workers')}>
+                <button className="action-btn" onClick={() => navigate('/admin/vendors')}>
                   Review Now
                 </button>
               </motion.div>
@@ -211,9 +228,9 @@ export default function AdminDashboard() {
                     <div className="project-bar">
                       <div
                         className="project-fill"
-                        style={{ 
-                          width: `${((overview?.verifiedWorkers ?? 0) / (overview?.totalWorkers || 1)) * 100}%`, 
-                          background: 'linear-gradient(90deg, #10b981, #059669)' 
+                        style={{
+                          width: `${((overview?.verifiedWorkers ?? 0) / (overview?.totalWorkers || 1)) * 100}%`,
+                          background: 'linear-gradient(90deg, #10b981, #059669)',
                         }}
                       />
                     </div>
@@ -226,9 +243,9 @@ export default function AdminDashboard() {
                     <div className="project-bar">
                       <div
                         className="project-fill"
-                        style={{ 
-                          width: `${((overview?.pendingWorkers ?? 0) / (overview?.totalWorkers || 1)) * 100}%`, 
-                          background: 'linear-gradient(90deg, #f59e0b, #d97706)' 
+                        style={{
+                          width: `${((overview?.pendingWorkers ?? 0) / (overview?.totalWorkers || 1)) * 100}%`,
+                          background: 'linear-gradient(90deg, #f59e0b, #d97706)',
                         }}
                       />
                     </div>
@@ -241,9 +258,9 @@ export default function AdminDashboard() {
                     <div className="project-bar">
                       <div
                         className="project-fill"
-                        style={{ 
-                          width: `${((overview?.rejectedWorkers ?? 0) / (overview?.totalWorkers || 1)) * 100}%`, 
-                          background: 'linear-gradient(90deg, #ef4444, #dc2626)' 
+                        style={{
+                          width: `${((overview?.rejectedWorkers ?? 0) / (overview?.totalWorkers || 1)) * 100}%`,
+                          background: 'linear-gradient(90deg, #ef4444, #dc2626)',
                         }}
                       />
                     </div>
@@ -282,32 +299,10 @@ export default function AdminDashboard() {
                 </div>
               </motion.div>
             </div>
+            </section>
           </div>
         )}
-
-        <footer className="bottom-nav">
-          <button className="bottom-nav-item active">
-            <BarChart2 size={18} />
-            <span>Dashboard</span>
-          </button>
-          <button className="bottom-nav-item" onClick={() => navigate('/admin/sites')}>
-            <MapPin size={18} />
-            <span>Sites</span>
-          </button>
-          <button className="bottom-nav-item" onClick={() => navigate('/admin/workers')}>
-            <Users size={18} />
-            <span>Workers</span>
-          </button>
-          <button className="bottom-nav-item" onClick={() => navigate('/admin/reports')}>
-            <BarChart2 size={18} />
-            <span>Reports</span>
-          </button>
-          <button className="bottom-nav-item" onClick={() => navigate('/admin/settings')}>
-            <UserCheck size={18} />
-            <span>Admin</span>
-          </button>
-        </footer>
-      </main>
+      </div>
     </div>
   );
 }

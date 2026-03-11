@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import WorkerVerification from './pages/WorkerVerification';
+import VendorVerification from './pages/VendorVerification';
+import VendorDetails from './pages/VendorDetails';
+import PlaceholderPage from './pages/PlaceholderPage';
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('adminToken');
@@ -27,6 +30,62 @@ function App() {
           element={
             <ProtectedRoute>
               <WorkerVerification />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/vendors"
+          element={
+            <ProtectedRoute>
+              <VendorVerification />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/vendors/:id"
+          element={
+            <ProtectedRoute>
+              <VendorDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/contracts"
+          element={
+            <ProtectedRoute>
+              <PlaceholderPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/invoices"
+          element={
+            <ProtectedRoute>
+              <PlaceholderPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/compliance"
+          element={
+            <ProtectedRoute>
+              <PlaceholderPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <ProtectedRoute>
+              <PlaceholderPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/support"
+          element={
+            <ProtectedRoute>
+              <PlaceholderPage />
             </ProtectedRoute>
           }
         />

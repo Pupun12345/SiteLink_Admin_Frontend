@@ -26,6 +26,19 @@ body {
   color: var(--dark);
 }
 
+.dashboard-page {
+  display: flex;
+  min-height: 100vh;
+  background: #f4f6fb;
+  color: var(--dark);
+}
+
+.dashboard-content {
+  flex: 1;
+  margin-left: 260px;
+  padding: 40px 40px 60px;
+}
+
 #root {
   min-height: 100vh;
 }
