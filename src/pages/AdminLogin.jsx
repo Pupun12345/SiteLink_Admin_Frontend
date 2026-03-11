@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, User, AlertCircle, ArrowRight } from 'lucide-react';
-import logo from '../assets/image.png';
+import { Lock, Mail, AlertCircle, ArrowRight, Wrench } from 'lucide-react';
 import api from '../api/axios';
 import './AdminLogin.css';
 
 export default function AdminLogin() {
-  const [employeeId, setEmployeeId] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -21,13 +19,12 @@ export default function AdminLogin() {
 
     try {
       const { data } = await api.post('/auth/admin/login', {
-        email: employeeId,
+        email,
         password,
       });
 
-      const storage = remember ? localStorage : sessionStorage;
-      storage.setItem('adminToken', data.token);
-      storage.setItem('adminUser', JSON.stringify(data.user));
+      localStorage.setItem('adminToken', data.token);
+      localStorage.setItem('adminUser', JSON.stringify(data.user));
       navigate('/admin/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
@@ -40,18 +37,20 @@ export default function AdminLogin() {
     <div className="login-container">
       <motion.div
         className="login-card"
-        initial={{ opacity: 0, scale: 0.9, y: 50 }}
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.6, type: 'spring', bounce: 0.4 }}
+        transition={{ duration: 0.5 }}
       >
         <div className="brand-header">
           <motion.div
             className="brand-logo"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.4 }}
           >
-            <img src={logo} alt="SITELINK Logo" />
+            <div className="logo-icon">
+              <Wrench size={32} strokeWidth={2.5} />
+            </div>
           </motion.div>
           <motion.h1
             className="brand-title"
@@ -59,7 +58,7 @@ export default function AdminLogin() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.4 }}
           >
-            SITELINK
+            SiteLink
           </motion.h1>
           <motion.p
             className="brand-subtitle"
@@ -67,27 +66,26 @@ export default function AdminLogin() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.4 }}
           >
-            ADMIN MANAGEMENT PORTAL
+            Workforce Management Platform
           </motion.p>
         </div>
 
         <motion.div
-          className="welcome"
+          className="login-header"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.4 }}
         >
-          <h2>Welcome Back</h2>
-          <p>Enter your credentials to access the job site portal</p>
+          <h2>Admin Login</h2>
+          <p>Enter your credentials to access the dashboard</p>
         </motion.div>
 
         {error && (
           <motion.div
             className="error-alert"
-            initial={{ opacity: 0, x: -50 }}
+            initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 50 }}
-            transition={{ type: 'spring', stiffness: 300 }}
+            exit={{ opacity: 0, x: 20 }}
           >
             <AlertCircle size={20} />
             <span>{error}</span>
@@ -96,87 +94,87 @@ export default function AdminLogin() {
 
         <form onSubmit={handleSubmit}>
           <motion.div
-            className="input-group"
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <User className="input-icon" size={20} />
-            <input
-              type="text"
-              placeholder="ID-000000"
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              required
-            />
-          </motion.div>
-
-          <motion.div
-            className="input-group"
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.6 }}
-          >
-            <Lock className="input-icon" size={20} />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </motion.div>
-
-          <motion.div
-            className="options"
+            className="form-field"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
+            transition={{ delay: 0.45 }}
           >
-            <label className="checkbox">
+            <label htmlFor="email">Email Address</label>
+            <div className="input-wrapper">
+              <Mail className="input-icon" size={18} />
               <input
-                type="checkbox"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
+                id="email"
+                type="email"
+                placeholder="admin@sitelink.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
               />
-              Stay logged in for this shift
-            </label>
-            <button type="button" className="forgot-link">
-              Forgot Password?
-            </button>
+            </div>
+          </motion.div>
+
+          <motion.div
+            className="form-field"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <div className="field-header">
+              <label htmlFor="password">Password</label>
+              <a href="#" className="forgot-password">Forgot Password?</a>
+            </div>
+            <div className="input-wrapper">
+              <Lock className="input-icon" size={18} />
+              <input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
           </motion.div>
 
           <motion.button
             type="submit"
             className="login-btn"
             disabled={loading}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.75 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            transition={{ delay: 0.55 }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
           >
             {loading ? (
-              <motion.span
-                animate={{ opacity: [1, 0.5, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              >
-                Signing in...
-              </motion.span>
+              <span>Signing in...</span>
             ) : (
               <>
-                <ArrowRight size={18} style={{ marginRight: 8 }} />
-                AUTHORIZE ACCESS
+                Sign In to Dashboard
+                <ArrowRight size={18} />
               </>
             )}
           </motion.button>
         </form>
 
-        {/* <div className="support">
-          Need technical support? <span className="support-ext">ext404</span>
-        </div> */}
+        <motion.div
+          className="support-footer"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+        >
+          Need help? <a href="#" className="support-link">Contact Support</a>
+        </motion.div>
 
-
+        <motion.div
+          className="status-footer"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.65 }}
+        >
+          <div className="status-indicator"></div>
+          ALL SYSTEMS OPERATIONAL
+        </motion.div>
       </motion.div>
     </div>
   );

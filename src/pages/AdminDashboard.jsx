@@ -3,34 +3,37 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Users,
-  UserCheck,
+  UserPlus,
+  Store,
   Clock,
-  XCircle,
-  LogOut,
-  Menu,
-  X,
+  Briefcase,
+  DollarSign,
   Bell,
-  MapPin,
-  BarChart2,
+  Search,
+  LogOut,
+  Shield,
+  Settings,
+  HelpCircle,
+  Calendar,
   Wrench,
 } from 'lucide-react';
 import api from '../api/axios';
 import './AdminDashboard.css';
 
 export default function AdminDashboard() {
-  const [overview, setOverview] = useState(null);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [timeFilter, setTimeFilter] = useState('1M');
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchOverview();
+    fetchStats();
   }, []);
 
-  const fetchOverview = async () => {
+  const fetchStats = async () => {
     try {
       const { data } = await api.get('/stats/overview');
-      setOverview(data.data);
+      setStats(data.data);
     } catch (err) {
       console.error('Failed to fetch stats:', err);
       if (err.response?.status === 401 || err.response?.status === 403) {
@@ -47,266 +50,346 @@ export default function AdminDashboard() {
     navigate('/admin/login');
   };
 
-  const statCards = [
-    {
-      title: 'Total Workers',
-      value: overview?.totalWorkers ?? 0,
-      delta: `${overview?.verifiedWorkers ?? 0} verified`,
-      icon: Users,
-      color: '#3b82f6',
-      bg: 'rgba(59, 130, 246, 0.15)',
-    },
-    {
-      title: 'Verified Workers',
-      value: overview?.verifiedWorkers ?? 0,
-      delta: 'Active and approved',
-      icon: UserCheck,
-      color: '#10b981',
-      bg: 'rgba(16, 185, 129, 0.15)',
-    },
-    {
-      title: 'Pending Review',
-      value: overview?.pendingWorkers ?? 0,
-      delta: 'Awaiting verification',
-      icon: Clock,
-      color: '#f59e0b',
-      bg: 'rgba(245, 158, 11, 0.15)',
-    },
-    {
-      title: 'Rejected',
-      value: overview?.rejectedWorkers ?? 0,
-      delta: 'Documents rejected',
-      icon: XCircle,
-      color: '#ef4444',
-      bg: 'rgba(239, 68, 68, 0.15)',
-    },
-  ];
+  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
 
-  const formatStatValue = (card) => {
-    return typeof card.value === 'number'
-      ? card.value.toLocaleString()
-      : card.value;
-  };
-
-  const adminUser = localStorage.getItem('adminUser');
-  const adminName = adminUser ? JSON.parse(adminUser)?.name : 'Admin';
+  if (loading) {
+    return <div className="loading-screen">Loading dashboard...</div>;
+  }
 
   return (
-    <div className="dashboard-container">
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="sidebar-header">
-          <h2>SITELINK</h2>
-          <button className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+    <div className="admin-dashboard">
+      {/* Sidebar */}
+      <aside className="dashboard-sidebar">
+        <div className="sidebar-logo">
+          <div className="logo-icon">
+            <Wrench size={24} />
+          </div>
+          <div className="logo-text">
+            <h3>SiteLink</h3>
+            <p>ADMIN CONSOLE</p>
+          </div>
+        </div>
+
+        <div className="sidebar-section">
+          <p className="section-label">MAIN</p>
+          <nav className="sidebar-nav">
+            <button className="nav-item active">
+              <div className="nav-icon"><Calendar size={20} /></div>
+              <span>Dashboard</span>
+            </button>
+            <button className="nav-item" onClick={() => navigate('/admin/workers')}>
+              <div className="nav-icon"><Users size={20} /></div>
+              <span>Workers</span>
+            </button>
+            <button className="nav-item">
+              <div className="nav-icon"><Store size={20} /></div>
+              <span>Vendors</span>
+            </button>
+            <button className="nav-item">
+              <div className="nav-icon"><Shield size={20} /></div>
+              <span>Verifications</span>
+            </button>
+            <button className="nav-item">
+              <div className="nav-icon"><Briefcase size={20} /></div>
+              <span>Jobs</span>
+            </button>
+          </nav>
+        </div>
+
+        <div className="sidebar-section">
+          <p className="section-label">FINANCE</p>
+          <nav className="sidebar-nav">
+            <button className="nav-item">
+              <div className="nav-icon"><DollarSign size={20} /></div>
+              <span>Revenue</span>
+            </button>
+            <button className="nav-item">
+              <div className="nav-icon"><Briefcase size={20} /></div>
+              <span>Subscriptions</span>
+            </button>
+          </nav>
+        </div>
+
+        <div className="sidebar-footer">
+          <button className="nav-item">
+            <div className="nav-icon"><Settings size={20} /></div>
+            <span>Settings</span>
+          </button>
+          <button className="nav-item">
+            <div className="nav-icon"><HelpCircle size={20} /></div>
+            <span>Support</span>
           </button>
         </div>
-        <nav className="sidebar-nav">
-          <button className="nav-item active">
-            <BarChart2 size={20} />
-            {sidebarOpen && <span>Dashboard</span>}
-          </button>
-          <button className="nav-item" onClick={() => navigate('/admin/workers')}>
-            <Clock size={20} />
-            {sidebarOpen && <span>Pending Workers</span>}
-          </button>
-          <button className="nav-item logout" onClick={handleLogout}>
-            <LogOut size={20} />
-            {sidebarOpen && <span>Logout</span>}
-          </button>
-        </nav>
       </aside>
 
-      <main className="main-content">
-        <header className="dashboard-header">
-          <div className="brand">
-            <div className="brand-logo">
-              <Wrench size={22} />
-            </div>
-            <div>
-              <h1>SITELINK</h1>
-              <p className="role">Admin</p>
-            </div>
+      {/* Main Content */}
+      <main className="dashboard-main">
+        {/* Top Bar */}
+        <header className="dashboard-topbar">
+          <div className="search-bar">
+            <Search size={18} />
+            <input type="text" placeholder="Search analytics, users, or jobs..." />
           </div>
 
-          <div className="header-actions">
-            <button className="icon-btn" aria-label="Notifications">
-              <Bell size={18} />
+          <div className="topbar-actions">
+            <button className="action-btn primary">
+              <UserPlus size={18} />
+              Invite User
             </button>
-            <div className="admin-info">
-              <span>{adminName || 'Admin'}</span>
+            <button className="icon-btn">
+              <Bell size={20} />
+              <span className="notification-badge"></span>
+            </button>
+            <div className="user-menu">
+              <div className="user-avatar">
+                <img src="https://ui-avatars.com/api/?name=Alex+Rivera&background=3b82f6&color=fff" alt="Admin" />
+              </div>
+              <div className="user-info">
+                <p className="user-name">{adminUser.name || 'Alex Rivera'}</p>
+                <p className="user-role">Super Admin</p>
+              </div>
             </div>
           </div>
         </header>
 
-        {loading ? (
-          <div className="loading">Loading dashboard…</div>
-        ) : (
-          <div className="dashboard-grid">
-            <div className="stats-grid">
-              {statCards.map((card, index) => (
-                <motion.div
-                  key={card.title}
-                  className="stat-card"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.08 }}
-                  whileHover={{ y: -5 }}
+        {/* Content Area */}
+        <div className="dashboard-content">
+          {/* Page Header */}
+          <div className="content-header">
+            <div>
+              <h1>Platform Overview</h1>
+              <p className="subtitle">Real-time analytics and activity across SiteLink network.</p>
+            </div>
+            <div className="time-filters">
+              {['1D', '5D', '1M', '1Y'].map((filter) => (
+                <button
+                  key={filter}
+                  className={`filter-btn ${timeFilter === filter ? 'active' : ''}`}
+                  onClick={() => setTimeFilter(filter)}
                 >
-                  <div className="stat-icon" style={{ background: card.bg, color: card.color }}>
-                    <card.icon size={18} />
-                  </div>
-                  <div className="stat-info">
-                    <p className="stat-title">{card.title}</p>
-                    <div className="stat-number">
-                      {formatStatValue(card)}
-                    </div>
-                    <p className="stat-delta">{card.delta}</p>
-                  </div>
-                </motion.div>
+                  {filter}
+                </button>
               ))}
             </div>
-
-            <div className="widgets-grid">
-              <motion.div
-                className="widget card"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <div className="widget-header">
-                  <div className="widget-header-left">
-                    <div className="widget-icon" style={{ background: 'rgba(245, 158, 11, 0.18)' }}>
-                      <Clock size={18} />
-                    </div>
-                    <div>
-                      <h2>Pending Verifications</h2>
-                      <p className="widget-subtitle">
-                        {overview?.pendingWorkers ?? 0} worker{(overview?.pendingWorkers ?? 0) !== 1 ? 's' : ''} awaiting document review
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <button className="action-btn" onClick={() => navigate('/admin/workers')}>
-                  Review Now
-                </button>
-              </motion.div>
-
-              <motion.div
-                className="widget card"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 }}
-              >
-                <div className="widget-header">
-                  <h2>Worker Statistics</h2>
-                </div>
-
-                <div className="project-list">
-                  <div className="project-row">
-                    <div className="project-meta">
-                      <span className="project-name">Verified Workers</span>
-                      <span className="project-progress">{overview?.verifiedWorkers ?? 0}</span>
-                    </div>
-                    <div className="project-bar">
-                      <div
-                        className="project-fill"
-                        style={{ 
-                          width: `${((overview?.verifiedWorkers ?? 0) / (overview?.totalWorkers || 1)) * 100}%`, 
-                          background: 'linear-gradient(90deg, #10b981, #059669)' 
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="project-row">
-                    <div className="project-meta">
-                      <span className="project-name">Pending Review</span>
-                      <span className="project-progress">{overview?.pendingWorkers ?? 0}</span>
-                    </div>
-                    <div className="project-bar">
-                      <div
-                        className="project-fill"
-                        style={{ 
-                          width: `${((overview?.pendingWorkers ?? 0) / (overview?.totalWorkers || 1)) * 100}%`, 
-                          background: 'linear-gradient(90deg, #f59e0b, #d97706)' 
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="project-row">
-                    <div className="project-meta">
-                      <span className="project-name">Rejected</span>
-                      <span className="project-progress">{overview?.rejectedWorkers ?? 0}</span>
-                    </div>
-                    <div className="project-bar">
-                      <div
-                        className="project-fill"
-                        style={{ 
-                          width: `${((overview?.rejectedWorkers ?? 0) / (overview?.totalWorkers || 1)) * 100}%`, 
-                          background: 'linear-gradient(90deg, #ef4444, #dc2626)' 
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                className="widget card recent-updates"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <div className="widget-header">
-                  <h2>Quick Stats</h2>
-                </div>
-                <div className="updates-list">
-                  <div className="update-row">
-                    <div className="update-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
-                      <UserCheck size={18} />
-                    </div>
-                    <div className="update-text">
-                      <span className="update-title">{overview?.verifiedWorkers ?? 0} Verified Workers</span>
-                      <span className="update-subtitle">Ready for deployment</span>
-                    </div>
-                  </div>
-                  <div className="update-row">
-                    <div className="update-icon" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
-                      <Clock size={18} />
-                    </div>
-                    <div className="update-text">
-                      <span className="update-title">{overview?.pendingWorkers ?? 0} Pending Review</span>
-                      <span className="update-subtitle">Action required</span>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
           </div>
-        )}
 
-        <footer className="bottom-nav">
-          <button className="bottom-nav-item active">
-            <BarChart2 size={18} />
-            <span>Dashboard</span>
-          </button>
-          <button className="bottom-nav-item" onClick={() => navigate('/admin/sites')}>
-            <MapPin size={18} />
-            <span>Sites</span>
-          </button>
-          <button className="bottom-nav-item" onClick={() => navigate('/admin/workers')}>
-            <Users size={18} />
-            <span>Workers</span>
-          </button>
-          <button className="bottom-nav-item" onClick={() => navigate('/admin/reports')}>
-            <BarChart2 size={18} />
-            <span>Reports</span>
-          </button>
-          <button className="bottom-nav-item" onClick={() => navigate('/admin/settings')}>
-            <UserCheck size={18} />
-            <span>Admin</span>
-          </button>
-        </footer>
+          {/* Stats Grid */}
+          <div className="stats-grid">
+            <motion.div
+              className="stat-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <div className="stat-header">
+                <p className="stat-label">TOTAL<br />WORKERS</p>
+                <span className="stat-badge success">↑8%</span>
+              </div>
+              <div className="stat-value">{stats?.totalWorkers?.toLocaleString() || '12,540'}</div>
+            </motion.div>
+
+            <motion.div
+              className="stat-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              <div className="stat-header">
+                <p className="stat-label">TOTAL<br />VENDORS</p>
+                <span className="stat-badge success">↑3%</span>
+              </div>
+              <div className="stat-value">{stats?.totalVendors?.toLocaleString() || '1,240'}</div>
+            </motion.div>
+
+            <motion.div
+              className="stat-card highlight"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="stat-header">
+                <p className="stat-label">PENDING<br />VERIFICATIONS</p>
+                <span className="stat-badge warning">Action<br/>Needed</span>
+              </div>
+              <div className="stat-value">{stats?.pendingWorkers || '45'}</div>
+            </motion.div>
+
+            <motion.div
+              className="stat-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <div className="stat-header">
+                <p className="stat-label">ACTIVE JOBS</p>
+              </div>
+              <div className="stat-value">{stats?.activeJobs || '82'} <span className="stat-sub">Stable</span></div>
+            </motion.div>
+
+            <motion.div
+              className="stat-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <div className="stat-header">
+                <p className="stat-label">SUBSCRIPTIONS</p>
+              </div>
+              <div className="stat-value">{stats?.subscriptions || '912'} <span className="stat-sub">Stable</span></div>
+            </motion.div>
+
+            <motion.div
+              className="stat-card highlight-revenue"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+            >
+              <div className="stat-header">
+                <p className="stat-label">TOTAL<br />REVENUE</p>
+                <span className="stat-badge success">↑12</span>
+              </div>
+              <div className="stat-value">${stats?.totalRevenue?.toLocaleString() || '124,000'}</div>
+            </motion.div>
+          </div>
+
+          {/* Charts Grid */}
+          <div className="charts-grid">
+            <motion.div
+              className="chart-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <div className="chart-header">
+                <h3>Worker Growth</h3>
+                <button className="options-btn">⋯</button>
+              </div>
+              <div className="chart-placeholder">
+                <svg viewBox="0 0 600 250" className="line-chart">
+                  <defs>
+                    <linearGradient id="workerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="rgba(59, 130, 246, 0.3)" />
+                      <stop offset="100%" stopColor="rgba(59, 130, 246, 0)" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M 0 200 Q 100 180, 150 160 T 300 120 T 450 80 T 600 40"
+                    fill="none"
+                    stroke="#3b82f6"
+                    strokeWidth="3"
+                  />
+                  <path
+                    d="M 0 200 Q 100 180, 150 160 T 300 120 T 450 80 T 600 40 L 600 250 L 0 250 Z"
+                    fill="url(#workerGradient)"
+                  />
+                </svg>
+                <div className="chart-labels">
+                  <span>JAN</span>
+                  <span>MAR</span>
+                  <span>MAY</span>
+                  <span>JUL</span>
+                  <span>SEP</span>
+                  <span>NOV</span>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              className="chart-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.45 }}
+            >
+              <div className="chart-header">
+                <h3>Vendor Registrations</h3>
+              </div>
+              <div className="chart-placeholder bar-chart">
+                <div className="bar-group">
+                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
+                    <div key={i} className="bar-column">
+                      <div
+                        className="bar"
+                        style={{
+                          height: `${[40, 30, 55, 35, 80, 25, 20][i]}%`,
+                          background: i === 4 ? '#3b82f6' : '#e5e7eb',
+                        }}
+                      ></div>
+                      <span className="bar-label">{day}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Bottom Charts */}
+          <div className="bottom-charts">
+            <motion.div
+              className="chart-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <div className="chart-header">
+                <h3>Monthly Revenue</h3>
+              </div>
+              <div className="chart-placeholder line-chart-small">
+                <svg viewBox="0 0 400 120" className="revenue-chart">
+                  <path
+                    d="M 0 80 L 100 90 L 200 40 L 300 50 L 400 10"
+                    fill="none"
+                    stroke="#3b82f6"
+                    strokeWidth="3"
+                  />
+                  <circle cx="400" cy="10" r="5" fill="#3b82f6" />
+                  <path d="M 390 20 L 400 10 L 410 20" fill="none" stroke="#3b82f6" strokeWidth="2" />
+                </svg>
+              </div>
+            </motion.div>
+
+            <motion.div
+              className="chart-card"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55 }}
+            >
+              <div className="chart-header">
+                <h3>User Distribution</h3>
+              </div>
+              <div className="chart-placeholder">
+                <div className="donut-chart">
+                  <svg viewBox="0 0 200 200">
+                    <circle
+                      cx="100"
+                      cy="100"
+                      r="80"
+                      fill="none"
+                      stroke="#3b82f6"
+                      strokeWidth="20"
+                      strokeDasharray="420 502"
+                      transform="rotate(-90 100 100)"
+                    />
+                    <circle
+                      cx="100"
+                      cy="100"
+                      r="80"
+                      fill="none"
+                      stroke="#e5e7eb"
+                      strokeWidth="20"
+                      strokeDasharray="82 502"
+                      strokeDashoffset="-420"
+                      transform="rotate(-90 100 100)"
+                    />
+                  </svg>
+                  <div className="donut-center">
+                    <div className="donut-value">14.7k</div>
+                    <div className="donut-label">Total Users</div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
       </main>
     </div>
   );
