@@ -4,6 +4,16 @@
   box-sizing: border-box;
 }
 
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
 :root {
   --primary: #6366f1;
   --primary-dark: #4f46e5;

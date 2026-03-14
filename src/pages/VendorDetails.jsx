@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle, XCircle, FileText, Download, Building } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
@@ -17,11 +17,7 @@ export default function VendorDetails() {
   const [isProcessing, setIsProcessing] = useState(false);
   const toast = useToast();
 
-  useEffect(() => {
-    fetchVendor();
-  }, [id]);
-
-  const fetchVendor = async () => {
+  const fetchVendor = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get(`/admin/vendors/${id}`);
@@ -37,7 +33,11 @@ export default function VendorDetails() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    fetchVendor();
+  }, [fetchVendor]);
 
   const handleVerify = async () => {
     if (isProcessing) return;
@@ -103,38 +103,58 @@ export default function VendorDetails() {
     <div className="dashboard-page">
       <Sidebar />
       <div className="dashboard-content">
-        <header className="vendor-top">
-          <div className="vendor-top-left">
-            <div className="vendor-title">
-              <h2>{vendor?.companyName || 'Vendor Details'}</h2>
-              <div className="vendor-meta">
-                <span className="vendor-id">
-                  Vendor ID: <strong>{vendor?._id ? `VND-${vendor._id.slice(-6).toUpperCase()}` : '—'}</strong>
-                </span>
-                <span className="vendor-submitted">
-                  Submitted on {vendor?.createdAt ? new Date(vendor.createdAt).toLocaleDateString() : '—'}
-                </span>
+        <header className="vendor-top-card">
+          <div className="vendor-breadcrumbs">
+            <button className="breadcrumb-link" onClick={() => navigate('/admin/vendors')}>Vendors</button>
+            <span className="breadcrumb-sep">›</span>
+            <span className="breadcrumb-current">{vendor?.companyName || 'Vendor Details'}</span>
+          </div>
+
+          <div className="vendor-top">
+            <div className="vendor-top-left">
+              <div className="vendor-logo">
+                {vendorImageUrl ? (
+                  <img src={vendorImageUrl} alt="Vendor Logo" />
+                ) : (
+                  <div className="vendor-placeholder-logo">
+                    <Building size={34} />
+                  </div>
+                )}
+              </div>
+              <div className="vendor-title">
+                <h2>{vendor?.companyName || 'Vendor Details'}</h2>
+                <div className="vendor-meta">
+                  <span className="vendor-id">
+                    Vendor ID: <strong>{vendor?._id ? `VND-${vendor._id.slice(-6).toUpperCase()}` : '—'}</strong>
+                  </span>
+                  <span className="vendor-submitted">
+                    Submitted on {vendor?.createdAt ? new Date(vendor.createdAt).toLocaleDateString() : '—'}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="vendor-top-right">
-            <span className={statusClass[getStatus()]}>{statusText[getStatus()]}</span>
-            <button
-              className="reject-btn"
-              onClick={() => setShowReject(true)}
-              disabled={isProcessing || getStatus() !== 'pending'}
-            >
-              <XCircle size={18} />
-              Reject Vendor
-            </button>
-            <button
-              className="approve-btn"
-              onClick={handleVerify}
-              disabled={isProcessing || getStatus() !== 'pending'}
-            >
-              <CheckCircle size={18} />
-              Approve Vendor
-            </button>
+
+            <div className="vendor-top-right">
+              <span className={statusClass[getStatus()]}>{statusText[getStatus()]}</span>
+              <div className="action-buttons">
+                <button
+                  className="reject-btn"
+                  onClick={() => setShowReject(true)}
+                  disabled={isProcessing || getStatus() !== 'pending'}
+                >
+                  <XCircle size={18} />
+                  Reject Vendor
+                </button>
+                <button
+                  className="approve-btn"
+                  onClick={handleVerify}
+                  disabled={isProcessing || getStatus() !== 'pending'}
+                >
+                  <CheckCircle size={18} />
+                  Approve Vendor
+                </button>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -253,15 +273,6 @@ export default function VendorDetails() {
                   </div>
                 </div>
 
-                <div className="company-logo">
-                  {vendorImageUrl ? (
-                    <img src={vendorImageUrl} alt="Company Logo" />
-                  ) : (
-                    <div className="vendor-placeholder-logo">
-                      <Building size={40} />
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           </div>

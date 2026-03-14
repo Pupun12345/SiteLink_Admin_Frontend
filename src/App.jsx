@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
-import WorkerVerification from './pages/WorkerVerification';
 import VendorVerification from './pages/VendorVerification';
 import VendorDetails from './pages/VendorDetails';
 import PlaceholderPage from './pages/PlaceholderPage';
@@ -22,14 +21,6 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/workers"
-          element={
-            <ProtectedRoute>
-              <WorkerVerification />
             </ProtectedRoute>
           }
         />
