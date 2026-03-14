@@ -1,0 +1,30 @@
+.placeholder-container {
+  min-height: 100vh;
+  padding: 80px 40px;
+  background: #f5f8ff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.placeholder-card {
+  background: white;
+  border-radius: 22px;
+  padding: 46px 38px;
+  box-shadow: 0 28px 68px rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(100, 116, 139, 0.18);
+  max-width: 580px;
+  text-align: center;
+}
+
+.placeholder-card h1 {
+  margin-bottom: 16px;
+  font-size: 28px;
+  color: #0f172a;
+}
+
+.placeholder-card p {
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.6;
+}

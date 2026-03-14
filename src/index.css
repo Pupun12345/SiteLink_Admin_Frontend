@@ -4,6 +4,16 @@
   box-sizing: border-box;
 }
 
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
 :root {
   --primary: #6366f1;
   --primary-dark: #4f46e5;
@@ -24,6 +34,19 @@ body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   background-attachment: fixed;
   color: var(--dark);
+}
+
+.dashboard-page {
+  display: flex;
+  min-height: 100vh;
+  background: #f4f6fb;
+  color: var(--dark);
+}
+
+.dashboard-content {
+  flex: 1;
+  margin-left: 260px;
+  padding: 40px 40px 60px;
 }
 
 #root {
