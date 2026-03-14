@@ -133,7 +133,6 @@ export default function AdminDashboard() {
               <h1>Platform Overview</h1>
               <p>Real-time analytics and activity across SiteLink network.</p>
             </div>
-
             <div className="header-search">
               <Search size={18} />
               <input
