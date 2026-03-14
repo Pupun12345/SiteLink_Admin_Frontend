@@ -119,6 +119,10 @@ export default function AdminDashboard() {
             <div className="nav-icon"><HelpCircle size={20} /></div>
             <span>Support</span>
           </button>
+          <button className="nav-item nav-item-logout" onClick={handleLogout}>
+            <div className="nav-icon"><LogOut size={20} /></div>
+            <span>Logout</span>
+          </button>
         </div>
       </aside>
 
