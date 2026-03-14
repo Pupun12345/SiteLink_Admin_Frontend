@@ -152,7 +152,7 @@
 /* Main Content */
 .verification-main {
   flex: 1;
-  margin-left: 240px;
+  margin-left: 260px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;

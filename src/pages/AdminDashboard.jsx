@@ -133,46 +133,6 @@ export default function AdminDashboard() {
               <h1>Platform Overview</h1>
               <p>Real-time analytics and activity across SiteLink network.</p>
             </div>
-
-<<<<<<< HEAD
-        <div className="sidebar-section">
-          <p className="section-label">FINANCE</p>
-          <nav className="sidebar-nav">
-            <button className="nav-item">
-              <div className="nav-icon"><DollarSign size={20} /></div>
-              <span>Revenue</span>
-            </button>
-            <button className="nav-item">
-              <div className="nav-icon"><Briefcase size={20} /></div>
-              <span>Subscriptions</span>
-            </button>
-          </nav>
-        </div>
-
-        <div className="sidebar-footer">
-          <button className="nav-item">
-            <div className="nav-icon"><Settings size={20} /></div>
-            <span>Settings</span>
-          </button>
-          <button className="nav-item">
-            <div className="nav-icon"><HelpCircle size={20} /></div>
-            <span>Support</span>
-          </button>
-          <button className="nav-item nav-item-logout" onClick={handleLogout}>
-            <div className="nav-icon"><LogOut size={20} /></div>
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="dashboard-main">
-        {/* Top Bar */}
-        <header className="dashboard-topbar">
-          <div className="search-bar">
-            <Search size={18} />
-            <input type="text" placeholder="Search analytics, users, or jobs..." />
-=======
             <div className="header-search">
               <Search size={18} />
               <input
@@ -180,7 +140,6 @@ export default function AdminDashboard() {
                 placeholder="Search analytics, users, or jobs..."
               />
             </div>
->>>>>>> de3e2ec772e51e71b8bfa00d085ec330d14ce547
           </div>
 
           <div className="header-right">

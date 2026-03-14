@@ -1,47 +1,56 @@
 import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Home,
+  LayoutGrid,
   Users,
-  FileText,
-  Receipt,
-  ShieldCheck,
+  Store,
+  Shield,
+  Briefcase,
+  DollarSign,
+  CreditCard,
   Settings,
   HelpCircle,
-  LogOut,
 } from 'lucide-react';
 import './Sidebar.css';
 
-const menuItems = [
+const mainItems = [
   {
     label: 'Dashboard',
     path: '/admin/dashboard',
-    icon: Home,
+    icon: LayoutGrid,
+  },
+  {
+    label: 'Workers',
+    path: '/admin/workers',
+    icon: Users,
   },
   {
     label: 'Vendors',
     path: '/admin/vendors',
-    icon: Users,
+    icon: Store,
   },
   {
-    label: 'Contracts',
-    path: '/admin/contracts',
-    icon: FileText,
+    label: 'Verifications',
+    path: '/admin/verifications',
+    icon: Shield,
   },
   {
-    label: 'Invoices',
-    path: '/admin/invoices',
-    icon: Receipt,
+    label: 'Jobs',
+    path: '/admin/jobs',
+    icon: Briefcase,
+  },
+];
+
+const financeItems = [
+  {
+    label: 'Revenue',
+    path: '/admin/revenue',
+    icon: DollarSign,
   },
   {
-    label: 'Compliance',
-    path: '/admin/compliance',
-    icon: ShieldCheck,
-  },
-  {
-    label: 'Settings',
-    path: '/admin/settings',
-    icon: Settings,
+    label: 'Subscriptions',
+    path: '/admin/subscriptions',
+    icon: CreditCard,
   },
 ];
 
@@ -49,8 +58,10 @@ export default function Sidebar({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const allItems = [...mainItems, ...financeItems];
+
   const activePath = useMemo(() => {
-    return menuItems.find((item) => location.pathname.startsWith(item.path))?.path;
+    return allItems.find((item) => location.pathname.startsWith(item.path))?.path;
   }, [location.pathname]);
 
   return (
@@ -59,12 +70,13 @@ export default function Sidebar({ onLogout }) {
         <div className="brand-icon" />
         <div className="brand-text">
           <div className="brand-name">SiteLink</div>
-          <div className="brand-sub">Enterprise Admin</div>
+          <div className="brand-sub">Admin Console</div>
         </div>
       </div>
 
       <nav className="sidebar-menu">
-        {menuItems.map((item) => {
+        <p className="sidebar-group-label">Main</p>
+        {mainItems.map((item) => {
           const Icon = item.icon;
           const active = activePath === item.path;
           return (
@@ -73,7 +85,23 @@ export default function Sidebar({ onLogout }) {
               className={`sidebar-item ${active ? 'active' : ''}`}
               onClick={() => navigate(item.path)}
             >
-              <Icon size={18} />
+              <Icon size={17} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+
+        <p className="sidebar-group-label sidebar-group-label-finance">Finance</p>
+        {financeItems.map((item) => {
+          const Icon = item.icon;
+          const active = activePath === item.path;
+          return (
+            <button
+              key={item.path}
+              className={`sidebar-item ${active ? 'active' : ''}`}
+              onClick={() => navigate(item.path)}
+            >
+              <Icon size={17} />
               <span>{item.label}</span>
             </button>
           );
@@ -81,12 +109,12 @@ export default function Sidebar({ onLogout }) {
       </nav>
 
       <div className="sidebar-footer">
-        <button className="sidebar-item" onClick={() => onLogout?.() || navigate('/admin/login')}>
-          <LogOut size={18} />
-          <span>Logout</span>
+        <button className="sidebar-item" onClick={() => navigate('/admin/settings')}>
+          <Settings size={17} />
+          <span>Settings</span>
         </button>
-        <button className="sidebar-support" onClick={() => navigate('/admin/support')}>
-          <HelpCircle size={16} />
+        <button className="sidebar-item" onClick={() => navigate('/admin/support')}>
+          <HelpCircle size={17} />
           <span>Support</span>
         </button>
       </div>

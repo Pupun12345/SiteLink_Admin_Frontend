@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import VendorVerification from './pages/VendorVerification';
+import WorkerVerification from './pages/WorkerVerification';
 import VendorDetails from './pages/VendorDetails';
 import PlaceholderPage from './pages/PlaceholderPage';
 
@@ -25,6 +26,14 @@ function App() {
           }
         />
         <Route
+          path="/admin/workers"
+          element={
+            <ProtectedRoute>
+              <WorkerVerification />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/vendors"
           element={
             <ProtectedRoute>
@@ -41,7 +50,7 @@ function App() {
           }
         />
         <Route
-          path="/admin/contracts"
+          path="/admin/verifications"
           element={
             <ProtectedRoute>
               <PlaceholderPage />
@@ -49,7 +58,7 @@ function App() {
           }
         />
         <Route
-          path="/admin/invoices"
+          path="/admin/jobs"
           element={
             <ProtectedRoute>
               <PlaceholderPage />
@@ -57,7 +66,15 @@ function App() {
           }
         />
         <Route
-          path="/admin/compliance"
+          path="/admin/revenue"
+          element={
+            <ProtectedRoute>
+              <PlaceholderPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/subscriptions"
           element={
             <ProtectedRoute>
               <PlaceholderPage />
