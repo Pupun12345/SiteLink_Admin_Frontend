@@ -2,10 +2,12 @@ import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutGrid,
+  Bell,
   Users,
   Store,
   Shield,
   Briefcase,
+  BarChart2,
   DollarSign,
   CreditCard,
   Settings,
@@ -39,6 +41,24 @@ const mainItems = [
     path: '/admin/jobs',
     icon: Briefcase,
   },
+  {
+    label: 'Reports',
+    path: '/admin/reports',
+    icon: BarChart2,
+  },
+];
+
+const systemItems = [
+  {
+    label: 'Notifications',
+    path: '/admin/notifications',
+    icon: Bell,
+  },
+  {
+    label: 'Settings',
+    path: '/admin/settings',
+    icon: Settings,
+  },
 ];
 
 const financeItems = [
@@ -58,7 +78,7 @@ export default function Sidebar({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const allItems = [...mainItems, ...financeItems];
+  const allItems = [...mainItems, ...financeItems, ...systemItems];
 
   const activePath = useMemo(() => {
     return allItems.find((item) => location.pathname.startsWith(item.path))?.path;
@@ -106,13 +126,25 @@ export default function Sidebar({ onLogout }) {
             </button>
           );
         })}
+
+        <p className="sidebar-group-label sidebar-group-label-finance">System</p>
+        {systemItems.map((item) => {
+          const Icon = item.icon;
+          const active = activePath === item.path;
+          return (
+            <button
+              key={item.path}
+              className={`sidebar-item ${active ? 'active' : ''}`}
+              onClick={() => navigate(item.path)}
+            >
+              <Icon size={17} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
 
       <div className="sidebar-footer">
-        <button className="sidebar-item" onClick={() => navigate('/admin/settings')}>
-          <Settings size={17} />
-          <span>Settings</span>
-        </button>
         <button className="sidebar-item" onClick={() => navigate('/admin/support')}>
           <HelpCircle size={17} />
           <span>Support</span>

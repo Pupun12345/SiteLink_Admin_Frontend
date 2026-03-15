@@ -4,7 +4,10 @@ import AdminDashboard from './pages/AdminDashboard';
 import VendorVerification from './pages/VendorVerification';
 import WorkerVerification from './pages/WorkerVerification';
 import VendorDetails from './pages/VendorDetails';
+import VerificationOverview from './pages/VerificationOverview';
 import PlaceholderPage from './pages/PlaceholderPage';
+import ReportsPage from './pages/ReportsPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('adminToken');
@@ -53,7 +56,7 @@ function App() {
           path="/admin/verifications"
           element={
             <ProtectedRoute>
-              <PlaceholderPage />
+              <VerificationOverview />
             </ProtectedRoute>
           }
         />
@@ -62,6 +65,22 @@ function App() {
           element={
             <ProtectedRoute>
               <PlaceholderPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute>
+              <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationsPage />
             </ProtectedRoute>
           }
         />

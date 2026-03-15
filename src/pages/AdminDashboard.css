@@ -172,6 +172,13 @@
   margin-bottom: 12px;
 }
 
+.reports-shortcut-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+}
+
 .period-btn {
   border: 1px solid #d4dceb;
   background: #f7f9fd;
@@ -205,6 +212,23 @@
   min-height: 104px;
   position: relative;
   overflow: hidden;
+}
+
+.stat-card-clickable {
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.stat-card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(15, 34, 77, 0.08);
+  border-color: #b9c8e7;
+}
+
+.stat-card:disabled {
+  border: 1px solid #d5deeb;
+  cursor: default;
 }
 
 .stat-card.highlight {
