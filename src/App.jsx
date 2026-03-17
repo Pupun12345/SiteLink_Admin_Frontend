@@ -8,6 +8,9 @@ import VerificationOverview from './pages/VerificationOverview';
 import PlaceholderPage from './pages/PlaceholderPage';
 import ReportsPage from './pages/ReportsPage';
 import NotificationsPage from './pages/NotificationsPage';
+import SystemMonitoring from './pages/SystemMonitoring';
+import AdminSettings from './pages/AdminSettings';
+import PlatformSettings from './pages/PlatformSettings';
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('adminToken');
@@ -96,7 +99,7 @@ function App() {
           path="/admin/subscriptions"
           element={
             <ProtectedRoute>
-              <PlaceholderPage />
+              <PlatformSettings />
             </ProtectedRoute>
           }
         />
@@ -104,7 +107,23 @@ function App() {
           path="/admin/settings"
           element={
             <ProtectedRoute>
-              <PlaceholderPage />
+              <AdminSettings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/system-monitoring"
+          element={
+            <ProtectedRoute>
+              <SystemMonitoring />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/platform-settings"
+          element={
+            <ProtectedRoute>
+              <PlatformSettings />
             </ProtectedRoute>
           }
         />

@@ -1,0 +1,220 @@
+.platform-settings-content {
+  padding: 22px;
+}
+
+.platform-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.platform-header h1 {
+  margin: 0;
+  font-size: 40px;
+  letter-spacing: -0.03em;
+  color: #16233d;
+}
+
+.platform-header p {
+  margin: 6px 0 0;
+  color: #6f82a2;
+}
+
+.platform-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.platform-icon-btn,
+.platform-save-btn {
+  border: 1px solid #d4deed;
+  border-radius: 9px;
+  height: 36px;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.platform-icon-btn {
+  width: 36px;
+  color: #5c7192;
+}
+
+.platform-save-btn {
+  background: #2f63db;
+  border-color: #2f63db;
+  color: #fff;
+  padding: 0 12px;
+  font-weight: 700;
+}
+
+.platform-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+}
+
+.platform-card {
+  background: #fff;
+  border: 1px solid #d6deed;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.platform-card h2,
+.platform-card h3 {
+  margin: 0;
+  color: #1a2945;
+}
+
+.platform-card p {
+  margin: 6px 0 12px;
+  color: #7083a3;
+  font-size: 14px;
+}
+
+.pricing-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pricing-table th,
+.pricing-table td {
+  border-top: 1px solid #ebf0f9;
+  padding: 12px 8px;
+  text-align: left;
+}
+
+.pricing-table th {
+  color: #7789a7;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.status-pill {
+  background: #e9f7ef;
+  color: #1a9f56;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pricing-table td button {
+  border: 0;
+  background: transparent;
+  color: #2f63db;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.platform-side-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.platform-side-stack select {
+  width: 100%;
+  border: 1px solid #d8e1ef;
+  border-radius: 8px;
+  height: 38px;
+  padding: 0 10px;
+  color: #344563;
+}
+
+.platform-side-stack label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #3c4f70;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.verification-card {
+  grid-column: 1 / 2;
+}
+
+.rule-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rule-columns h4 {
+  margin: 4px 0 12px;
+  color: #7d8fac;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
+.rule-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  color: #2a3b58;
+}
+
+.rule-toggle {
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: #d7dfed;
+  position: relative;
+}
+
+.rule-toggle::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  left: 3px;
+  top: 3px;
+}
+
+.rule-toggle.on {
+  background: #2f63db;
+}
+
+.rule-toggle.on::after {
+  left: 17px;
+}
+
+@media (max-width: 1180px) {
+  .platform-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .verification-card {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .platform-settings-content {
+    padding: 14px 12px 20px;
+  }
+
+  .platform-header {
+    flex-direction: column;
+  }
+
+  .platform-header h1 {
+    font-size: 30px;
+  }
+
+  .rule-columns {
+    grid-template-columns: 1fr;
+  }
+}

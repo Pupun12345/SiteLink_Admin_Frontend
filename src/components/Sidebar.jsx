@@ -3,13 +3,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutGrid,
   Bell,
+  Activity,
   Users,
   Store,
   Shield,
   Briefcase,
   BarChart2,
   DollarSign,
-  CreditCard,
+  SlidersHorizontal,
   Settings,
   HelpCircle,
 } from 'lucide-react';
@@ -50,9 +51,19 @@ const mainItems = [
 
 const systemItems = [
   {
+    label: 'System Monitoring',
+    path: '/admin/system-monitoring',
+    icon: Activity,
+  },
+  {
     label: 'Notifications',
     path: '/admin/notifications',
     icon: Bell,
+  },
+  {
+    label: 'Platform Settings',
+    path: '/admin/platform-settings',
+    icon: SlidersHorizontal,
   },
   {
     label: 'Settings',
@@ -66,11 +77,6 @@ const financeItems = [
     label: 'Revenue',
     path: '/admin/revenue',
     icon: DollarSign,
-  },
-  {
-    label: 'Subscriptions',
-    path: '/admin/subscriptions',
-    icon: CreditCard,
   },
 ];
 
