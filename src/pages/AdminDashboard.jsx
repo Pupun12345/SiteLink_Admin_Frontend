@@ -4,6 +4,7 @@ import {
   Clock,
   Bell,
   BarChart2,
+  FileText,
   ShoppingBag,
   Users,
   TrendingUp,
@@ -114,6 +115,7 @@ export default function AdminDashboard() {
       icon: BarChart2,
       accent: "#0ea5e9",
       highlight: true,
+      path: "/admin/reports",
     },
   ];
 
@@ -148,7 +150,7 @@ export default function AdminDashboard() {
               Invite User
             </button>
 
-            <button className="icon-btn">
+            <button className="icon-btn" onClick={() => navigate('/admin/notifications')}>
               <Bell size={18} />
             </button>
 
@@ -170,6 +172,14 @@ export default function AdminDashboard() {
 
         {/* PERIOD FILTER */}
         <div className="period-picker">
+          <button
+            type="button"
+            className="period-btn reports-shortcut-btn"
+            onClick={() => navigate("/admin/reports")}
+          >
+            <FileText size={14} />
+            Reports
+          </button>
           {["1D", "5D", "1M", "1Y"].map((period) => (
             <button
               key={period}
@@ -185,9 +195,14 @@ export default function AdminDashboard() {
         {/* STATS */}
         <div className="stats-grid">
           {statCards.map((card) => (
-            <div
+            <button
               key={card.title}
-              className={`stat-card ${card.highlight ? "highlight" : ""}`}
+              type="button"
+              className={`stat-card ${card.highlight ? "highlight" : ""} ${
+                card.path ? "stat-card-clickable" : ""
+              }`}
+              onClick={() => card.path && navigate(card.path)}
+              disabled={!card.path}
             >
               {card.badge && <div className="stat-badge">{card.badge}</div>}
 
@@ -208,7 +223,7 @@ export default function AdminDashboard() {
               </div>
 
               {card.highlight && <div className="stat-highlight" />}
-            </div>
+            </button>
           ))}
         </div>
 

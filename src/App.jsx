@@ -5,10 +5,16 @@ import AdminDashboard from './pages/AdminDashboard';
 import VendorVerification from './pages/VendorVerification';
 import WorkerVerification from './pages/WorkerVerification';
 import VendorDetails from './pages/VendorDetails';
+import VerificationOverview from './pages/VerificationOverview';
 import PlaceholderPage from './pages/PlaceholderPage';
 import RequirementsDashboard from './pages/Requirements';
 import JobRequirements from './pages/JobRequirements';
 import UserProfilePage from './pages/UserProfilePage';
+import ReportsPage from './pages/ReportsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import SystemMonitoring from './pages/SystemMonitoring';
+import AdminSettings from './pages/AdminSettings';
+import PlatformSettings from './pages/PlatformSettings';
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('adminToken');
@@ -89,7 +95,7 @@ function App() {
           path="/admin/verifications"
           element={
             <ProtectedRoute>
-              <PlaceholderPage />
+              <VerificationOverview />
             </ProtectedRoute>
           }
         />
@@ -98,6 +104,22 @@ function App() {
           element={
             <ProtectedRoute>
               <PlaceholderPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute>
+              <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationsPage />
             </ProtectedRoute>
           }
         />
@@ -113,7 +135,7 @@ function App() {
           path="/admin/subscriptions"
           element={
             <ProtectedRoute>
-              <PlaceholderPage />
+              <PlatformSettings />
             </ProtectedRoute>
           }
         />
@@ -121,7 +143,23 @@ function App() {
           path="/admin/settings"
           element={
             <ProtectedRoute>
-              <PlaceholderPage />
+              <AdminSettings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/system-monitoring"
+          element={
+            <ProtectedRoute>
+              <SystemMonitoring />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/platform-settings"
+          element={
+            <ProtectedRoute>
+              <PlatformSettings />
             </ProtectedRoute>
           }
         />

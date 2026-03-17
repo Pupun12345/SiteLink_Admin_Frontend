@@ -2,12 +2,15 @@ import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutGrid,
+  Bell,
+  Activity,
   Users,
   Store,
   Shield,
   Briefcase,
+  BarChart2,
   DollarSign,
-  CreditCard,
+  SlidersHorizontal,
   Settings,
   HelpCircle,
   BaggageClaim,
@@ -51,6 +54,34 @@ const mainItems = [
     path: '/admin/jobs',
     icon: Briefcase,
   },
+  {
+    label: 'Reports',
+    path: '/admin/reports',
+    icon: BarChart2,
+  },
+];
+
+const systemItems = [
+  {
+    label: 'System Monitoring',
+    path: '/admin/system-monitoring',
+    icon: Activity,
+  },
+  {
+    label: 'Notifications',
+    path: '/admin/notifications',
+    icon: Bell,
+  },
+  {
+    label: 'Platform Settings',
+    path: '/admin/platform-settings',
+    icon: SlidersHorizontal,
+  },
+  {
+    label: 'Settings',
+    path: '/admin/settings',
+    icon: Settings,
+  },
 ];
 
 const financeItems = [
@@ -59,18 +90,13 @@ const financeItems = [
     path: '/admin/revenue',
     icon: DollarSign,
   },
-  {
-    label: 'Subscriptions',
-    path: '/admin/subscriptions',
-    icon: CreditCard,
-  },
 ];
 
 export default function Sidebar({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const allItems = [...mainItems, ...financeItems];
+  const allItems = [...mainItems, ...financeItems, ...systemItems];
 
   const activePath = useMemo(() => {
     return allItems.find((item) => location.pathname.startsWith(item.path))?.path;
@@ -132,13 +158,25 @@ export default function Sidebar({ onLogout }) {
             </button>
           );
         })}
+
+        <p className="sidebar-group-label sidebar-group-label-finance">System</p>
+        {systemItems.map((item) => {
+          const Icon = item.icon;
+          const active = activePath === item.path;
+          return (
+            <button
+              key={item.path}
+              className={`sidebar-item ${active ? 'active' : ''}`}
+              onClick={() => navigate(item.path)}
+            >
+              <Icon size={17} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
 
       <div className="sidebar-footer">
-        <button className="sidebar-item" onClick={() => navigate('/admin/settings')}>
-          <Settings size={17} />
-          <span>Settings</span>
-        </button>
         <button className="sidebar-item" onClick={() => navigate('/admin/support')}>
           <HelpCircle size={17} />
           <span>Support</span>
