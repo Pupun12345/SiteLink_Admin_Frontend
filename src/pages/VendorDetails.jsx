@@ -15,6 +15,9 @@ export default function VendorDetails() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [showReject, setShowReject] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showRating, setShowRating] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
   const toast = useToast();
 
   const fetchVendor = useCallback(async () => {
@@ -73,6 +76,59 @@ export default function VendorDetails() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleRateVendor = async () => {
+    if (rating === 0) {
+      toast.showToast('Please select a rating', { type: 'error' });
+      return;
+    }
+
+    if (isProcessing) return;
+
+    setIsProcessing(true);
+    try {
+      console.log('Submitting rating:', { rating, comment: ratingComment });
+      const response = await api.put(`/admin/vendors/${id}/rate`, { rating, comment: ratingComment });
+      console.log('Rating response:', response);
+      setShowRating(false);
+      setRating(0);
+      setRatingComment('');
+      await fetchVendor();
+      toast.showToast('Vendor rated successfully', { type: 'success' });
+      
+      // Trigger a refresh in the parent component by storing a timestamp
+      sessionStorage.setItem('vendorListRefresh', Date.now().toString());
+      window.dispatchEvent(new Event('vendorRated'));
+    } catch (err) {
+      console.error('Rating error:', err.response?.data || err.message);
+      toast.showToast(err.response?.data?.message || 'Rating failed', { type: 'error' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDownloadFile = (fileUrl, fileName) => {
+    if (!fileUrl) {
+      toast.showToast('File not available', { type: 'error' });
+      return;
+    }
+    const url = fileUrl.startsWith('http') ? fileUrl : `http://localhost:5000/${fileUrl}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName || 'document';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleViewFile = (fileUrl) => {
+    if (!fileUrl) {
+      toast.showToast('File not available', { type: 'error' });
+      return;
+    }
+    const url = fileUrl.startsWith('http') ? fileUrl : `http://localhost:5000/${fileUrl}`;
+    window.open(url, '_blank');
   };
 
   const getStatus = () => {
@@ -136,23 +192,42 @@ export default function VendorDetails() {
 
             <div className="vendor-top-right">
               <span className={statusClass[getStatus()]}>{statusText[getStatus()]}</span>
+              {vendor?.adminRating && getStatus() === 'verified' && (
+                <div className="vendor-rating">
+                  <span className="rating-stars">{'⭐'.repeat(vendor.adminRating)}</span>
+                  <span className="rating-value">{vendor.adminRating}/5</span>
+                </div>
+              )}
               <div className="action-buttons">
-                <button
-                  className="reject-btn"
-                  onClick={() => setShowReject(true)}
-                  disabled={isProcessing || getStatus() !== 'pending'}
-                >
-                  <XCircle size={18} />
-                  Reject Vendor
-                </button>
-                <button
-                  className="approve-btn"
-                  onClick={handleVerify}
-                  disabled={isProcessing || getStatus() !== 'pending'}
-                >
-                  <CheckCircle size={18} />
-                  Approve Vendor
-                </button>
+                {getStatus() === 'pending' && (
+                  <>
+                    <button
+                      className="reject-btn"
+                      onClick={() => setShowReject(true)}
+                      disabled={isProcessing}
+                    >
+                      <XCircle size={18} />
+                      Reject Vendor
+                    </button>
+                    <button
+                      className="approve-btn"
+                      onClick={handleVerify}
+                      disabled={isProcessing}
+                    >
+                      <CheckCircle size={18} />
+                      Approve Vendor
+                    </button>
+                  </>
+                )}
+                {getStatus() === 'verified' && (
+                  <button
+                    className="rate-btn"
+                    onClick={() => setShowRating(true)}
+                    disabled={isProcessing}
+                  >
+                    ⭐ Rate Vendor
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -170,26 +245,42 @@ export default function VendorDetails() {
                   <h3>Company Information</h3>
                 </div>
                 <div className="card-body">
-                  <div className="card-row">
-                    <span className="label">Industry</span>
-                    <span className="value">{vendor.projectTypes?.[0] || 'Construction & Services'}</span>
-                  </div>
-                  <div className="card-row">
-                    <span className="label">Company Type</span>
-                    <span className="value">Private Limited</span>
-                  </div>
-                  <div className="card-row">
-                    <span className="label">Registered Address</span>
-                    <span className="value">{vendor.city || 'N/A'}</span>
-                  </div>
-                  <div className="card-row">
-                    <span className="label">Website</span>
-                    <span className="value">{vendor.website || '—'}</span>
-                  </div>
-                  <div className="card-row">
-                    <span className="label">Tax ID / PAN</span>
-                    <span className="value">{vendor.panNumber || 'N/A'}</span>
-                  </div>
+                  {vendor.companyName && (
+                    <div className="card-row">
+                      <span className="label">Company Name</span>
+                      <span className="value">{vendor.companyName}</span>
+                    </div>
+                  )}
+                  {vendor.projectTypes && vendor.projectTypes.length > 0 && (
+                    <div className="card-row">
+                      <span className="label">Industry</span>
+                      <span className="value">{vendor.projectTypes.join(', ')}</span>
+                    </div>
+                  )}
+                  {vendor.city && (
+                    <div className="card-row">
+                      <span className="label">Registered Address</span>
+                      <span className="value">{vendor.city}</span>
+                    </div>
+                  )}
+                  {vendor.website && (
+                    <div className="card-row">
+                      <span className="label">Website</span>
+                      <span className="value">{vendor.website}</span>
+                    </div>
+                  )}
+                  {vendor.panNumber && (
+                    <div className="card-row">
+                      <span className="label">Tax ID / PAN</span>
+                      <span className="value">{vendor.panNumber}</span>
+                    </div>
+                  )}
+                  {vendor.licenseNumber && (
+                    <div className="card-row">
+                      <span className="label">License Number</span>
+                      <span className="value">{vendor.licenseNumber}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -198,22 +289,30 @@ export default function VendorDetails() {
                   <h3>Contact Information</h3>
                 </div>
                 <div className="card-body">
-                  <div className="card-row">
-                    <span className="label">Primary Contact Person</span>
-                    <span className="value">{vendor.ownerName || 'N/A'}</span>
-                  </div>
-                  <div className="card-row">
-                    <span className="label">Email Address</span>
-                    <span className="value">{vendor.email || 'N/A'}</span>
-                  </div>
-                  <div className="card-row">
-                    <span className="label">Direct Phone</span>
-                    <span className="value">{vendor.phone || 'N/A'}</span>
-                  </div>
-                  <div className="card-row alert-row">
-                    <span className="label">Emergency Contact</span>
-                    <span className="value danger">{vendor.emergencyContact || '—'}</span>
-                  </div>
+                  {vendor.ownerName && (
+                    <div className="card-row">
+                      <span className="label">Primary Contact Person</span>
+                      <span className="value">{vendor.ownerName}</span>
+                    </div>
+                  )}
+                  {vendor.email && (
+                    <div className="card-row">
+                      <span className="label">Email Address</span>
+                      <span className="value">{vendor.email}</span>
+                    </div>
+                  )}
+                  {vendor.phone && (
+                    <div className="card-row">
+                      <span className="label">Direct Phone</span>
+                      <span className="value">{vendor.phone}</span>
+                    </div>
+                  )}
+                  {vendor.emergencyContact && (
+                    <div className="card-row alert-row">
+                      <span className="label">Emergency Contact</span>
+                      <span className="value danger">{vendor.emergencyContact}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -225,54 +324,85 @@ export default function VendorDetails() {
                   <button className="upload-btn">Upload Additional Document</button>
                 </div>
                 <div className="card-body">
-                  <div className="document-row">
-                    <div className="document-meta">
-                      <div className="doc-icon">
-                        <FileText size={18} />
+                  {vendor.panCardImage && (
+                    <div className="document-row">
+                      <div className="document-meta">
+                        <div className="doc-icon">
+                          <FileText size={18} />
+                        </div>
+                        <div>
+                          <div className="doc-title">PAN Card</div>
+                          <div className="doc-size">Document</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="doc-title">GST Certificate</div>
-                        <div className="doc-size">PDF • 1.2 MB</div>
+                      <div className="doc-actions">
+                        <button 
+                          className="doc-action"
+                          onClick={() => handleViewFile(vendor.panCardImage)}
+                        >
+                          View
+                        </button>
+                        <button 
+                          className="doc-action"
+                          onClick={() => handleDownloadFile(vendor.panCardImage, 'pan-card')}
+                        >
+                          <Download size={16} />
+                          Download
+                        </button>
                       </div>
                     </div>
-                    <button className="doc-action">View</button>
-                  </div>
+                  )}
 
-                  <div className="document-row">
-                    <div className="document-meta">
-                      <div className="doc-icon">
-                        <FileText size={18} />
+                  {vendor.gstNumber && (
+                    <div className="document-row">
+                      <div className="document-meta">
+                        <div className="doc-icon">
+                          <FileText size={18} />
+                        </div>
+                        <div>
+                          <div className="doc-title">GST Number</div>
+                          <div className="doc-size">{vendor.gstNumber}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="doc-title">Business Reg. Proof</div>
-                        <div className="doc-size">PDF • 2.4 MB</div>
-                      </div>
+                      <button className="doc-action">Verified</button>
                     </div>
-                    <a
-                      href={vendor.panCardImage || '#'}
-                      className="doc-action"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Download size={16} />
-                      Download
-                    </a>
-                  </div>
+                  )}
 
-                  <div className="document-row">
-                    <div className="document-meta">
-                      <div className="doc-icon">
-                        <FileText size={18} />
+                  {vendor.companyLogo && (
+                    <div className="document-row">
+                      <div className="document-meta">
+                        <div className="doc-icon">
+                          <FileText size={18} />
+                        </div>
+                        <div>
+                          <div className="doc-title">Company Logo</div>
+                          <div className="doc-size">Image</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="doc-title">ID Proofs (Authorized)</div>
-                        <div className="doc-size">ZIP • 5.8 MB</div>
+                      <div className="doc-actions">
+                        <button 
+                          className="doc-action"
+                          onClick={() => handleViewFile(vendor.companyLogo)}
+                        >
+                          View
+                        </button>
+                        <button 
+                          className="doc-action"
+                          onClick={() => handleDownloadFile(vendor.companyLogo, 'company-logo')}
+                        >
+                          <Download size={16} />
+                          Download
+                        </button>
                       </div>
                     </div>
-                    <button className="doc-action">Download</button>
-                  </div>
+                  )}
+
+                  {!vendor.panCardImage && !vendor.gstNumber && !vendor.companyLogo && (
+                    <div className="no-documents">
+                      <p>No documents uploaded yet</p>
+                    </div>
+                  )}
                 </div>
-
               </div>
             </div>
           </div>
@@ -292,6 +422,36 @@ export default function VendorDetails() {
               </button>
               <button className="confirm" onClick={handleReject}>
                 Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className={`modal-overlay ${showRating ? 'visible' : ''}`} onClick={() => setShowRating(false)}>
+          <div className="rating-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Rate Vendor</h3>
+            <div className="rating-stars">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  className={`star ${rating >= star ? 'active' : ''}`}
+                  onClick={() => setRating(star)}
+                >
+                  ⭐
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={ratingComment}
+              onChange={(e) => setRatingComment(e.target.value)}
+              placeholder="Add optional comment..."
+            />
+            <div className="rating-actions">
+              <button className="cancel" onClick={() => setShowRating(false)}>
+                Cancel
+              </button>
+              <button className="confirm" onClick={handleRateVendor}>
+                Submit Rating
               </button>
             </div>
           </div>

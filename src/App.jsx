@@ -1,3 +1,4 @@
+import UserManagement from './pages/UserManagement';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -5,6 +6,9 @@ import VendorVerification from './pages/VendorVerification';
 import WorkerVerification from './pages/WorkerVerification';
 import VendorDetails from './pages/VendorDetails';
 import PlaceholderPage from './pages/PlaceholderPage';
+import RequirementsDashboard from './pages/Requirements';
+import JobRequirements from './pages/JobRequirements';
+import UserProfilePage from './pages/UserProfilePage';
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('adminToken');
@@ -22,6 +26,38 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/requirements"
+          element={
+            <ProtectedRoute>
+              <RequirementsDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/requirements/:id"
+          element={
+            <ProtectedRoute>
+              <JobRequirements />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/user-management"
+          element={
+            <ProtectedRoute>
+              <UserManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/user-profile/:id"
+          element={
+            <ProtectedRoute>
+              <UserProfilePage />
             </ProtectedRoute>
           }
         />
