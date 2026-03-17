@@ -572,6 +572,11 @@
   color: #374151;
 }
 
+.no-rating {
+  color: #9ca3af;
+  font-weight: 600;
+}
+
 .view-files-btn {
   display: flex;
   align-items: center;

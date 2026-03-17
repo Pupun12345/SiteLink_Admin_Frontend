@@ -13,6 +13,8 @@ import {
   SlidersHorizontal,
   Settings,
   HelpCircle,
+  BaggageClaim,
+  LogOut,
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -21,6 +23,16 @@ const mainItems = [
     label: 'Dashboard',
     path: '/admin/dashboard',
     icon: LayoutGrid,
+  },
+  {
+    label: 'User Management',
+    path: '/admin/user-management',
+    icon: Users,
+  },
+  {
+    label: 'Requirements',
+    path: '/admin/requirements',
+    icon: BaggageClaim,
   },
   {
     label: 'Workers',
@@ -90,6 +102,20 @@ export default function Sidebar({ onLogout }) {
     return allItems.find((item) => location.pathname.startsWith(item.path))?.path;
   }, [location.pathname]);
 
+  const handleLogout = () => {
+    // Clear admin authentication data
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    
+    // Call onLogout callback if provided
+    if (onLogout) {
+      onLogout();
+    }
+    
+    // Navigate to admin login
+    navigate('/admin/login');
+  };
+
   return (
     <aside className="app-sidebar">
       <div className="sidebar-brand">
@@ -154,6 +180,10 @@ export default function Sidebar({ onLogout }) {
         <button className="sidebar-item" onClick={() => navigate('/admin/support')}>
           <HelpCircle size={17} />
           <span>Support</span>
+        </button>
+        <button className="sidebar-item logout-btn" onClick={handleLogout}>
+          <LogOut size={17} />
+          <span>Logout</span>
         </button>
       </div>
     </aside>

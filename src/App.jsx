@@ -1,3 +1,4 @@
+import UserManagement from './pages/UserManagement';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -6,6 +7,9 @@ import WorkerVerification from './pages/WorkerVerification';
 import VendorDetails from './pages/VendorDetails';
 import VerificationOverview from './pages/VerificationOverview';
 import PlaceholderPage from './pages/PlaceholderPage';
+import RequirementsDashboard from './pages/Requirements';
+import JobRequirements from './pages/JobRequirements';
+import UserProfilePage from './pages/UserProfilePage';
 import ReportsPage from './pages/ReportsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import SystemMonitoring from './pages/SystemMonitoring';
@@ -28,6 +32,38 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/requirements"
+          element={
+            <ProtectedRoute>
+              <RequirementsDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/requirements/:id"
+          element={
+            <ProtectedRoute>
+              <JobRequirements />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/user-management"
+          element={
+            <ProtectedRoute>
+              <UserManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/user-profile/:id"
+          element={
+            <ProtectedRoute>
+              <UserProfilePage />
             </ProtectedRoute>
           }
         />
