@@ -103,7 +103,7 @@ function App() {
           path="/admin/jobs"
           element={
             <ProtectedRoute>
-              <PlaceholderPage />
+              <RequirementsDashboard />
             </ProtectedRoute>
           }
         />
