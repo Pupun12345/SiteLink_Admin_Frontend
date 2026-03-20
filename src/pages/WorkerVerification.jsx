@@ -46,7 +46,7 @@ export default function WorkerVerification() {
 
   const fetchWorkers = async () => {
     try {
-      const { data } = await api.get('/admin/workers/all');
+      const { data } = await api.get('/admin/users?userType=worker');
       setWorkers(data.data || []);
     } catch (err) {
       console.error('Failed to fetch workers:', err);
@@ -60,25 +60,25 @@ export default function WorkerVerification() {
     }
   };
 
-  const getStatusBadgeClass = (status) => {
-    if (status === 'verified' || status === 'approved') return 'status-approved';
-    if (status === 'pending') return 'status-pending';
-    if (status === 'rejected') return 'status-rejected';
+  const getStatusBadgeClass = (worker) => {
+    if (worker.status === 'Verified' || worker.verified) return 'status-approved';
+    if (worker.status === 'Pending') return 'status-pending';
+    if (worker.status === 'Rejected') return 'status-rejected';
     return 'status-pending';
   };
 
   const getStatusText = (worker) => {
-    if (worker.isVerified) return 'APPROVED';
-    if (worker.verificationStatus === 'rejected') return 'REJECTED';
+    if (worker.status === 'Verified' || worker.verified) return 'APPROVED';
+    if (worker.status === 'Rejected') return 'REJECTED';
     return 'PENDING';
   };
 
   const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
 
   const filteredWorkers = workers.filter(worker => {
-    if (statusFilter === 'pending' && worker.isVerified) return false;
-    if (statusFilter === 'approved' && !worker.isVerified) return false;
-    if (roleFilter && !worker.skills?.some(s => s.skillName.toLowerCase().includes(roleFilter.toLowerCase()))) return false;
+    if (statusFilter === 'pending' && (worker.status === 'Verified' || worker.verified)) return false;
+    if (statusFilter === 'approved' && !(worker.status === 'Verified' || worker.verified)) return false;
+    if (roleFilter && !worker.role?.toLowerCase().includes(roleFilter.toLowerCase())) return false;
     return true;
   });
 
@@ -153,7 +153,7 @@ export default function WorkerVerification() {
               transition={{ delay: 0.15 }}
             >
               <p className="stat-box-label">PENDING REVIEW</p>
-              <div className="stat-box-value">{workers.filter(w => !w.isVerified && w.verificationStatus !== 'rejected').length}</div>
+              <div className="stat-box-value">{workers.filter(w => w.status === 'Pending').length}</div>
               <p className="stat-box-change warning">8 requires urgent action</p>
             </motion.div>
 
@@ -164,7 +164,7 @@ export default function WorkerVerification() {
               transition={{ delay: 0.2 }}
             >
               <p className="stat-box-label">APPROVED WORKERS</p>
-              <div className="stat-box-value">{workers.filter(w => w.isVerified).length.toLocaleString()}</div>
+              <div className="stat-box-value">{workers.filter(w => w.status === 'Verified' || w.verified).length.toLocaleString()}</div>
               <div className="progress-bar">
                 <div className="progress-fill" style={{ width: '75%' }}></div>
               </div>
@@ -237,7 +237,7 @@ export default function WorkerVerification() {
                     <td>
                       <div className="worker-cell">
                         <img
-                          src={worker.profileImage ? `http://localhost:5000/${worker.profileImage}` : `https://ui-avatars.com/api/?name=${worker.name}&background=3b82f6&color=fff`}
+                          src={worker.avatar || `https://ui-avatars.com/api/?name=${worker.name}&background=3b82f6&color=fff`}
                           alt={worker.name}
                           className="worker-table-avatar"
                         />
@@ -247,7 +247,7 @@ export default function WorkerVerification() {
                         </div>
                       </div>
                     </td>
-                    <td>{worker.skills?.[0]?.skillName || 'General'}</td>
+                    <td>{worker.role || 'General Worker'}</td>
                     <td>{worker.experience || 'N/A'}</td>
                     <td>{worker.city || 'N/A'}</td>
                     <td>
@@ -263,11 +263,11 @@ export default function WorkerVerification() {
                     <td>
                       <button className="view-files-btn">
                         <FileText size={16} />
-                        VIEW {(worker.aadhaarFrontImage ? 1 : 0) + (worker.aadhaarBackImage ? 1 : 0) + (worker.certificates?.length || 0)} FILES
+                        VIEW FILES
                       </button>
                     </td>
                     <td>
-                      <span className={`status-badge ${getStatusBadgeClass(worker.verificationStatus)}`}>
+                      <span className={`status-badge ${getStatusBadgeClass(worker)}`}>
                         {getStatusText(worker)}
                       </span>
                     </td>

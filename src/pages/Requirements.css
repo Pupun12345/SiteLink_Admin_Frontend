@@ -30,9 +30,16 @@
   gap: 20px;
 }
 
-.search {
+.search-container {
   flex: 1;
   max-width: 500px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search {
+  flex: 1;
   padding: 10px 14px;
   border-radius: 6px;
   border: 1px solid #d1d5db;
@@ -42,6 +49,21 @@
 
 .search::placeholder {
   color: #9ca3af;
+}
+
+.search-btn {
+  padding: 10px 12px;
+  background: #2463eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.search-btn:hover {
+  background: #1d4ed8;
 }
 
 .profile {
@@ -154,6 +176,65 @@
 
 .clear:hover {
   color: #1d4ed8;
+}
+
+/* Loading and Error States */
+
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top: 3px solid #2463eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-state p,
+.error-state p {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.retry-btn {
+  background: #2463eb;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.retry-btn:hover {
+  background: #1d4ed8;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination button:disabled:hover {
+  border-color: #d1d5db;
+  color: #374151;
 }
 
 /* Table */
