@@ -21,7 +21,6 @@ import {
   Wrench,
   Shield,
 } from 'lucide-react';
-import api from '../api/axios';
 import './WorkerDetail.css';
 
 export default function WorkerDetail() {
@@ -35,91 +34,203 @@ export default function WorkerDetail() {
     fetchWorkerDetails();
   }, [id]);
 
+  const MOCK_WORKERS_DB = {
+    wk0001: {
+      _id: 'wk0001',
+      name: 'Rajesh Kumar',
+      age: 32,
+      phone: '+91 98765 43210',
+      email: 'rajesh.kumar@example.com',
+      experience: '5+ Years',
+      city: 'Mumbai',
+      dailyRate: 1200,
+      isVerified: false,
+      verificationStatus: 'pending',
+      createdAt: '2024-03-10T10:00:00Z',
+      skills: [{ skillId: 1, skillName: 'Electrician' }],
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: ['Master Electrician Certification (Level 4)', 'Industrial Training Institute (ITI) Diploma'],
+    },
+    wk0002: {
+      _id: 'wk0002',
+      name: 'Suresh Patel',
+      age: 28,
+      phone: '+91 91234 56789',
+      email: 'suresh.patel@example.com',
+      experience: '3-5 Years',
+      city: 'Ahmedabad',
+      dailyRate: 900,
+      isVerified: true,
+      verificationStatus: 'verified',
+      createdAt: '2024-01-15T09:30:00Z',
+      skills: [{ skillId: 2, skillName: 'Plumber' }],
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: ['ITI Diploma in Plumbing'],
+    },
+    wk0003: {
+      _id: 'wk0003',
+      name: 'Amit Singh',
+      age: 24,
+      phone: '+91 87654 32109',
+      email: 'amit.singh@example.com',
+      experience: '1-3 Years',
+      city: 'Delhi',
+      dailyRate: 700,
+      isVerified: false,
+      verificationStatus: 'rejected',
+      createdAt: '2024-05-20T14:00:00Z',
+      skills: [{ skillId: 3, skillName: 'Carpenter' }],
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: [],
+    },
+    wk0004: {
+      _id: 'wk0004',
+      name: 'Vikram Yadav',
+      age: 38,
+      phone: '+91 99887 76655',
+      email: 'vikram.yadav@example.com',
+      experience: '5+ Years',
+      city: 'Pune',
+      dailyRate: 1100,
+      isVerified: false,
+      verificationStatus: 'pending',
+      createdAt: '2024-06-01T08:00:00Z',
+      skills: [{ skillId: 4, skillName: 'Mason' }],
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: ['Construction Safety Certificate'],
+    },
+    wk0005: {
+      _id: 'wk0005',
+      name: 'Pradeep Nair',
+      age: 30,
+      phone: '+91 94455 66778',
+      email: 'pradeep.nair@example.com',
+      experience: '3-5 Years',
+      city: 'Chennai',
+      dailyRate: 1050,
+      isVerified: true,
+      verificationStatus: 'verified',
+      createdAt: '2023-11-11T11:00:00Z',
+      skills: [{ skillId: 5, skillName: 'Welder' }],
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: ['Welding Technology Diploma', 'Industrial Safety Certificate'],
+    },
+    wk0006: {
+      _id: 'wk0006',
+      name: 'Rohit Sharma',
+      age: 22,
+      phone: '+91 78899 00112',
+      email: 'rohit.sharma@example.com',
+      experience: '0-1 Year',
+      city: 'Hyderabad',
+      dailyRate: 600,
+      isVerified: false,
+      verificationStatus: 'pending',
+      createdAt: '2025-01-05T07:30:00Z',
+      skills: [{ skillId: 6, skillName: 'Painter' }],
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: [],
+    },
+    wk0007: {
+      _id: 'wk0007',
+      name: 'Deepak Joshi',
+      age: 27,
+      phone: '+91 93344 55667',
+      email: 'deepak.joshi@example.com',
+      experience: '1-3 Years',
+      city: 'Jaipur',
+      dailyRate: 800,
+      isVerified: true,
+      verificationStatus: 'verified',
+      createdAt: '2024-08-22T13:00:00Z',
+      skills: [{ skillId: 7, skillName: 'Tile Fitter' }],
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: ['Tiling & Flooring Certificate'],
+    },
+    wk0008: {
+      _id: 'wk0008',
+      name: 'Sanjay Mehra',
+      age: 20,
+      phone: '+91 85533 44221',
+      email: 'sanjay.mehra@example.com',
+      experience: '0-1 Year',
+      city: 'Kolkata',
+      dailyRate: 550,
+      isVerified: false,
+      verificationStatus: 'pending',
+      createdAt: '2025-02-18T10:45:00Z',
+      skills: [{ skillId: 8, skillName: 'Civil Helper' }],
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: [],
+    },
+  };
+
   const fetchWorkerDetails = async () => {
     try {
-      const { data } = await api.get(`/admin/workers/${id}`);
-      // Mock detailed data matching the UI
-      const mockWorker = {
-        _id: id,
-        name: 'John Doe',
-        workerId: 'ID-#WK-9021',
-        role: 'Electrician',
-        experience: '8 Years',
-        age: 28,
-        expectedWage: '$45/hr',
-        email: 'john.doe@example.com',
-        phone: '+1 (555) 000-1234',
-        appliedOn: 'October 24, 2023',
-        status: 'PENDING REVIEW',
-        profileImage: '/uploads/profiles/profile1.jpg',
-        locations: [
-          { name: 'New York, NY', isPrimary: true },
-          { name: 'Jersey City, NJ', isPrimary: false },
-          { name: 'Brooklyn, NY', isPrimary: false },
-        ],
-        documents: [
-          {
-            name: 'Aadhaar Card',
-            type: 'NATIONAL ID PROOF',
-            verified: '2/2 Verified',
-            viewLink: '#',
-          },
-          {
-            name: 'Police Clearance',
-            type: 'BACKGROUND CHECK',
-            verified: 'View Certificate',
-            viewLink: '#',
-          },
-        ],
-        certifications: [
-          {
-            name: 'Master Electrician Certification (Level 4)',
-            icon: '🏆',
-          },
-          {
-            name: 'Industrial Training Institute (ITI) Diploma',
-            icon: '📜',
-          },
-        ],
-        workPhotos: [
-          '/uploads/work/photo1.jpg',
-          '/uploads/work/photo2.jpg',
-          '/uploads/work/photo3.jpg',
-          '/uploads/work/photo4.jpg',
-        ],
+      const w = MOCK_WORKERS_DB[id];
+      if (!w) throw new Error('Worker not found');
+      const docs = [
+        {
+          name: 'Aadhaar Card',
+          type: 'NATIONAL ID PROOF',
+          verified: '2/2 Verified',
+          viewLink: '#',
+        },
+        {
+          name: 'Police Clearance',
+          type: 'BACKGROUND CHECK',
+          verified: 'View Certificate',
+          viewLink: '#',
+        },
+      ];
+      const mapped = {
+        _id: w._id,
+        name: w.name,
+        workerId: `ID-#WK-${w._id.slice(-4)}`,
+        role: w.skills?.[0]?.skillName || 'General Worker',
+        experience: w.experience || 'N/A',
+        age: w.age || 'N/A',
+        expectedWage: w.dailyRate ? `₹${w.dailyRate}/day` : 'N/A',
+        appliedOn: w.createdAt
+          ? new Date(w.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+          : 'N/A',
+        status: w.isVerified ? 'APPROVED' : w.verificationStatus === 'rejected' ? 'REJECTED' : 'PENDING REVIEW',
+        profileImage: w.profileImage,
+        locations: w.city ? [{ name: w.city, isPrimary: true }] : [],
+        documents: docs,
+        certifications: (w.certificates || []).map(cert => ({ name: cert, icon: '📜' })),
+        workPhotos: [1, 2, 3, 4],
         contactInfo: {
-          email: 'john.doe@example.com',
-          phone: '+1 (555) 000-1234',
+          email: w.email || 'N/A',
+          phone: w.phone || 'N/A',
         },
       };
-      setWorker(mockWorker);
+      setWorker(mapped);
     } catch (err) {
-      console.error('Failed to fetch worker details:', err);
+      console.error('Worker not found in mock data:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = async () => {
-    try {
-      await api.put(`/admin/workers/${id}/verify`);
-      alert('Worker approved successfully!');
-      navigate('/admin/workers');
-    } catch (err) {
-      alert('Failed to approve worker');
-    }
+  const handleApprove = () => {
+    alert(`Worker "${worker?.name}" approved successfully! (Mock action)`);
+    navigate('/admin/workers');
   };
 
-  const handleReject = async () => {
+  const handleReject = () => {
     const reason = prompt('Please provide a reason for rejection:');
     if (!reason) return;
-    try {
-      await api.put(`/admin/workers/${id}/reject`, { reason });
-      alert('Worker rejected');
-      navigate('/admin/workers');
-    } catch (err) {
-      alert('Failed to reject worker');
-    }
+    alert(`Worker "${worker?.name}" rejected. Reason: ${reason} (Mock action)`);
+    navigate('/admin/workers');
   };
 
   if (loading) {

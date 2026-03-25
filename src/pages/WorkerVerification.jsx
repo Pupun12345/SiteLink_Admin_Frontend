@@ -10,13 +10,11 @@ import {
   FileText,
   Star,
 } from 'lucide-react';
-import api from '../api/axios';
 import Sidebar from '../components/Sidebar';
 import './WorkerVerification.css';
 
 export default function WorkerVerification() {
   const [workers, setWorkers] = useState([]);
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('');
@@ -35,26 +33,122 @@ export default function WorkerVerification() {
     fetchStats();
   }, []);
 
+  const MOCK_WORKERS = [
+    {
+      _id: 'wk0001',
+      name: 'Rajesh Kumar',
+      profileImage: null,
+      skills: [{ skillId: 1, skillName: 'Electrician' }],
+      experience: '5+ Years',
+      city: 'Mumbai',
+      isVerified: false,
+      verificationStatus: 'pending',
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: ['Master Electrician Certification (Level 4)'],
+    },
+    {
+      _id: 'wk0002',
+      name: 'Suresh Patel',
+      profileImage: null,
+      skills: [{ skillId: 2, skillName: 'Plumber' }],
+      experience: '3-5 Years',
+      city: 'Ahmedabad',
+      isVerified: true,
+      verificationStatus: 'verified',
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: ['ITI Diploma in Plumbing'],
+    },
+    {
+      _id: 'wk0003',
+      name: 'Amit Singh',
+      profileImage: null,
+      skills: [{ skillId: 3, skillName: 'Carpenter' }],
+      experience: '1-3 Years',
+      city: 'Delhi',
+      isVerified: false,
+      verificationStatus: 'rejected',
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: [],
+    },
+    {
+      _id: 'wk0004',
+      name: 'Vikram Yadav',
+      profileImage: null,
+      skills: [{ skillId: 4, skillName: 'Mason' }],
+      experience: '5+ Years',
+      city: 'Pune',
+      isVerified: false,
+      verificationStatus: 'pending',
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: ['Construction Safety Certificate'],
+    },
+    {
+      _id: 'wk0005',
+      name: 'Pradeep Nair',
+      profileImage: null,
+      skills: [{ skillId: 5, skillName: 'Welder' }],
+      experience: '3-5 Years',
+      city: 'Chennai',
+      isVerified: true,
+      verificationStatus: 'verified',
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: ['Welding Technology Diploma', 'Industrial Safety Certificate'],
+    },
+    {
+      _id: 'wk0006',
+      name: 'Rohit Sharma',
+      profileImage: null,
+      skills: [{ skillId: 6, skillName: 'Painter' }],
+      experience: '0-1 Year',
+      city: 'Hyderabad',
+      isVerified: false,
+      verificationStatus: 'pending',
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: [],
+    },
+    {
+      _id: 'wk0007',
+      name: 'Deepak Joshi',
+      profileImage: null,
+      skills: [{ skillId: 7, skillName: 'Tile Fitter' }],
+      experience: '1-3 Years',
+      city: 'Jaipur',
+      isVerified: true,
+      verificationStatus: 'verified',
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: ['Tiling & Flooring Certificate'],
+    },
+    {
+      _id: 'wk0008',
+      name: 'Sanjay Mehra',
+      profileImage: null,
+      skills: [{ skillId: 8, skillName: 'Civil Helper' }],
+      experience: '0-1 Year',
+      city: 'Kolkata',
+      isVerified: false,
+      verificationStatus: 'pending',
+      aadhaarFrontImage: null,
+      aadhaarBackImage: null,
+      certificates: [],
+    },
+  ];
+
   const fetchStats = async () => {
-    try {
-      const { data } = await api.get('/stats/overview');
-      setStats(data.data);
-    } catch (err) {
-      console.error('Failed to fetch stats:', err);
-    }
+    // Using mock data — no backend call needed
   };
 
   const fetchWorkers = async () => {
     try {
-      const { data } = await api.get('/admin/users?userType=worker');
-      setWorkers(data.data || []);
+      setWorkers(MOCK_WORKERS);
     } catch (err) {
-      console.error('Failed to fetch workers:', err);
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
-        navigate('/admin/login');
-      }
+      console.error('Failed to load workers:', err);
     } finally {
       setLoading(false);
     }
@@ -73,7 +167,7 @@ export default function WorkerVerification() {
     return 'PENDING';
   };
 
-  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}'); // eslint-disable-line no-unused-vars
 
   const filteredWorkers = workers.filter(worker => {
     if (statusFilter === 'pending' && (worker.status === 'Verified' || worker.verified)) return false;
@@ -233,6 +327,8 @@ export default function WorkerVerification() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
+                    onClick={() => navigate(`/admin/workers/${worker._id}`)}
+                    style={{ cursor: 'pointer' }}
                   >
                     <td>
                       <div className="worker-cell">

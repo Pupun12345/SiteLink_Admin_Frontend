@@ -1,11 +1,18 @@
 import { Bell, Lock, Save, ShieldCheck, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import './AdminSettings.css';
 
 export default function AdminSettings() {
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    navigate('/admin/login');
+  };
   return (
     <div className="dashboard-page admin-settings-page">
-      <Sidebar />
+      <Sidebar onLogout={handleLogout} />
 
       <main className="dashboard-content admin-settings-content">
         <header className="admin-settings-header">
