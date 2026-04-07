@@ -589,3 +589,247 @@
 .rating-actions .confirm:hover {
   background: rgba(59, 130, 246, 1);
 }
+
+/* Rating Modal - New Sliding UI */
+.rating-modal-container {
+  width: min(520px, 92vw);
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 28px 72px rgba(15, 23, 42, 0.25);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.rating-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px 0 32px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  margin-bottom: 24px;
+}
+
+.rating-modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.92);
+}
+
+.rating-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.rating-modal-close:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.rating-modal-body {
+  padding: 0 32px;
+}
+
+.rating-modal-description {
+  margin: 0 0 24px 0;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.rating-input-section {
+  margin-bottom: 24px;
+}
+
+.rating-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.rating-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.rating-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.rating-stars-container {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.rating-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  opacity: 0.4;
+}
+
+.rating-star:hover {
+  opacity: 0.7;
+  transform: scale(1.1);
+}
+
+.rating-star.active {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.rating-slider-section {
+  margin-top: 16px;
+}
+
+.rating-range-input {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.rating-range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.rating-range-input::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.rating-scale-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 0 10px;
+}
+
+.scale-label {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.scale-label.active {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.rating-decimal-display {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.rating-comment-section {
+  margin-bottom: 24px;
+}
+
+.comment-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.rating-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.rating-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.rating-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 24px 32px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  margin-top: 24px;
+}
+
+.rating-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.rating-btn-cancel {
+  background-color: #f9fafb;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.rating-btn-cancel:hover {
+  background-color: #f3f4f6;
+}
+
+.rating-btn-submit {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.rating-btn-submit:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.rating-btn-submit:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}

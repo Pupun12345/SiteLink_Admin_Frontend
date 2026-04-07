@@ -328,15 +328,24 @@ export default function VendorVerification() {
                     <td>
                       {vendor.verificationStatus === 'verified' && vendor.adminRating ? (
                         <div className="rating-cell">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star 
-                              key={star}
-                              size={14} 
-                              fill={star <= vendor.adminRating ? '#fbbf24' : '#e5e7eb'} 
-                              stroke={star <= vendor.adminRating ? '#fbbf24' : '#e5e7eb'} 
-                            />
-                          ))}
-                          <span>{vendor.adminRating}/5</span>
+                          {[1, 2, 3, 4, 5].map((star) => {
+                            const rating = parseFloat(vendor.adminRating);
+                            const isFilled = star <= Math.floor(rating);
+                            const isHalfFilled = star > Math.floor(rating) && star <= Math.ceil(rating) && rating % 1 >= 0.5;
+                            
+                            return (
+                              <Star 
+                                key={star}
+                                size={14} 
+                                fill={isFilled ? '#fbbf24' : isHalfFilled ? '#fbbf24' : '#e5e7eb'} 
+                                stroke={isFilled || isHalfFilled ? '#fbbf24' : '#e5e7eb'}
+                                style={{
+                                  opacity: isHalfFilled ? 0.6 : 1
+                                }}
+                              />
+                            );
+                          })}
+                          <span>{parseFloat(vendor.adminRating).toFixed(1)}/5</span>
                         </div>
                       ) : (
                         <div className="rating-cell">

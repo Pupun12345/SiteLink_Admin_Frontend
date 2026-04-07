@@ -2,6 +2,40 @@
   padding: 22px;
 }
 
+.message-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-weight: 500;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-banner.success {
+  background: #e9f7ef;
+  color: #1a9f56;
+  border: 1px solid #a6e3d0;
+}
+
+.message-banner.error {
+  background: #fdf0f0;
+  color: #c53030;
+  border: 1px solid #fcb0b0;
+}
+
 .platform-header {
   display: flex;
   justify-content: space-between;
@@ -53,6 +87,10 @@
   font-weight: 700;
 }
 
+.platform-save-btn:hover {
+  background: #2451b9;
+}
+
 .platform-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -97,6 +135,22 @@
   letter-spacing: 0.08em;
 }
 
+.pricing-table input {
+  border: 1px solid #d8e1ef;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 14px;
+  color: #344563;
+  width: 100%;
+  max-width: 120px;
+}
+
+.pricing-table input:focus {
+  outline: none;
+  border-color: #2f63db;
+  box-shadow: 0 0 0 2px rgba(47, 99, 219, 0.1);
+}
+
 .status-pill {
   background: #e9f7ef;
   color: #1a9f56;
@@ -112,6 +166,13 @@
   color: #2f63db;
   font-weight: 700;
   cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.pricing-table td button:hover {
+  background: rgba(47, 99, 219, 0.1);
 }
 
 .platform-side-stack {
@@ -127,6 +188,13 @@
   height: 38px;
   padding: 0 10px;
   color: #344563;
+  cursor: pointer;
+}
+
+.platform-side-stack select:focus {
+  outline: none;
+  border-color: #2f63db;
+  box-shadow: 0 0 0 2px rgba(47, 99, 219, 0.1);
 }
 
 .platform-side-stack label {
@@ -136,6 +204,14 @@
   color: #3c4f70;
   font-weight: 600;
   margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.platform-side-stack input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  accent-color: #2f63db;
 }
 
 .verification-card {
@@ -162,6 +238,13 @@
   align-items: center;
   margin-bottom: 12px;
   color: #2a3b58;
+}
+
+.rule-toggle-input {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  accent-color: #2f63db;
 }
 
 .rule-toggle {

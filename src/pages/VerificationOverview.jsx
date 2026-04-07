@@ -23,11 +23,6 @@ export default function VerificationOverview() {
             <h1>Verification Center</h1>
             <p>Track verification queues and jump directly into worker or vendor review flows.</p>
           </div>
-
-          <div className="verification-overview-badge">
-            <ShieldCheck size={16} />
-            Unified Verification Queue
-          </div>
         </header>
 
         <section className="verification-overview-grid">
@@ -57,7 +52,7 @@ export default function VerificationOverview() {
 
             <button
               type="button"
-              className="chart-link-btn"
+              className="chart-link-btn-worker"
               onClick={() => navigate('/admin/workers')}
             >
               Open Worker Verification
@@ -89,7 +84,7 @@ export default function VerificationOverview() {
 
             <button
               type="button"
-              className="chart-link-btn"
+              className="chart-link-btn-vendor"
               onClick={() => navigate('/admin/vendors')}
             >
               Open Vendor Verification

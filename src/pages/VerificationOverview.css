@@ -176,7 +176,7 @@
   stroke-linecap: round;
 }
 
-.chart-link-btn {
+.chart-link-btn-vendor {
   border: 1px solid #d4deef;
   background: #f9fbff;
   color: #2f63db;
@@ -190,6 +190,23 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.chart-link-btn-worker {
+  border: 1px solid #d4deef;
+  background: #f9fbff;
+  color: #2f63db;
+  border-radius: 10px;
+  height: 40px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 28px;
 }
 
 .chart-link-btn:hover {

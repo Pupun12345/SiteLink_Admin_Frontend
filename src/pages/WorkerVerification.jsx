@@ -11,13 +11,14 @@ import {
   Star,
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
+import api from '../api/axios';
 import './WorkerVerification.css';
 
 export default function WorkerVerification() {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const navigate = useNavigate();
@@ -28,151 +29,96 @@ export default function WorkerVerification() {
     navigate('/admin/login');
   };
 
+  const handleExportCSV = () => {
+    if (filteredWorkers.length === 0) {
+      toast.showToast('No workers to export', { type: 'warning' });
+      return;
+    }
+
+    const headers = ['Worker Name', 'Role', 'Experience', 'City', 'Phone', 'Email', 'Rating', 'Status', 'Applied Date'];
+    const rows = filteredWorkers.map(worker => [
+      worker.name || '',
+      worker.role || 'General Worker',
+      worker.experience || 'N/A',
+      worker.city || 'N/A',
+      worker.phone || 'N/A',
+      worker.email || 'N/A',
+      worker.adminRating ? `${parseFloat(worker.adminRating).toFixed(1)}/5` : 'Not Rated',
+      worker.status || 'Pending',
+      worker.join || 'N/A'
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell.toString().replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `workers-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    
+    toast.showToast(`Exported ${filteredWorkers.length} workers to CSV`, { type: 'success' });
+  };
+
   useEffect(() => {
     fetchWorkers();
-    fetchStats();
   }, []);
-
-  const MOCK_WORKERS = [
-    {
-      _id: 'wk0001',
-      name: 'Rajesh Kumar',
-      profileImage: null,
-      skills: [{ skillId: 1, skillName: 'Electrician' }],
-      experience: '5+ Years',
-      city: 'Mumbai',
-      isVerified: false,
-      verificationStatus: 'pending',
-      aadhaarFrontImage: null,
-      aadhaarBackImage: null,
-      certificates: ['Master Electrician Certification (Level 4)'],
-    },
-    {
-      _id: 'wk0002',
-      name: 'Suresh Patel',
-      profileImage: null,
-      skills: [{ skillId: 2, skillName: 'Plumber' }],
-      experience: '3-5 Years',
-      city: 'Ahmedabad',
-      isVerified: true,
-      verificationStatus: 'verified',
-      aadhaarFrontImage: null,
-      aadhaarBackImage: null,
-      certificates: ['ITI Diploma in Plumbing'],
-    },
-    {
-      _id: 'wk0003',
-      name: 'Amit Singh',
-      profileImage: null,
-      skills: [{ skillId: 3, skillName: 'Carpenter' }],
-      experience: '1-3 Years',
-      city: 'Delhi',
-      isVerified: false,
-      verificationStatus: 'rejected',
-      aadhaarFrontImage: null,
-      aadhaarBackImage: null,
-      certificates: [],
-    },
-    {
-      _id: 'wk0004',
-      name: 'Vikram Yadav',
-      profileImage: null,
-      skills: [{ skillId: 4, skillName: 'Mason' }],
-      experience: '5+ Years',
-      city: 'Pune',
-      isVerified: false,
-      verificationStatus: 'pending',
-      aadhaarFrontImage: null,
-      aadhaarBackImage: null,
-      certificates: ['Construction Safety Certificate'],
-    },
-    {
-      _id: 'wk0005',
-      name: 'Pradeep Nair',
-      profileImage: null,
-      skills: [{ skillId: 5, skillName: 'Welder' }],
-      experience: '3-5 Years',
-      city: 'Chennai',
-      isVerified: true,
-      verificationStatus: 'verified',
-      aadhaarFrontImage: null,
-      aadhaarBackImage: null,
-      certificates: ['Welding Technology Diploma', 'Industrial Safety Certificate'],
-    },
-    {
-      _id: 'wk0006',
-      name: 'Rohit Sharma',
-      profileImage: null,
-      skills: [{ skillId: 6, skillName: 'Painter' }],
-      experience: '0-1 Year',
-      city: 'Hyderabad',
-      isVerified: false,
-      verificationStatus: 'pending',
-      aadhaarFrontImage: null,
-      aadhaarBackImage: null,
-      certificates: [],
-    },
-    {
-      _id: 'wk0007',
-      name: 'Deepak Joshi',
-      profileImage: null,
-      skills: [{ skillId: 7, skillName: 'Tile Fitter' }],
-      experience: '1-3 Years',
-      city: 'Jaipur',
-      isVerified: true,
-      verificationStatus: 'verified',
-      aadhaarFrontImage: null,
-      aadhaarBackImage: null,
-      certificates: ['Tiling & Flooring Certificate'],
-    },
-    {
-      _id: 'wk0008',
-      name: 'Sanjay Mehra',
-      profileImage: null,
-      skills: [{ skillId: 8, skillName: 'Civil Helper' }],
-      experience: '0-1 Year',
-      city: 'Kolkata',
-      isVerified: false,
-      verificationStatus: 'pending',
-      aadhaarFrontImage: null,
-      aadhaarBackImage: null,
-      certificates: [],
-    },
-  ];
-
-  const fetchStats = async () => {
-    // Using mock data — no backend call needed
-  };
 
   const fetchWorkers = async () => {
     try {
-      setWorkers(MOCK_WORKERS);
+      setLoading(true);
+      const { data } = await api.get('/admin/users', {
+        params: {
+          userType: 'worker',
+          status: 'all',
+          limit: 1000,
+        },
+      });
+
+      setWorkers(data.data || []);
     } catch (err) {
       console.error('Failed to load workers:', err);
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        navigate('/admin/login');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const getStatusBadgeClass = (worker) => {
-    if (worker.status === 'Verified' || worker.verified) return 'status-approved';
+    if (worker.status === 'Verified') return 'status-approved';
     if (worker.status === 'Pending') return 'status-pending';
     if (worker.status === 'Rejected') return 'status-rejected';
     return 'status-pending';
   };
 
   const getStatusText = (worker) => {
-    if (worker.status === 'Verified' || worker.verified) return 'APPROVED';
+    if (worker.status === 'Verified') return 'APPROVED';
     if (worker.status === 'Rejected') return 'REJECTED';
     return 'PENDING';
   };
 
   const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}'); // eslint-disable-line no-unused-vars
 
+  const approvedWorkers = workers.filter(worker => worker.status === 'Verified');
+  const ratedWorkers = approvedWorkers.filter(worker => typeof worker.adminRating === 'number');
+  const averageRating = ratedWorkers.length > 0
+    ? (ratedWorkers.reduce((sum, worker) => sum + worker.adminRating, 0) / ratedWorkers.length).toFixed(1)
+    : null;
+
   const filteredWorkers = workers.filter(worker => {
-    if (statusFilter === 'pending' && (worker.status === 'Verified' || worker.verified)) return false;
-    if (statusFilter === 'approved' && !(worker.status === 'Verified' || worker.verified)) return false;
-    if (roleFilter && !worker.role?.toLowerCase().includes(roleFilter.toLowerCase())) return false;
+    if (statusFilter === 'pending' && worker.status !== 'Pending') return false;
+    if (statusFilter === 'approved' && worker.status !== 'Verified') return false;
+    if (searchTerm && !`${worker.name} ${worker.role || ''} ${worker._id}`.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
 
@@ -197,7 +143,12 @@ export default function WorkerVerification() {
         <header className="verification-topbar">
           <div className="search-bar">
             <Search size={18} />
-            <input type="text" placeholder="Search workers, ID or trade..." />
+            <input
+              type="text"
+              placeholder="Search workers, ID or trade..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
           <div className="topbar-actions">
@@ -221,7 +172,7 @@ export default function WorkerVerification() {
               <h1>Worker Verification</h1>
               <p className="page-subtitle">Review and manage professional certifications for site personnel.</p>
             </div>
-            <button className="export-btn">
+            <button className="export-btn" onClick={handleExportCSV}>
               <Download size={18} />
               Export CSV
             </button>
@@ -247,8 +198,8 @@ export default function WorkerVerification() {
               transition={{ delay: 0.15 }}
             >
               <p className="stat-box-label">PENDING REVIEW</p>
-              <div className="stat-box-value">{workers.filter(w => w.status === 'Pending').length}</div>
-              <p className="stat-box-change warning">8 requires urgent action</p>
+              <div className="stat-box-value">{workers.filter(w => w.status === 'Pending').length.toLocaleString()}</div>
+              <p className="stat-box-change warning">{workers.filter(w => w.status === 'Pending').length} requires review</p>
             </motion.div>
 
             <motion.div
@@ -258,9 +209,9 @@ export default function WorkerVerification() {
               transition={{ delay: 0.2 }}
             >
               <p className="stat-box-label">APPROVED WORKERS</p>
-              <div className="stat-box-value">{workers.filter(w => w.status === 'Verified' || w.verified).length.toLocaleString()}</div>
+              <div className="stat-box-value">{approvedWorkers.length.toLocaleString()}</div>
               <div className="progress-bar">
-                <div className="progress-fill" style={{ width: '75%' }}></div>
+                <div className="progress-fill" style={{ width: approvedWorkers.length > 0 ? `${Math.min(100, (approvedWorkers.length / Math.max(1, workers.length)) * 100)}%` : '0%' }}></div>
               </div>
             </motion.div>
 
@@ -271,8 +222,13 @@ export default function WorkerVerification() {
               transition={{ delay: 0.25 }}
             >
               <p className="stat-box-label">AVG. RATING</p>
-              <div className="stat-box-value">4.8<span className="rating-sub">/5.0</span></div>
-              <p className="stat-box-change success">★ Based on 90+</p>
+              <div className="stat-box-value">
+                {averageRating || '—'}
+                <span className="rating-sub">/5.0</span>
+              </div>
+              <p className="stat-box-change success">
+                {ratedWorkers.length > 0 ? `★ Based on ${ratedWorkers.length} review${ratedWorkers.length === 1 ? '' : 's'}` : 'No ratings yet'}
+              </p>
             </motion.div>
           </div>
 
@@ -292,14 +248,6 @@ export default function WorkerVerification() {
                   </div>
                 )}
               </div>
-              {roleFilter && (
-                <div className="filter-pill">
-                  Role: {roleFilter}
-                  <button onClick={() => setRoleFilter('')}>
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
             </div>
             <div className="results-count">
               SHOWING {paginatedWorkers.length} OF {filteredWorkers.length}
@@ -347,14 +295,30 @@ export default function WorkerVerification() {
                     <td>{worker.experience || 'N/A'}</td>
                     <td>{worker.city || 'N/A'}</td>
                     <td>
-                      <div className="rating-cell">
-                        <Star size={14} fill="#fbbf24" stroke="#fbbf24" />
-                        <Star size={14} fill="#fbbf24" stroke="#fbbf24" />
-                        <Star size={14} fill="#fbbf24" stroke="#fbbf24" />
-                        <Star size={14} fill="#fbbf24" stroke="#fbbf24" />
-                        <Star size={14} fill="#e5e7eb" stroke="#e5e7eb" />
-                        <span>4.5</span>
-                      </div>
+                      {worker.adminRating ? (
+                        <div className="rating-cell">
+                          {[1, 2, 3, 4, 5].map((star) => {
+                            const rating = parseFloat(worker.adminRating);
+                            const isFilled = star <= Math.floor(rating);
+                            const isHalfFilled = star > Math.floor(rating) && star <= Math.ceil(rating) && rating % 1 >= 0.5;
+                            
+                            return (
+                              <Star
+                                key={star}
+                                size={14}
+                                fill={isFilled ? '#fbbf24' : isHalfFilled ? '#fbbf24' : '#e5e7eb'}
+                                stroke={isFilled || isHalfFilled ? '#fbbf24' : '#e5e7eb'}
+                                style={{
+                                  opacity: isHalfFilled ? 0.6 : 1
+                                }}
+                              />
+                            );
+                          })}
+                          <span>{parseFloat(worker.adminRating).toFixed(1)}/5</span>
+                        </div>
+                      ) : (
+                        <span className="no-rating">—</span>
+                      )}
                     </td>
                     <td>
                       <button className="view-files-btn">

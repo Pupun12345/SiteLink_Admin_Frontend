@@ -103,25 +103,24 @@ export default function Sidebar({ onLogout }) {
   }, [location.pathname]);
 
   const handleLogout = () => {
-    // Clear admin authentication data
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
-    
-    // Call onLogout callback if provided
+
     if (onLogout) {
       onLogout();
     }
     
-    // Navigate to admin login
     navigate('/admin/login');
   };
 
   return (
     <aside className="app-sidebar">
       <div className="sidebar-brand">
-        <div className="brand-icon" />
+        <div className="brand-icon">
+          <img src="/SiteLinkIcon.png" alt="SiteLink Logo" />
+        </div>
         <div className="brand-text">
-          <div className="brand-name">SiteLink</div>
+          <div className="brand">SiteLink</div>
           <div className="brand-sub">Admin Console</div>
         </div>
       </div>
