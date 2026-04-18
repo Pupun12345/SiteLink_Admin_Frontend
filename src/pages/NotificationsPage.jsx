@@ -74,7 +74,7 @@ export default function NotificationsPage() {
   });
   const [creating, setCreating] = useState(false);
 
-  const adminUser = useMemo(() => ({ name: 'Admin' }), []);
+  const adminUser = useMemo(() => JSON.parse(localStorage.getItem('adminUser') || '{}'), []);
 
   // Fetch notifications
   const fetchNotifications = async (page = 1, search = '', tabFilter = activeTab) => {

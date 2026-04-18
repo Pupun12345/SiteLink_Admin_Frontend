@@ -40,7 +40,35 @@ export default function PlatformSettings() {
     canAccessPlatformSettings: true,
   });
 
+
+  const adminUser = localStorage.getItem('adminUser');
   useEffect(() => {
+    if (!adminUser) return;
+    hasPermission('canAccessPlatformSettings').then(hasAccess => {
+      if (!hasAccess) {
+        showMessage('error', 'You do not have permission to access platform settings');
+        setTimeout(() => redirect('/admin/dashboard'), 2000);
+      } else {
+        setPermissions(prev => ({
+          ...prev,
+          canAccessPlatformSettings: true
+        }));
+      }
+    });
+  }, [adminUser]);
+
+
+  useEffect(() => {
+    const savedWorkerRules = localStorage.getItem('workerRules');
+    const savedVendorRules = localStorage.getItem('vendorRules');
+    const savedNotifications = localStorage.getItem('notifications');
+    const savedLanguage = localStorage.getItem('language');
+
+    if (savedWorkerRules) setWorkerRules(JSON.parse(savedWorkerRules));
+    if (savedVendorRules) setVendorRules(JSON.parse(savedVendorRules));
+    if (savedNotifications) setNotifications(JSON.parse(savedNotifications));
+    if (savedLanguage) setLanguage(savedLanguage);
+
     fetchSettings();
   }, []);
 

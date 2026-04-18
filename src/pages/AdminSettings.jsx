@@ -222,16 +222,23 @@ export default function AdminSettings() {
         formData.append('profileImage', profileImageFile);
       }
 
+
       const response = await api.put('/profile/admin/edit', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
 
-      if (response.data.message) {
+      console.log('Profile update response:', response.data);
+
+      if (response.data.success) {
         showMessage('success', 'Profile updated successfully!');
         setProfileImageFile(null);
-        fetchProfile();
+        
+        //Reloading the page
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       }
     } catch (error) {
       console.error('Error updating profile:', error);

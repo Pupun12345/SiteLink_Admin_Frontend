@@ -99,6 +99,7 @@ export default function Sidebar({ onLogout }) {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
 
     if (onLogout) {
       onLogout();

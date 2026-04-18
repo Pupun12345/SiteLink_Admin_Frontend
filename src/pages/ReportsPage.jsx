@@ -71,7 +71,7 @@ export default function ReportsPage() {
     }, {})
   );
 
-  const adminUser = useMemo(() => ({ name: 'Admin' }), []);
+  const adminUser = useMemo(() => JSON.parse(localStorage.getItem('adminUser') || '{}'), []);
 
   const updateCardState = (cardKey, field, value) => {
     setFormState((prev) => ({
