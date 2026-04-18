@@ -27,17 +27,45 @@ import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
+  const [chartData, setChartData] = useState(null);
+  const [profile, setProfile] = useState({ name: '', email: '', imageUrl: '' });
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState("1M");
   const [selectedPeriod, setSelectedPeriod] = useState("1M");
 
   const navigate = useNavigate();
 
-  const adminUser = JSON.parse(localStorage.getItem("adminUser") || "{}");
+  const fetchAdminProfile = async () => {
+    try {
+      const response = await api.get('/profile/me');
+      if (response.data.user) {
+        const user = response.data.user;
+        const imageUrl = user.profileImage 
+          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}` 
+          : `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`;
+        setProfile({
+          name: user.name || '',
+          email: user.email || '',
+          imageUrl: imageUrl
+        });
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchStats();
+    fetchAdminProfile();
   }, []);
+
+  useEffect(() => {
+    if (selectedPeriod) {
+      fetchChartData();
+    }
+  }, [selectedPeriod]);
 
   const fetchStats = async () => {
     try {
@@ -53,9 +81,17 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchChartData = async () => {
+    try {
+      const { data } = await api.get(`/stats/chart-data?period=${selectedPeriod}`);
+      setChartData(data.data);
+    } catch (err) {
+      console.error("Failed to fetch chart data:", err);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminUser");
     navigate("/admin/login");
   };
 
@@ -72,6 +108,7 @@ export default function AdminDashboard() {
         : "↗ 8% from last week",
       icon: Users,
       accent: "#4f46e5",
+      path: "/admin/workers",
     },
     {
       title: "Total Vendors",
@@ -81,6 +118,7 @@ export default function AdminDashboard() {
         : "↗ 3% from last week",
       icon: ShoppingBag,
       accent: "#0ea5e9",
+      path: "/admin/vendors",
     },
     {
       title: "Pending Verifications",
@@ -109,8 +147,8 @@ export default function AdminDashboard() {
     {
       title: "Total Revenue",
       value: overview?.totalRevenue
-        ? `$${overview.totalRevenue.toLocaleString()}`
-        : "$124,000",
+        ? `₹${overview.totalRevenue.toLocaleString()}`
+        : "₹124,000",
       delta: "↗ 12% this month",
       icon: BarChart2,
       accent: "#0ea5e9",
@@ -145,10 +183,6 @@ export default function AdminDashboard() {
           </div>
 
           <div className="header-right">
-            <button className="primary-btn invite-btn">
-              <UserPlus size={18} />
-              Invite User
-            </button>
 
             <button className="icon-btn" onClick={() => navigate('/admin/notifications')}>
               <Bell size={18} />
@@ -157,13 +191,12 @@ export default function AdminDashboard() {
             <div className="user-menu">
               <div className="user-avatar">
                 <img
-                  src={`https://ui-avatars.com/api/?name=${adminUser.name || "Admin"
-                    }&background=3b82f6&color=fff`}
+                  src={`${profile.imageUrl}`}
                   alt="Admin"
                 />
               </div>
               <div className="user-info">
-                <p className="user-name">{adminUser.name || "Admin"}</p>
+                <p className="user-name">{profile.name || "Admin"}</p>
                 <p className="user-role">Super Admin</p>
               </div>
             </div>
@@ -180,7 +213,7 @@ export default function AdminDashboard() {
             <FileText size={14} />
             Reports
           </button>
-          {["1D", "5D", "1M", "1Y"].map((period) => (
+           {["1D", "5D", "1M", "1Y"].map((period) => (
             <button
               key={period}
               className={`period-btn ${selectedPeriod === period ? "active" : ""
@@ -198,9 +231,8 @@ export default function AdminDashboard() {
             <button
               key={card.title}
               type="button"
-              className={`stat-card ${card.highlight ? "highlight" : ""} ${
-                card.path ? "stat-card-clickable" : ""
-              }`}
+              className={`stat-card ${card.highlight ? "highlight" : ""} ${card.path ? "stat-card-clickable" : ""
+                }`}
               onClick={() => card.path && navigate(card.path)}
               disabled={!card.path}
             >
@@ -237,7 +269,25 @@ export default function AdminDashboard() {
             <div className="chart-header">
               <h3>Worker Growth</h3>
             </div>
-            <div className="chart-placeholder chart-line" />
+            <div className="chart-placeholder chart-line" style={{ position: 'relative' }}>
+              {chartData?.workerGrowth && chartData.workerGrowth.length > 1 && (
+                <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 10 }} viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <polyline
+                    points={chartData.workerGrowth.map((d, i) => {
+                      const maxValue = Math.max(...chartData.workerGrowth.map(p => p.value), 1);
+                      const x = (i / Math.max(chartData.workerGrowth.length - 1, 1)) * 100;
+                      const y = 100 - ((d.value / maxValue) * 60 + 20);
+                      return `${x},${y}`;
+                    }).join(' ')}
+                    fill="none"
+                    stroke="#2f63db"
+                    strokeWidth="3"
+                    vectorEffect="non-scaling-stroke"
+                    opacity="1"
+                  />
+                </svg>
+              )}
+            </div>
           </motion.div>
 
           <motion.div
@@ -248,7 +298,36 @@ export default function AdminDashboard() {
             <div className="chart-header">
               <h3>Vendor Registrations</h3>
             </div>
-            <div className="chart-placeholder chart-bars" />
+            <div className="chart-placeholder chart-bars">
+              {chartData?.vendorRegistrations && chartData.vendorRegistrations.length > 0 ? (
+                <>
+                  {chartData.vendorRegistrations.slice(0, 6).map((d, i, arr) => {
+                    const maxValue = Math.max(...arr.map(p => p.value), 1);
+                    const height = Math.max((d.value / maxValue * 100), 10);
+                    const isMiddle = i === Math.floor(arr.length / 2);
+                    const totalBars = arr.length;
+                    const barWidth = 12;
+                    const totalWidth = totalBars * barWidth + (totalBars - 1) * 4;
+                    const leftPosition = 8 + ((84 - totalWidth) / 2) + (i * (barWidth + 4));
+                    
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          position: 'absolute',
+                          left: `${leftPosition}%`,
+                          bottom: '16%',
+                          width: `${barWidth}%`,
+                          height: `${height * 0.72}%`,
+                          background: isMiddle ? '#2f63db' : '#e9eef7',
+                          borderRadius: '8px 8px 0 0'
+                        }}
+                      />
+                    );
+                  })}
+                </>
+              ) : null}
+            </div>
           </motion.div>
 
           <motion.div
@@ -259,7 +338,25 @@ export default function AdminDashboard() {
             <div className="chart-header">
               <h3>Monthly Revenue</h3>
             </div>
-            <div className="chart-placeholder chart-line" />
+            <div className="chart-placeholder chart-line" style={{ position: 'relative' }}>
+              {chartData?.monthlyRevenue && chartData.monthlyRevenue.length > 1 && (
+                <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 10 }} viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <polyline
+                    points={chartData.monthlyRevenue.map((d, i) => {
+                      const maxValue = Math.max(...chartData.monthlyRevenue.map(p => p.value), 1);
+                      const x = (i / Math.max(chartData.monthlyRevenue.length - 1, 1)) * 100;
+                      const y = 100 - ((d.value / maxValue) * 60 + 20);
+                      return `${x},${y}`;
+                    }).join(' ')}
+                    fill="none"
+                    stroke="#2f63db"
+                    strokeWidth="3"
+                    vectorEffect="non-scaling-stroke"
+                    opacity="1"
+                  />
+                </svg>
+              )}
+            </div>
           </motion.div>
 
           <motion.div
@@ -273,7 +370,7 @@ export default function AdminDashboard() {
 
             <div className="chart-placeholder chart-donut">
               <div className="chart-donut-inner" />
-              <div className="chart-donut-label">14.7k</div>
+              <div className="chart-donut-label">{chartData?.userDistribution?.total || '0'}</div>
             </div>
           </motion.div>
         </div>

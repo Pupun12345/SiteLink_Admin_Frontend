@@ -32,7 +32,7 @@
   width: 64px;
   height: 64px;
   border-radius: 16px;
-  background: #3b82f6;
+  background: #3c4c66;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -44,7 +44,7 @@
   font-size: 32px;
   font-weight: 700;
   margin: 0 0 8px 0;
-  color: #f59e0b;
+  color: #e21c1c;
   letter-spacing: -0.5px;
 }
 

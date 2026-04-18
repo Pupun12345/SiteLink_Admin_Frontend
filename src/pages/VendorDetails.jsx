@@ -16,7 +16,7 @@ export default function VendorDetails() {
   const [showReject, setShowReject] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showRating, setShowRating] = useState(false);
-  const [rating, setRating] = useState(0);
+  const [rating, setRating] = useState(0.0);
   const [ratingComment, setRatingComment] = useState('');
   const toast = useToast();
 
@@ -30,7 +30,7 @@ export default function VendorDetails() {
       setError(err.response?.data?.message || 'Unable to load vendor');
       if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
+        
         navigate('/admin/login');
       }
     } finally {
@@ -79,8 +79,8 @@ export default function VendorDetails() {
   };
 
   const handleRateVendor = async () => {
-    if (rating === 0) {
-      toast.showToast('Please select a rating', { type: 'error' });
+    if (rating < 0.1 || rating > 5.0) {
+      toast.showToast('Please choose a rating between 0.1 and 5.0', { type: 'error' });
       return;
     }
 
@@ -88,21 +88,32 @@ export default function VendorDetails() {
 
     setIsProcessing(true);
     try {
-      console.log('Submitting rating:', { rating, comment: ratingComment });
-      const response = await api.put(`/admin/vendors/${id}/rate`, { rating, comment: ratingComment });
-      console.log('Rating response:', response);
-      setShowRating(false);
-      setRating(0);
-      setRatingComment('');
-      await fetchVendor();
-      toast.showToast('Vendor rated successfully', { type: 'success' });
+      const response = await api.put(`/admin/users/${id}/rate`, { 
+        rating: parseFloat(rating.toFixed(1)), 
+        comment: ratingComment 
+      });
       
-      // Trigger a refresh in the parent component by storing a timestamp
-      sessionStorage.setItem('vendorListRefresh', Date.now().toString());
-      window.dispatchEvent(new Event('vendorRated'));
+      if (response.data.success) {
+        setShowRating(false);
+        setRating(0.0);
+        setRatingComment('');
+        await fetchVendor();
+        toast.showToast('Vendor rated successfully', { type: 'success' });
+        
+        sessionStorage.setItem('vendorListRefresh', Date.now().toString());
+        window.dispatchEvent(new Event('vendorRated'));
+      } else {
+        throw new Error(response.data.message || 'Rating failed');
+      }
     } catch (err) {
-      console.error('Rating error:', err.response?.data || err.message);
-      toast.showToast(err.response?.data?.message || 'Rating failed', { type: 'error' });
+      if (err.response?.status === 401) {
+        toast.showToast('Authentication required. Please login again.', { type: 'error' });
+        localStorage.removeItem('adminToken');
+        
+        navigate('/admin/login');
+      } else {
+        toast.showToast(err.response?.data?.message || err.message || 'Rating failed', { type: 'error' });
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -408,54 +419,147 @@ export default function VendorDetails() {
           </div>
         )}
 
-        <div className={`modal-overlay ${showReject ? 'visible' : ''}`} onClick={() => setShowReject(false)}>
-          <div className="reject-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Rejection Reason</h3>
-            <textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Enter reason for rejection..."
-            />
-            <div className="reject-actions">
-              <button className="cancel" onClick={() => setShowReject(false)}>
-                Cancel
-              </button>
-              <button className="confirm" onClick={handleReject}>
-                Confirm Rejection
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className={`modal-overlay ${showRating ? 'visible' : ''}`} onClick={() => setShowRating(false)}>
-          <div className="rating-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Rate Vendor</h3>
-            <div className="rating-stars">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  className={`star ${rating >= star ? 'active' : ''}`}
-                  onClick={() => setRating(star)}
-                >
-                  ⭐
+        {showReject && (
+          <div 
+            className="modal-overlay visible"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowReject(false);
+              }
+            }}
+          >
+            <div className="reject-modal">
+              <h3>Rejection Reason</h3>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Enter reason for rejection..."
+              />
+              <div className="reject-actions">
+                <button className="cancel" onClick={() => setShowReject(false)}>
+                  Cancel
                 </button>
-              ))}
-            </div>
-            <textarea
-              value={ratingComment}
-              onChange={(e) => setRatingComment(e.target.value)}
-              placeholder="Add optional comment..."
-            />
-            <div className="rating-actions">
-              <button className="cancel" onClick={() => setShowRating(false)}>
-                Cancel
-              </button>
-              <button className="confirm" onClick={handleRateVendor}>
-                Submit Rating
-              </button>
+                <button className="confirm" onClick={handleReject}>
+                  Confirm Rejection
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {showRating && (
+          <div 
+            className="modal-overlay visible"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowRating(false);
+              }
+            }}
+          >
+            <div className="rating-modal-container">
+              <div className="rating-modal-header">
+                <h3>Rate Vendor</h3>
+                <button 
+                  className="rating-modal-close"
+                  type="button"
+                  onClick={() => setShowRating(false)}
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="rating-modal-body">
+                <p className="rating-modal-description">
+                  Rate <strong>{vendor?.companyName}</strong> based on their profile, documentation, and business credentials.
+                </p>
+                
+                <div className="rating-input-section">
+                  <div className="rating-display">
+                    <span className="rating-label">Current Rating:</span>
+                    <span className="rating-value">{rating.toFixed(1)}/5.0</span>
+                  </div>
+                  
+                  <div className="rating-stars-container">
+                    {[1, 2, 3, 4, 5].map(starValue => {
+                      const isFilled = starValue <= Math.floor(rating);
+                      const isHalfFilled = starValue > Math.floor(rating) && starValue <= Math.ceil(rating) && rating % 1 >= 0.5;
+                      
+                      return (
+                        <button
+                          key={starValue}
+                          type="button"
+                          className={`rating-star ${isFilled || isHalfFilled ? 'active' : ''}`}
+                          onClick={() => setRating(starValue)}
+                        >
+                          ⭐
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="rating-slider-section">
+                    <input
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="0.1"
+                      value={rating}
+                      onChange={(e) => setRating(parseFloat(e.target.value))}
+                      className="rating-range-input"
+                    />
+                    <div className="rating-scale-labels">
+                      <span className="scale-label">0</span>
+                      <span className="scale-label">1</span>
+                      <span className="scale-label">2</span>
+                      <span className="scale-label">3</span>
+                      <span className="scale-label">4</span>
+                      <span className="scale-label">5</span>
+                    </div>
+                    <div className="rating-decimal-display">
+                      Use slider for precise rating: {rating.toFixed(1)}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="rating-comment-section">
+                  <label htmlFor="vendor-rating-comment" className="comment-label">
+                    Additional Comments (Optional)
+                  </label>
+                  <textarea
+                    id="vendor-rating-comment"
+                    className="rating-textarea"
+                    placeholder="Share your thoughts about this vendor's profile, credentials, or documentation..."
+                    value={ratingComment}
+                    onChange={(e) => setRatingComment(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+              </div>
+              
+              <div className="rating-modal-footer">
+                <button 
+                  type="button"
+                  className="rating-btn rating-btn-cancel"
+                  onClick={() => {
+                    setShowRating(false);
+                    setRating(0.0);
+                    setRatingComment('');
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button"
+                  className="rating-btn rating-btn-submit"
+                  onClick={handleRateVendor}
+                  disabled={isProcessing || rating < 0.1}
+                >
+                  {isProcessing ? 'Submitting...' : 'Submit Rating'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
