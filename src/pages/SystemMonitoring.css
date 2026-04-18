@@ -278,14 +278,17 @@
 }
 
 .traffic-bars span {
-  background: #dfe7f6;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
   border-radius: 4px 4px 0 0;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
 }
 
 .traffic-bars span:hover {
-  background: #2f63db;
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+  transform: translateY(-2px);
 }
 
 .traffic-summary {

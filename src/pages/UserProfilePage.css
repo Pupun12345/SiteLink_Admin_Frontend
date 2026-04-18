@@ -73,8 +73,7 @@ button {
 
 .app-root {
   display: flex;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
 }
 
 .sidebar {
@@ -84,6 +83,11 @@ button {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 100;
 }
 
 .sidebar-logo {
@@ -195,9 +199,10 @@ button {
 .main-content {
   flex: 1;
   min-width: 0;
+  margin-left: var(--sidebar-w);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  min-height: 100vh;
 }
 
 
@@ -292,6 +297,7 @@ button {
 
 
 .page-body {
+  flex: 1;
   padding: 28px;
   max-width: 1280px;
   width: 100%;
@@ -811,6 +817,10 @@ button {
 @media (max-width: 640px) {
   .sidebar {
     display: none;
+  }
+
+  .main-content {
+    margin-left: 0;
   }
 
   .page-body {

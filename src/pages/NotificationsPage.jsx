@@ -53,6 +53,9 @@ export default function NotificationsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [filters, setFilters] = useState({
     status: 'all',
@@ -66,18 +69,17 @@ export default function NotificationsPage() {
     category: 'info',
     priority: 'medium',
     recipientType: 'admin',
-    actionUrl: '',
     actionText: '',
     expiresAt: ''
   });
   const [creating, setCreating] = useState(false);
 
-  const adminUser = useMemo(() => JSON.parse(localStorage.getItem('adminUser') || '{}'), []);
+  const adminUser = useMemo(() => ({ name: 'Admin' }), []);
 
   // Fetch notifications
   const fetchNotifications = async (page = 1, search = '', tabFilter = activeTab) => {
     try {
-      setLoading(page === 1); // Only show loading for first page
+      setLoading(page === 1);
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '10',
@@ -86,7 +88,6 @@ export default function NotificationsPage() {
         priority: filters.priority
       });
 
-      // Map tab to type filter
       if (tabFilter !== 'All Notifications') {
         if (tabFilter === 'Verifications') {
           params.set('type', 'Verification');
@@ -113,7 +114,6 @@ export default function NotificationsPage() {
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
       if (err.response?.status === 404) {
-        // No notifications found - this is normal
         setNotifications([]);
         setStats({});
         setError(null);
@@ -207,16 +207,14 @@ export default function NotificationsPage() {
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-    setCurrentPage(1); // Reset to first page when searching
+    setCurrentPage(1); 
     
-    // Debounce search
     clearTimeout(window.searchTimeout);
     window.searchTimeout = setTimeout(() => {
       fetchNotifications(1, value, activeTab);
     }, 500);
   };
 
-  // Handle tab change
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setCurrentPage(1);
@@ -224,7 +222,6 @@ export default function NotificationsPage() {
     fetchNotifications(1, '', tab);
   };
 
-  // Handle page change
   const handlePageChange = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
@@ -249,7 +246,6 @@ export default function NotificationsPage() {
     try {
       setCreating(true);
       
-      // Prepare the data
       const notificationData = {
         title: createForm.title.trim(),
         message: createForm.message.trim(),
@@ -259,10 +255,6 @@ export default function NotificationsPage() {
         recipientType: createForm.recipientType
       };
 
-      // Add optional fields if they exist
-      if (createForm.actionUrl.trim()) {
-        notificationData.actionUrl = createForm.actionUrl.trim();
-      }
       if (createForm.actionText.trim()) {
         notificationData.actionText = createForm.actionText.trim();
       }
@@ -282,7 +274,6 @@ export default function NotificationsPage() {
           category: 'info',
           priority: 'medium',
           recipientType: 'admin',
-          actionUrl: '',
           actionText: '',
           expiresAt: ''
         });
@@ -300,7 +291,6 @@ export default function NotificationsPage() {
     }
   };
 
-  // Close modal - simplified
   const closeCreateModal = () => {
     if (creating) return;
     setShowCreateModal(false);
@@ -311,13 +301,11 @@ export default function NotificationsPage() {
       category: 'info',
       priority: 'medium',
       recipientType: 'admin',
-      actionUrl: '',
       actionText: '',
       expiresAt: ''
     });
   };
 
-  // Simple escape key handler
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape' && showCreateModal && !creating) {
@@ -331,7 +319,6 @@ export default function NotificationsPage() {
     }
   }, [showCreateModal, creating]);
 
-  // Format date
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
@@ -350,7 +337,6 @@ export default function NotificationsPage() {
     }
   };
 
-  // Get priority icon
   const getPriorityIcon = (priority) => {
     if (!priority) return null;
     const config = priorityConfig[priority.toLowerCase()] || priorityConfig.medium;
@@ -360,30 +346,39 @@ export default function NotificationsPage() {
 
   // View notification details
   const viewNotificationDetails = (notification) => {
-    const details = [
-      `Title: ${notification.title}`,
-      `Message: ${notification.message}`,
-      `Type: ${notification.type}`,
-      `Priority: ${notification.priority}`,
-      `Status: ${notification.status}`,
-      `Created: ${formatDate(notification.createdAt)}`
-    ];
-    
-    if (notification.actionUrl) {
-      details.push(`Action URL: ${notification.actionUrl}`);
-    }
-    if (notification.actionText) {
-      details.push(`Action Text: ${notification.actionText}`);
-    }
-    
-    alert(details.join('\n\n'));
+    setSelectedNotification(notification);
+    setShowViewModal(true);
   };
 
-  // Initial load and cleanup
+  // Show delete confirmation
+  const showDeleteConfirmation = (notification) => {
+    setSelectedNotification(notification);
+    setShowDeleteModal(true);
+  };
+
+  // Delete notification
+  const confirmDeleteNotification = async () => {
+    if (!selectedNotification) return;
+    
+    try {
+      const response = await api.delete(`/notifications/${selectedNotification._id}`);
+      if (response.data.success) {
+        await fetchNotifications(currentPage, searchTerm, activeTab);
+        setShowDeleteModal(false);
+        setSelectedNotification(null);
+      } else {
+        alert('Failed to delete notification: ' + (response.data.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to delete notification:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Unknown error occurred';
+      alert('Failed to delete notification: ' + errorMessage);
+    }
+  };
+
   useEffect(() => {
     fetchNotifications();
     
-    // Cleanup timeout on unmount
     return () => {
       if (window.searchTimeout) {
         clearTimeout(window.searchTimeout);
@@ -391,7 +386,6 @@ export default function NotificationsPage() {
     };
   }, []);
 
-  // Auto-refresh notifications every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       if (!loading && !creating && !refreshing) {
@@ -445,9 +439,6 @@ export default function NotificationsPage() {
               title="Generate system notifications"
             >
               <RefreshCw size={15} className={refreshing ? 'spinning' : ''} />
-            </button>
-            <button type="button" className="mini-icon-btn" aria-label="Help">
-              <CircleHelp size={15} />
             </button>
           </div>
         </header>
@@ -589,7 +580,7 @@ export default function NotificationsPage() {
                             </button>
                             <button 
                               type="button" 
-                              onClick={() => deleteNotification(item._id)}
+                              onClick={() => showDeleteConfirmation(item)}
                               title="Delete notification"
                             >
                               <Trash2 size={14} />
@@ -793,15 +784,6 @@ export default function NotificationsPage() {
                 </div>
 
                 <div className="notification-form-row">
-                  <div className="notification-form-group">
-                    <label>Action URL (Optional)</label>
-                    <input
-                      type="url"
-                      value={createForm.actionUrl}
-                      onChange={(e) => handleCreateFormChange('actionUrl', e.target.value)}
-                      placeholder="https://example.com/action"
-                    />
-                  </div>
                   
                   <div className="notification-form-group">
                     <label>Action Text (Optional)</label>
@@ -839,6 +821,175 @@ export default function NotificationsPage() {
                   disabled={creating || !createForm.title.trim() || !createForm.message.trim()}
                 >
                   {creating ? 'Creating...' : 'Create Notification'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View Notification Modal */}
+        {showViewModal && selectedNotification && (
+          <div className="notification-modal-backdrop" onClick={() => setShowViewModal(false)}>
+            <div className="notification-view-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="notification-modal-header">
+                <div className="view-modal-title">
+                  <div className="notification-type-badge">
+                    {(() => {
+                      const config = typeConfig[selectedNotification.type] || typeConfig.System;
+                      const TypeIcon = config.icon;
+                      return (
+                        <span className={`type-icon ${config.className}`}>
+                          <TypeIcon size={16} />
+                        </span>
+                      );
+                    })()}
+                    {selectedNotification.type}
+                  </div>
+                  <div className={`priority-badge ${selectedNotification.priority}`}>
+                    {getPriorityIcon(selectedNotification.priority)}
+                    {selectedNotification.priority}
+                  </div>
+                </div>
+                <button 
+                  className="notification-modal-close"
+                  onClick={() => setShowViewModal(false)}
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="notification-view-body">
+                <div className="view-section">
+                  <h4>{selectedNotification.title}</h4>
+                  <p className="notification-message">{selectedNotification.message}</p>
+                </div>
+
+                <div className="view-details-grid">
+                  <div className="view-detail">
+                    <label>Status</label>
+                    <span className={`status-chip ${selectedNotification.status.toLowerCase()}`}>
+                      {selectedNotification.status}
+                    </span>
+                  </div>
+                  <div className="view-detail">
+                    <label>Category</label>
+                    <span className={`category-chip ${selectedNotification.category}`}>
+                      {selectedNotification.category}
+                    </span>
+                  </div>
+                  <div className="view-detail">
+                    <label>Created</label>
+                    <span>{formatDate(selectedNotification.createdAt)}</span>
+                  </div>
+                  <div className="view-detail">
+                    <label>Recipient Type</label>
+                    <span>{selectedNotification.recipientType}</span>
+                  </div>
+                </div>
+
+                {( selectedNotification.actionText) && (
+                  <div className="view-section">
+                    <h5>Action Details</h5>
+                    {selectedNotification.actionText && (
+                      <div className="view-detail">
+                        <label>Action Text</label>
+                        <span>{selectedNotification.actionText}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {selectedNotification.metadata && Object.keys(selectedNotification.metadata).length > 0 && (
+                  <div className="view-section">
+                    <h5>Additional Information</h5>
+                    <div className="metadata-grid">
+                      {Object.entries(selectedNotification.metadata).map(([key, value]) => (
+                        <div key={key} className="view-detail">
+                          <label>{key}</label>
+                          <span>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="notification-modal-footer">
+                {selectedNotification.status === 'Unread' && (
+                  <button 
+                    className="notification-btn-mark-read"
+                    onClick={() => {
+                      markAsRead(selectedNotification._id);
+                      setShowViewModal(false);
+                    }}
+                  >
+                    <CheckCircle size={16} />
+                    Mark as Read
+                  </button>
+                )}
+                <button 
+                  className="notification-btn-cancel"
+                  onClick={() => setShowViewModal(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && selectedNotification && (
+          <div className="notification-modal-backdrop" onClick={() => setShowDeleteModal(false)}>
+            <div className="notification-delete-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="delete-modal-header">
+                <div className="delete-icon">
+                  <Trash2 size={24} />
+                </div>
+                <h3>Delete Notification</h3>
+              </div>
+              
+              <div className="delete-modal-body">
+                <p>Are you sure you want to delete this notification?</p>
+                <div className="notification-preview">
+                  <div className="preview-header">
+                    <span className={`type-icon ${(typeConfig[selectedNotification.type] || typeConfig.System).className}`}>
+                      {(() => {
+                        const config = typeConfig[selectedNotification.type] || typeConfig.System;
+                        const TypeIcon = config.icon;
+                        return <TypeIcon size={14} />;
+                      })()}
+                    </span>
+                    <strong>{selectedNotification.title}</strong>
+                  </div>
+                  <p className="preview-message">{selectedNotification.message}</p>
+                  <div className="preview-meta">
+                    <span className={`priority-text ${selectedNotification.priority}`}>
+                      {selectedNotification.priority} priority
+                    </span>
+                    <span>•</span>
+                    <span>{formatDate(selectedNotification.createdAt)}</span>
+                  </div>
+                </div>
+                <p className="delete-warning">
+                  <AlertTriangle size={16} />
+                  This action cannot be undone.
+                </p>
+              </div>
+              
+              <div className="notification-modal-footer">
+                <button 
+                  className="notification-btn-cancel"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="notification-btn-delete"
+                  onClick={confirmDeleteNotification}
+                >
+                  <Trash2 size={16} />
+                  Delete Notification
                 </button>
               </div>
             </div>

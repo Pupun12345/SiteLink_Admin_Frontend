@@ -448,6 +448,50 @@ img { display: block; }
   border-radius: var(--radius-md);
   background: url('https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&q=80&w=800') center/cover;
   border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.map-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.map-thumb:hover .map-overlay {
+  opacity: 1;
+}
+
+.view-map-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--surface);
+  color: var(--primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-map-btn:hover {
+  background: var(--primary);
+  color: var(--surface);
+}
+
+.view-map-btn .material-symbols-outlined {
+  font-size: 18px;
 }
 
 @media (min-width: 700px) {
@@ -589,6 +633,32 @@ img { display: block; }
   background: var(--bg);
   color: var(--text-secondary);
   border: 1px solid var(--border);
+}
+
+.status-badge.hired {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.status-badge.rejected {
+  background: var(--red-bg);
+  color: var(--red-text);
+}
+
+.job-badge.filled {
+  background: var(--blue-bg);
+  color: var(--blue-text);
+}
+
+.job-badge.closed {
+  background: var(--bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.job-badge.cancelled {
+  background: var(--red-bg);
+  color: var(--red-text);
 }
 
 /* ── View All ── */

@@ -35,6 +35,8 @@ export default function WorkerDetail() {
   const [error, setError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showApprovalConfirm, setShowApprovalConfirm] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState(0.0);
   const [ratingComment, setRatingComment] = useState('');
@@ -105,14 +107,14 @@ export default function WorkerDetail() {
       setError(err.response?.data?.message || err.message || 'Unable to load worker');
       if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
+        
         navigate('/admin/login');
       }
     } finally {
       setLoading(false);
     }
   };
-  const handleApprove = async () => {
+  const handleApprove = () => {
     setShowApprovalConfirm(true);
   };
 
@@ -134,15 +136,24 @@ export default function WorkerDetail() {
     }
   };
 
-  const handleReject = async () => {
-    const reason = prompt('Please provide a reason for rejection:');
-    if (!reason?.trim()) return;
+  const handleReject = () => {
+    setShowRejectModal(true);
+    setRejectReason('');
+  };
+
+  const confirmReject = async () => {
+    if (!rejectReason.trim()) {
+      toast.showToast('Please provide a reason for rejection', { type: 'error' });
+      return;
+    }
     if (isProcessing) return;
     setIsProcessing(true);
     try {
-      await api.put(`/admin/workers/${id}/reject`, { reason });
+      await api.put(`/admin/workers/${id}/reject`, { reason: rejectReason });
       await fetchWorkerDetails();
       toast.showToast('Worker rejected successfully', { type: 'success' });
+      setShowRejectModal(false);
+      setRejectReason('');
       navigate('/admin/workers');
     } catch (err) {
       toast.showToast(err.response?.data?.message || 'Rejection failed', { type: 'error' });
@@ -179,7 +190,7 @@ export default function WorkerDetail() {
       if (err.response?.status === 401) {
         toast.showToast('Authentication required. Please login again.', { type: 'error' });
         localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
+        
         navigate('/admin/login');
       } else {
         toast.showToast(err.response?.data?.message || err.message || 'Rating failed', { type: 'error' });
@@ -553,33 +564,24 @@ export default function WorkerDetail() {
         </div>
 
         {showApprovalConfirm && (
-          <div className="modal-overlay" onClick={(e) => {
-            e.stopPropagation();
-            setShowApprovalConfirm(false);
-          }}>
-            <div className="approval-modal" onClick={(e) => e.stopPropagation()}>
-              <h3>Approve Worker</h3>
-              <p className="approval-description">
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+            <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '500px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Approve Worker</h3>
+              <p style={{ margin: '0 0 24px 0', fontSize: '16px', color: '#6b7280', lineHeight: '1.6' }}>
                 Are you sure you want to approve <strong>{worker.name}</strong>? 
                 This action will verify the worker and allow them to receive job assignments.
               </p>
-              <div className="approval-actions">
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button 
-                  className="cancel" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowApprovalConfirm(false);
-                  }}
+                  onClick={() => setShowApprovalConfirm(false)}
+                  style={{ padding: '10px 24px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
                 >
                   No, Cancel
                 </button>
                 <button 
-                  className="confirm" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    confirmApproval();
-                  }}
+                  onClick={confirmApproval}
                   disabled={isProcessing}
+                  style={{ padding: '10px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: isProcessing ? 'not-allowed' : 'pointer', opacity: isProcessing ? 0.6 : 1 }}
                 >
                   {isProcessing ? 'Approving...' : 'Yes, Approve'}
                 </button>
@@ -588,9 +590,52 @@ export default function WorkerDetail() {
           </div>
         )}
 
-        {/* Rating Modal */}
+        {showRejectModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+            <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '500px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Reject Worker</h3>
+              <p style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#6b7280' }}>
+                Please provide a reason for rejecting <strong>{worker.name}</strong>:
+              </p>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Enter rejection reason..."
+                rows={4}
+                style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '15px', fontFamily: 'inherit', resize: 'vertical', marginBottom: '24px', boxSizing: 'border-box' }}
+              />
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button 
+                  onClick={() => {
+                    setShowRejectModal(false);
+                    setRejectReason('');
+                  }}
+                  style={{ padding: '10px 24px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmReject}
+                  disabled={isProcessing || !rejectReason.trim()}
+                  style={{ padding: '10px 24px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: (isProcessing || !rejectReason.trim()) ? 'not-allowed' : 'pointer', opacity: (isProcessing || !rejectReason.trim()) ? 0.6 : 1 }}
+                >
+                  {isProcessing ? 'Rejecting...' : 'Confirm Rejection'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+{/* Rating Modal */}
         {showRating && (
-          <div className="rating-modal-backdrop">
+          <div 
+            className="rating-modal-backdrop"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowRating(false);
+              }
+            }}
+          >
             <div className="rating-modal-container">
               <div className="rating-modal-header">
                 <h3>Rate Worker</h3>
@@ -704,40 +749,34 @@ export default function WorkerDetail() {
         )}
 
         {showRequestModal && (
-          <div className="modal-overlay" onClick={(e) => {
-            e.stopPropagation();
-            setShowRequestModal(false);
-          }}>
-            <div className="request-modal" onClick={(e) => e.stopPropagation()}>
+          <div 
+            className="modal-overlay"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowRequestModal(false);
+              }
+            }}
+          >
+            <div className="request-modal">
               <h3>Request Additional Information</h3>
               <p className="request-description">Send a request to the worker for additional information or clarification.</p>
               <textarea
                 className="request-message"
                 placeholder="Enter your message to the worker..."
                 value={requestMessage}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  setRequestMessage(e.target.value);
-                }}
-                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => setRequestMessage(e.target.value)}
                 rows={4}
               />
               <div className="request-actions">
                 <button 
                   className="cancel" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowRequestModal(false);
-                  }}
+                  onClick={() => setShowRequestModal(false)}
                 >
                   Cancel
                 </button>
                 <button 
                   className="confirm" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRequestInfo();
-                  }}
+                  onClick={handleRequestInfo}
                   disabled={isProcessing || !requestMessage.trim()}
                 >
                   Send Request

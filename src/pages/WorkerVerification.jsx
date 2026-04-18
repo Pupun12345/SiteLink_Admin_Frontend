@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import toast, { Toaster } from 'react-hot-toast';
 import {
   Bell,
   Search,
@@ -9,6 +10,7 @@ import {
   ChevronDown,
   FileText,
   Star,
+  Plus,
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
@@ -16,22 +18,63 @@ import './WorkerVerification.css';
 
 export default function WorkerVerification() {
   const [workers, setWorkers] = useState([]);
+  const [profile, setProfile] = useState({ name: '', email: '', imageUrl: '' });
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: '',
+    experience: '',
+    city: '',
+    rating: '',
+    dailyRate: '',
+  });
+  const [profileImage, setProfileImage] = useState(null);
+  const [documentFile, setDocumentFile] = useState(null);
   const navigate = useNavigate();
+
+  const fetchAdminProfile = async () => {
+    try {
+      const response = await api.get('/profile/me');
+      if (response.data.user) {
+        const user = response.data.user;
+        const imageUrl = user.profileImage 
+          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}` 
+          : `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`;
+        setProfile({
+          name: user.name || '',
+          email: user.email || '',
+          imageUrl: imageUrl
+        });
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchAdminProfile();
+  }, []);
+
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
+    
     navigate('/admin/login');
   };
 
   const handleExportCSV = () => {
     if (filteredWorkers.length === 0) {
-      toast.showToast('No workers to export', { type: 'warning' });
+      alert('No workers to export');
       return;
     }
 
@@ -62,8 +105,6 @@ export default function WorkerVerification() {
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
-    
-    toast.showToast(`Exported ${filteredWorkers.length} workers to CSV`, { type: 'success' });
   };
 
   useEffect(() => {
@@ -82,16 +123,147 @@ export default function WorkerVerification() {
       });
 
       setWorkers(data.data || []);
+      console.log(data.data)
     } catch (err) {
       console.error('Failed to load workers:', err);
       if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
+        
         navigate('/admin/login');
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddWorker = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    const loadingToast = toast.loading('Adding worker...');
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('phone', formData.phone);
+
+      if (formData.email) {
+        formDataToSend.append('email', formData.email);
+      }
+
+      formDataToSend.append('password', 'TempPass@123'); // Temporary password
+      formDataToSend.append('confirmPassword', 'TempPass@123');
+      formDataToSend.append('userType', 'worker');
+
+      if (formData.city) {
+        formDataToSend.append('city', formData.city);
+      }
+
+      if (formData.experience) {
+        formDataToSend.append('experience', formData.experience);
+      }
+
+      if (formData.rating) {
+        formDataToSend.append('adminRating', formData.rating);
+      }
+
+      if (formData.dailyRate) {
+        formDataToSend.append('dailyRate', formData.dailyRate);
+      }
+
+      if (profileImage) {
+        formDataToSend.append('profileImage', profileImage);
+      }
+      if (documentFile) {
+        formDataToSend.append('aadhaarFrontImage', documentFile);
+      }
+
+      const registerResponse = await api.post('/auth/register', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // Get the worker ID from response
+      const workerOTP = registerResponse.data?.data?.otp;
+      console.log('Worker OTP:', workerOTP);
+
+      const workerResponse = await api.post("/auth/verify-otp", {
+        phone: formData.phone,
+        otp: workerOTP
+      });
+
+
+      const workerID = workerResponse?.data?.user?.id || workerResponse?.data?.user?._id || workerResponse?.data?.data?.id || workerResponse?.data?.data?._id;
+      console.log('Worker ID after OTP verification:', workerID);
+
+      const finalWorkerID = workerID || registerResponse.data?.userId;
+      console.log('Final worker ID:', finalWorkerID);
+
+      if (finalWorkerID) {
+        try {
+          console.log('Attempting auto-verify with:', {
+            url: `/admin/workers/${finalWorkerID}/auto-verify`,
+            rating: parseFloat(formData.rating)
+          });
+
+          const verifyResponse = await api.put(`/admin/workers/${finalWorkerID}/auto-verify`, {
+            rating: parseFloat(formData.rating)
+          });
+          
+          console.log('Auto-verify response:', verifyResponse.data);
+          toast.success('Worker added and approved successfully!', { id: loadingToast });
+        } catch (verifyErr) {
+          console.error('Failed to auto-approve:', verifyErr);
+          console.error('Error status:', verifyErr.response?.status);
+          console.error('Error data:', verifyErr.response?.data);
+          console.error('Request URL:', verifyErr.config?.url);
+          toast.error(`Worker added but approval failed: ${verifyErr.response?.data?.message || verifyErr.message}. Please approve manually.`, { id: loadingToast });
+        }
+      } else {
+        console.error('No worker ID received');
+        toast.error('Worker added but no ID received. Please verify manually.', { id: loadingToast });
+      }
+
+      setFormData({ name: '', email: '', phone: '', role: '', experience: '', city: '', rating: '', dailyRate: '' });
+      setProfileImage(null);
+      setDocumentFile(null);
+      setShowAddForm(false);
+      fetchWorkers();
+    } catch (err) {
+      console.error('Full error:', err);
+      console.error('Error response:', JSON.stringify(err.response?.data, null, 2));
+
+      let errorMsg = 'Failed to add worker';
+
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        const errors = err.response.data.errors.map(e => `${e.param}: ${e.msg}`).join('\n');
+        errorMsg = errors;
+        toast.error(
+          <div style={{ whiteSpace: 'pre-line' }}>
+            <strong>Validation Errors:</strong>\n{errors}
+          </div>,
+          { id: loadingToast, duration: 6000 }
+        );
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+        toast.error(errorMsg, { id: loadingToast });
+      } else {
+        errorMsg = err.message;
+        toast.error(errorMsg, { id: loadingToast });
+      }
+
+      console.error('Error details:', errorMsg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCancelAdd = () => {
+    setShowAddForm(false);
+    setFormData({ name: '', email: '', phone: '', role: '', experience: '', city: '', rating: '', dailyRate: '' });
+    setProfileImage(null);
+    setDocumentFile(null);
   };
 
   const getStatusBadgeClass = (worker) => {
@@ -106,8 +278,6 @@ export default function WorkerVerification() {
     if (worker.status === 'Rejected') return 'REJECTED';
     return 'PENDING';
   };
-
-  const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}'); // eslint-disable-line no-unused-vars
 
   const approvedWorkers = workers.filter(worker => worker.status === 'Verified');
   const ratedWorkers = approvedWorkers.filter(worker => typeof worker.adminRating === 'number');
@@ -135,11 +305,10 @@ export default function WorkerVerification() {
 
   return (
     <div className="verification-page">
+      <Toaster position="top-right" reverseOrder={false} />
       <Sidebar onLogout={handleLogout} />
 
-      {/* Main Content */}
       <main className="verification-main">
-        {/* Top Bar */}
         <header className="verification-topbar">
           <div className="search-bar">
             <Search size={18} />
@@ -152,33 +321,260 @@ export default function WorkerVerification() {
           </div>
 
           <div className="topbar-actions">
-            <button className="icon-btn">
+            <button className="icon-btn" onClick={() => navigate("/admin/notifications")}>
               <Bell size={20} />
               <span className="notification-badge"></span>
             </button>
             <div className="user-menu">
               <div className="user-avatar">
-                <img src="https://ui-avatars.com/api/?name=Alex+Rivera&background=3b82f6&color=fff" alt="Admin" />
+                <img src={`${profile.imageUrl}`} alt="Admin" />
               </div>
             </div>
           </div>
         </header>
 
-        {/* Content */}
         <div className="verification-content">
-          {/* Page Header */}
           <div className="page-header">
             <div>
               <h1>Worker Verification</h1>
               <p className="page-subtitle">Review and manage professional certifications for site personnel.</p>
             </div>
-            <button className="export-btn" onClick={handleExportCSV}>
-              <Download size={18} />
-              Export CSV
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="export-btn" onClick={handleExportCSV}>
+                <Download size={18} />
+                Export CSV
+              </button>
+              <button className="add-btn" onClick={() => setShowAddForm(!showAddForm)}>
+                <Plus size={18} />
+                {showAddForm ? 'Cancel' : 'Add Worker'}
+              </button>
+            </div>
           </div>
 
-          {/* Stats Cards */}
+          {showAddForm && (
+            <div style={{
+              background: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '12px',
+              padding: '24px',
+              marginBottom: '24px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            }}>
+              <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '700' }}>Add New Worker</h3>
+              <form onSubmit={handleAddWorker}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Enter worker name"
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="Enter email address"
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Daily Wage</label>
+                    <input
+                      type="tel"
+                      required
+                      value={formData.dailyRate}
+                      onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value })}
+                      placeholder="Enter Daily Wage"
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Phone</label>
+                    <input
+                      type="tel"
+                      required
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="Enter phone number"
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Role</label>
+                    <input
+                      type="text"
+                      value={formData.role}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      placeholder="e.g., Carpenter, Electrician"
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Experience</label>
+                    <select
+                      value={formData.experience}
+                      onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        backgroundColor: 'white'
+                      }}
+                    >
+                      <option value="">Select experience</option>
+                      <option value="0-1 Year">0-1 Year</option>
+                      <option value="1-3 Years">1-3 Years</option>
+                      <option value="3-5 Years">3-5 Years</option>
+                      <option value="5+ Years">5+ Years</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>City</label>
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="Enter city"
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Rating (1-5)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="5"
+                      step="0.1"
+                      value={formData.rating}
+                      onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                      placeholder="Enter rating"
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Profile Photo (Optional)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setProfileImage(e.target.files[0])}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    {profileImage && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {profileImage.name}</p>}
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Document (Optional)</label>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => setDocumentFile(e.target.files[0])}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    {documentFile && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {documentFile.name}</p>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                  <button
+                    type="button"
+                    onClick={handleCancelAdd}
+                    style={{
+                      padding: '10px 20px',
+                      background: '#f3f4f6',
+                      color: '#374151',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    style={{
+                      padding: '10px 20px',
+                      background: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: submitting ? 'not-allowed' : 'pointer',
+                      opacity: submitting ? 0.6 : 1
+                    }}
+                  >
+                    {submitting ? 'Adding...' : 'Add Worker'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           <div className="stats-row">
             <motion.div
               className="stat-box"
@@ -232,7 +628,6 @@ export default function WorkerVerification() {
             </motion.div>
           </div>
 
-          {/* Filters */}
           <div className="filters-section">
             <div className="filter-group">
               <div className="filter-dropdown">
@@ -254,7 +649,6 @@ export default function WorkerVerification() {
             </div>
           </div>
 
-          {/* Table */}
           <div className="table-container">
             <table className="workers-table">
               <thead>
@@ -281,12 +675,19 @@ export default function WorkerVerification() {
                     <td>
                       <div className="worker-cell">
                         <img
-                          src={worker.avatar || `https://ui-avatars.com/api/?name=${worker.name}&background=3b82f6&color=fff`}
+                          src={
+                            worker.profileImage
+                              ? "http://localhost:5000/" + worker.profileImage.replace(/\\/g, '/')
+                              : `https://ui-avatars.com/api/?name=${encodeURIComponent(worker.name)}&background=3b82f6&color=fff`
+                          }
                           alt={worker.name}
                           className="worker-table-avatar"
+                          onError={(e) => {
+                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(worker.name)}&background=3b82f6&color=fff`;
+                          }}
                         />
                         <div>
-                          <div className="worker-name">{worker.name}</div>
+                          <div className="worker-name" style={{ fontSize: "1.2rem" }}>{worker.name}</div>
                           <div className="worker-id">ID: #WK-{worker._id.slice(-4)}</div>
                         </div>
                       </div>
@@ -301,7 +702,7 @@ export default function WorkerVerification() {
                             const rating = parseFloat(worker.adminRating);
                             const isFilled = star <= Math.floor(rating);
                             const isHalfFilled = star > Math.floor(rating) && star <= Math.ceil(rating) && rating % 1 >= 0.5;
-                            
+
                             return (
                               <Star
                                 key={star}
@@ -337,7 +738,6 @@ export default function WorkerVerification() {
             </table>
           </div>
 
-          {/* Pagination */}
           <div className="pagination">
             <div className="pagination-info">
               Showing <strong>{((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong>{Math.min(currentPage * itemsPerPage, filteredWorkers.length)}</strong> of <strong>{filteredWorkers.length}</strong> entries

@@ -1,4 +1,4 @@
-import { Bell, Lock, Save, ShieldCheck, User, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Bell, Lock, Save, User, AlertCircle, CheckCircle, Eye, EyeOff, Users, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
@@ -26,18 +26,29 @@ export default function AdminSettings() {
     confirmPassword: ''
   });
 
-
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-
-
   const [showPasswords, setShowPasswords] = useState({
     currentPassword: false,
     newPassword: false,
     confirmPassword: false
   });
 
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newAdminForm, setNewAdminForm] = useState({
+    email: '',
+    password: '',
+    name: '',
+    permissions: {
+      canAccessPlatformSettings: false,
+      canAccessRevenue: false,
+      canVerifyUsers: true,
+      canManageUsers: true,
+    },
+  });
+
   useEffect(() => {
     fetchProfile();
+    fetchAdminUsers();
   }, []);
 
   const fetchProfile = async () => {
@@ -51,13 +62,98 @@ export default function AdminSettings() {
           email: user.email || '',
           profileImage: user.profileImage || ''
         }));
-        setProfileImagePreview(user.profileImage || `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`);
+        const imageUrl = user.profileImage 
+          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}` 
+          : `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`;
+        setProfileImagePreview(imageUrl);
       }
       setLoading(false);
     } catch (error) {
       console.error('Error fetching profile:', error);
       showMessage('error', 'Failed to load profile');
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+    fetchAdminUsers();
+  },[]);
+
+  const fetchAdminUsers = async () => {
+    try {
+      const response = await api.get('/admin-users');
+      if (response.data.success) {
+        setAdminUsers(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+    }
+  };
+
+  const handleCreateAdmin = async () => {
+    try {
+      if (!newAdminForm.email || !newAdminForm.password || !newAdminForm.name) {
+        showMessage('error', 'All fields are required');
+        return;
+      }
+
+      const response = await api.post('/admin-users', newAdminForm);
+      if (response.data.success) {
+        showMessage('success', 'Admin user created successfully');
+        setNewAdminForm({
+          email: '',
+          password: '',
+          name: '',
+          permissions: {
+            canAccessPlatformSettings: false,
+            canAccessRevenue: false,
+            canVerifyUsers: true,
+            canManageUsers: true,
+          },
+        });
+        fetchAdminUsers();
+      }
+    } catch (error) {
+      console.error('Error creating admin:', error);
+      showMessage('error', error.response?.data?.message || 'Failed to create admin user');
+    }
+  };
+
+  const handleDeleteAdmin = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this admin user?')) return;
+    
+    try {
+      const response = await api.delete(`/admin-users/${id}`);
+      if (response.data.success) {
+        showMessage('success', 'Admin user deleted successfully');
+        fetchAdminUsers();
+      }
+    } catch (error) {
+      console.error('Error deleting admin:', error);
+      showMessage('error', 'Failed to delete admin user');
+    }
+  };
+
+  const handleTogglePermission = async (userId, permission) => {
+    try {
+      const user = adminUsers.find(u => u._id === userId);
+      const updatedPermissions = {
+        ...user.permissions,
+        [permission]: !user.permissions[permission],
+      };
+
+      const response = await api.put(`/admin-users/${userId}`, {
+        permissions: updatedPermissions,
+      });
+
+      if (response.data.success) {
+        showMessage('success', 'Permissions updated');
+        fetchAdminUsers();
+      }
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+      showMessage('error', 'Failed to update permissions');
     }
   };
 
@@ -77,19 +173,18 @@ export default function AdminSettings() {
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file size (2MB max)
       if (file.size > 2 * 1024 * 1024) {
         showMessage('error', 'Image size must be less than 2MB');
         return;
       }
       
-      // Validate file type
       if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
         showMessage('error', 'Only JPG and PNG formats are allowed');
         return;
       }
 
       setProfileImageFile(file);
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImagePreview(reader.result);
@@ -161,7 +256,7 @@ export default function AdminSettings() {
         return;
       }
 
-      const response = await api.put('/settings/change-password', {
+      const response = await api.put('/profile/change-password', {
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword
       });
@@ -173,6 +268,11 @@ export default function AdminSettings() {
           newPassword: '',
           confirmPassword: ''
         });
+        setShowPasswords({
+          currentPassword: false,
+          newPassword: false,
+          confirmPassword: false
+        });
       }
     } catch (error) {
       console.error('Error changing password:', error);
@@ -182,7 +282,7 @@ export default function AdminSettings() {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
+    
     navigate('/admin/login');
   };
 
@@ -209,7 +309,7 @@ export default function AdminSettings() {
           </div>
 
           <div className="admin-settings-header-actions">
-            <button type="button" className="mini-icon-btn" aria-label="Notifications">
+            <button type="button" className="mini-icon-btn" aria-label="Notifications" onClick={()=>navigate("/admin/notifications")}> 
               <Bell size={16} />
             </button>
             <button type="button" className="save-btn" onClick={handleSaveProfile}>
@@ -377,41 +477,136 @@ export default function AdminSettings() {
           </button>
         </section>
 
-        <section className="settings-panel twofa-panel">
-          <h2>
-            <ShieldCheck size={16} />
-            Two-Factor Authentication
-          </h2>
-
-          <div className="twofa-head-row">
-            <div>
-              <strong>Secure your account with 2FA</strong>
-              <p>
-                Two-factor authentication adds an extra layer of security to your account at login.
-              </p>
-            </div>
-
-            <label className="switch">
-              <input 
-                type="checkbox"
-                checked={twoFactorEnabled}
-                onChange={(e) => setTwoFactorEnabled(e.target.checked)}
-              />
-              <span />
-            </label>
+        <section className="settings-panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>
+              <Users size={16} />
+              Admin Users Management
+            </h2>
+            <button type="button" className="save-btn" onClick={() => setShowCreateModal(true)}>
+              <Plus size={14} />
+              Create Admin User
+            </button>
           </div>
 
-          <div className="twofa-methods">
-            <article className={`method-card ${twoFactorEnabled ? 'enabled' : ''}`}>
-              <h3>Authenticator App</h3>
-              <p>Google Authenticator or Authy</p>
-            </article>
-            <article className="method-card">
-              <h3>SMS Authentication</h3>
-              <p>Verification via phone number</p>
-            </article>
+          <div className="admin-users-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Platform Settings</th>
+                  <th>Revenue Access</th>
+                  <th>Verify Users</th>
+                  <th>Manage Users</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {adminUsers.map((user) => (
+                  <tr key={user._id}>
+                    <td>{user.name}</td>
+                    <td>{user.email}</td>
+                    <td>
+                      <label className="switch">
+                        <input
+                          type="checkbox"
+                          checked={user.permissions.canAccessPlatformSettings}
+                          onChange={() => handleTogglePermission(user._id, 'canAccessPlatformSettings')}
+                        />
+                        <span className="slider" />
+                      </label>
+                    </td>
+                    <td>
+                      <label className="switch">
+                        <input
+                          type="checkbox"
+                          checked={user.permissions.canAccessRevenue}
+                          onChange={() => handleTogglePermission(user._id, 'canAccessRevenue')}
+                        />
+                        <span className="slider" />
+                      </label>
+                    </td>
+                    <td>
+                      <label className="switch">
+                        <input
+                          type="checkbox"
+                          checked={user.permissions.canVerifyUsers}
+                          onChange={() => handleTogglePermission(user._id, 'canVerifyUsers')}
+                        />
+                        <span className="slider" />
+                      </label>
+                    </td>
+                    <td>
+                      <label className="switch">
+                        <input
+                          type="checkbox"
+                          checked={user.permissions.canManageUsers}
+                          onChange={() => handleTogglePermission(user._id, 'canManageUsers')}
+                        />
+                        <span className="slider" />
+                      </label>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="delete-btn"
+                        onClick={() => handleDeleteAdmin(user._id)}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
+
+        {showCreateModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowCreateModal(false)}>
+            <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '500px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+              <h2 style={{ margin: '0 0 20px', color: '#1b2944', fontSize: '24px' }}>Create Admin User</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#5f718f', fontWeight: '700' }}>Name</span>
+                  <input type="text" value={newAdminForm.name} onChange={(e) => setNewAdminForm({ ...newAdminForm, name: e.target.value })} placeholder="Enter admin name" style={{ border: '1px solid #d9e2f0', background: '#fdfefe', color: '#2a3a57', borderRadius: '8px', height: '38px', padding: '0 10px', fontSize: '14px' }} />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#5f718f', fontWeight: '700' }}>Email</span>
+                  <input type="email" value={newAdminForm.email} onChange={(e) => setNewAdminForm({ ...newAdminForm, email: e.target.value })} placeholder="Enter admin email" style={{ border: '1px solid #d9e2f0', background: '#fdfefe', color: '#2a3a57', borderRadius: '8px', height: '38px', padding: '0 10px', fontSize: '14px' }} />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#5f718f', fontWeight: '700' }}>Password</span>
+                  <input type="password" value={newAdminForm.password} onChange={(e) => setNewAdminForm({ ...newAdminForm, password: e.target.value })} placeholder="Enter password" style={{ border: '1px solid #d9e2f0', background: '#fdfefe', color: '#2a3a57', borderRadius: '8px', height: '38px', padding: '0 10px', fontSize: '14px' }} />
+                </label>
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', background: '#f8fafc' }}>
+                  <h3 style={{ margin: '0 0 12px', fontSize: '14px', color: '#1b2944' }}>Permissions</h3>
+                  <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <input type="checkbox" checked={newAdminForm.permissions.canAccessPlatformSettings} onChange={(e) => setNewAdminForm({ ...newAdminForm, permissions: { ...newAdminForm.permissions, canAccessPlatformSettings: e.target.checked } })} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
+                    <span style={{ fontWeight: '400', color: '#2a3a57' }}>Access Platform Settings</span>
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <input type="checkbox" checked={newAdminForm.permissions.canAccessRevenue} onChange={(e) => setNewAdminForm({ ...newAdminForm, permissions: { ...newAdminForm.permissions, canAccessRevenue: e.target.checked } })} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
+                    <span style={{ fontWeight: '400', color: '#2a3a57' }}>Access Revenue Page</span>
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <input type="checkbox" checked={newAdminForm.permissions.canVerifyUsers} onChange={(e) => setNewAdminForm({ ...newAdminForm, permissions: { ...newAdminForm.permissions, canVerifyUsers: e.target.checked } })} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
+                    <span style={{ fontWeight: '400', color: '#2a3a57' }}>Verify Workers/Vendors</span>
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                    <input type="checkbox" checked={newAdminForm.permissions.canManageUsers} onChange={(e) => setNewAdminForm({ ...newAdminForm, permissions: { ...newAdminForm.permissions, canManageUsers: e.target.checked } })} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
+                    <span style={{ fontWeight: '400', color: '#2a3a57' }}>Manage Users</span>
+                  </label>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
+                  <button type="button" onClick={() => setShowCreateModal(false)} style={{ background: '#fff', border: '1px solid #d4ddeb', color: '#5e7292', padding: '0 16px', height: '36px', borderRadius: '9px', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+                  <button type="button" onClick={handleCreateAdmin} style={{ background: '#2f63db', border: '1px solid #2f63db', color: '#fff', padding: '0 16px', height: '36px', borderRadius: '9px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}><Save size={14} />Create Admin</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

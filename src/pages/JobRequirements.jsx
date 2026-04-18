@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import "./JobRequirements.css";
 import Sidebar from "../components/Sidebar";
 import api from "../api/axios";
@@ -27,6 +27,7 @@ function getStatusClass(status) {
 
 export default function JobRequirements() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [job, setJob] = useState(null);
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +35,8 @@ export default function JobRequirements() {
   const [search, setSearch] = useState("");
   const [showAllApplicants, setShowAllApplicants] = useState(false);
   const [selectedApplicant, setSelectedApplicant] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [mapUrl, setMapUrl] = useState("");
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -45,69 +48,46 @@ export default function JobRequirements() {
           const jobData = response.data.data || {};
           setJob(jobData);
           
-          // Use actual applicants or sample data for testing
-          const actualApplicants = jobData.applicants || [];
+          const actualApplicants = (jobData.applicants || []).map(app => ({
+            ...app,
+            applied: formatDate(app.applied)
+          }));
+          setApplicants(actualApplicants);
           
-          // Add sample applicants if none exist (for testing)
-          const sampleApplicants = actualApplicants.length > 0 ? actualApplicants : [
-            {
-              id: '1',
-              name: 'John Smith',
-              role: 'Senior Mason',
-              status: 'pending',
-              applied: '2 days ago',
-              avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
-              experience: '5+ years',
-              location: 'Mumbai',
-              skills: ['Masonry', 'Concrete Work'],
-              phone: '+91 9876543210',
-              email: 'john.smith@email.com',
-              dailyRate: 1500
-            },
-            {
-              id: '2',
-              name: 'Priya Sharma',
-              role: 'Electrician',
-              status: 'shortlisted',
-              applied: '1 day ago',
-              avatar: 'https://randomuser.me/api/portraits/women/2.jpg',
-              experience: '3-5 years',
-              location: 'Delhi',
-              skills: ['Electrical Wiring', 'Panel Installation'],
-              phone: '+91 9876543211',
-              email: 'priya.sharma@email.com',
-              dailyRate: 1200
-            },
-            {
-              id: '3',
-              name: 'Rajesh Kumar',
-              role: 'Plumber',
-              status: 'pending',
-              applied: '3 hours ago',
-              avatar: 'https://randomuser.me/api/portraits/men/3.jpg',
-              experience: '1-3 years',
-              location: 'Pune',
-              skills: ['Plumbing', 'Pipe Fitting'],
-              phone: '+91 9876543212',
-              email: 'rajesh.kumar@email.com',
-              dailyRate: 1000
-            }
-          ];
+          // Generate map URL for location
+          if (jobData.address || jobData.location) {
+            const locationQuery = encodeURIComponent(jobData.address || jobData.location);
+            setMapUrl(`https://www.google.com/maps/search/?api=1&query=${locationQuery}`);
+          }
           
-          setApplicants(sampleApplicants);
           setError(null);
         } else {
           setError(response.data.message || "Job not found");
         }
       } catch (err) {
         console.error("Failed to fetch job:", err);
-        setError("Failed to load job details");
+        setError(err.response?.data?.message || "Failed to load job details");
       } finally {
         setLoading(false);
       }
     };
     fetchJob();
   }, [id]);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    
+    if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
 
   if (loading) {
@@ -161,17 +141,79 @@ export default function JobRequirements() {
   };
 
   const handleApplicantAction = async (applicantId, action) => {
+    setActionLoading(true);
     try {
-      // Here you would make API calls to update applicant status
-      console.log(`${action} applicant:`, applicantId);
-      // Example: await api.put(`/jobs/${id}/applicants/${applicantId}`, { status: action });
+      const response = await api.put(`/jobs/${id}/applications/${applicantId}`, { 
+        status: action,
+        notes: `Status updated to ${action}` 
+      });
       
-      // Update local state
-      setApplicants(prev => prev.map(app => 
-        app.id === applicantId ? { ...app, status: action } : app
-      ));
+      if (response.data.success) {
+        setApplicants(prev => prev.map(app => 
+          app.id === applicantId ? { ...app, status: action } : app
+        ));
+        
+        // Refresh job data to update counts
+        const jobResponse = await api.get(`/jobs/${id}`);
+        if (jobResponse.data.success) {
+          setJob(jobResponse.data.data);
+        }
+        
+        alert(`Application ${action} successfully!`);
+      }
     } catch (error) {
       console.error(`Failed to ${action} applicant:`, error);
+      alert(error.response?.data?.message || `Failed to ${action} application. Please try again.`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleJobStatusUpdate = async (newStatus) => {
+    if (!window.confirm(`Are you sure you want to ${newStatus.toLowerCase()} this job?`)) {
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      const response = await api.put(`/jobs/${id}`, { status: newStatus });
+      if (response.data.success) {
+        setJob(prev => ({ ...prev, status: newStatus }));
+        alert(`Job status updated to ${newStatus} successfully!`);
+      }
+    } catch (error) {
+      console.error(`Failed to update job status:`, error);
+      alert(error.response?.data?.message || 'Failed to update job status. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleGetDirections = () => {
+    if (mapUrl) {
+      window.open(mapUrl, '_blank');
+    } else {
+      alert('Location information not available');
+    }
+  };
+
+  const handleDeleteJob = async () => {
+    if (!window.confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      const response = await api.delete(`/jobs/${id}`);
+      if (response.data.success) {
+        alert('Job deleted successfully!');
+        navigate('/admin/requirements');
+      }
+    } catch (error) {
+      console.error('Failed to delete job:', error);
+      alert(error.response?.data?.message || 'Failed to delete job. Please try again.');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -209,8 +251,32 @@ export default function JobRequirements() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <button className="btn btn-secondary">Close Job</button>
-            <button className="btn btn-danger">Cancel Job</button>
+            {job.status === 'Open' && (
+              <button 
+                className="btn btn-secondary"
+                onClick={() => handleJobStatusUpdate('Closed')}
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Processing...' : 'Close Job'}
+              </button>
+            )}
+            {job.status !== 'Cancelled' && (
+              <button 
+                className="btn btn-danger"
+                onClick={() => handleJobStatusUpdate('Cancelled')}
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Processing...' : 'Cancel Job'}
+              </button>
+            )}
+            <button 
+              className="btn btn-danger"
+              onClick={handleDeleteJob}
+              disabled={actionLoading}
+              style={{ marginLeft: '8px' }}
+            >
+              {actionLoading ? 'Deleting...' : 'Delete Job'}
+            </button>
           </div>
         </header>
 
@@ -297,14 +363,23 @@ export default function JobRequirements() {
                   Location
                 </div>
                 <div className="card-body location-body">
-                  <div className="map-thumb" style={{ backgroundImage: `url(${mapImage})` }} />
+                  <div className="map-thumb" style={{ backgroundImage: `url(${mapImage})` }}>
+                    {mapUrl && (
+                      <div className="map-overlay">
+                        <button className="view-map-btn" onClick={handleGetDirections}>
+                          <span className="material-symbols-outlined">map</span>
+                          View on Map
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <div className="location-info">
                     <div>
                       <p className="label-upper">Project Site</p>
                       <p className="location-name">{job.projectSite || job.location || "Unknown site"}</p>
                       <p className="location-address">{job.address || job.location || "Not available"}</p>
                     </div>
-                    <button className="directions-btn">
+                    <button className="directions-btn" onClick={handleGetDirections} disabled={!mapUrl}>
                       Get Directions
                       <span className="material-symbols-outlined directions-icon">open_in_new</span>
                     </button>
@@ -346,7 +421,9 @@ export default function JobRequirements() {
                               </div>
                             </td>
                             <td className="applied-time">{a.applied}</td>
-                            <td><StatusBadge status={a.status} /></td>
+                            <td>
+                              <StatusBadge status={a.status} />
+                            </td>
                           </tr>
                         ))
                       ) : (
@@ -379,99 +456,8 @@ export default function JobRequirements() {
           </div>
         </div>
 
-        {/* Simple Test Modal */}
+        {/* All Applicants Modal */}
         {showAllApplicants && (
-          <div 
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.8)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 9999
-            }}
-            onClick={() => setShowAllApplicants(false)}
-          >
-            <div 
-              style={{
-                background: 'white',
-                padding: '20px',
-                borderRadius: '8px',
-                maxWidth: '90vw',
-                maxHeight: '90vh',
-                overflow: 'auto'
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2>All Applicants - {job?.title}</h2>
-              <button 
-                onClick={() => setShowAllApplicants(false)}
-                style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  background: 'red',
-                  color: 'white',
-                  border: 'none',
-                  padding: '5px 10px',
-                  cursor: 'pointer'
-                }}
-              >
-                Close
-              </button>
-              
-              <div style={{ marginTop: '20px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#f5f5f5' }}>
-                      <th style={{ padding: '10px', border: '1px solid #ddd' }}>Name</th>
-                      <th style={{ padding: '10px', border: '1px solid #ddd' }}>Role</th>
-                      <th style={{ padding: '10px', border: '1px solid #ddd' }}>Experience</th>
-                      <th style={{ padding: '10px', border: '1px solid #ddd' }}>Location</th>
-                      <th style={{ padding: '10px', border: '1px solid #ddd' }}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {applicants.map((applicant) => (
-                      <tr key={applicant.id}>
-                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <img 
-                              src={applicant.avatar} 
-                              alt={applicant.name}
-                              style={{ width: '30px', height: '30px', borderRadius: '50%' }}
-                            />
-                            {applicant.name}
-                          </div>
-                        </td>
-                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>{applicant.role}</td>
-                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>{applicant.experience}</td>
-                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>{applicant.location}</td>
-                        <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                          <span style={{ 
-                            padding: '2px 8px', 
-                            borderRadius: '4px',
-                            backgroundColor: applicant.status === 'shortlisted' ? '#e3f2fd' : '#f5f5f5',
-                            color: applicant.status === 'shortlisted' ? '#1976d2' : '#666'
-                          }}>
-                            {applicant.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Original Modal (commented out for testing) */}
-        {false && showAllApplicants && (
           <div className="modal-overlay" onClick={handleCloseModal}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
@@ -565,6 +551,7 @@ export default function JobRequirements() {
                                     className="modal-action-btn shortlist-btn"
                                     onClick={() => handleApplicantAction(applicant.id, 'shortlisted')}
                                     title="Shortlist"
+                                    disabled={actionLoading}
                                   >
                                     <span className="material-symbols-outlined">star</span>
                                   </button>
@@ -572,6 +559,7 @@ export default function JobRequirements() {
                                     className="modal-action-btn reject-btn"
                                     onClick={() => handleApplicantAction(applicant.id, 'rejected')}
                                     title="Reject"
+                                    disabled={actionLoading}
                                   >
                                     <span className="material-symbols-outlined">close</span>
                                   </button>
@@ -583,6 +571,7 @@ export default function JobRequirements() {
                                     className="modal-action-btn hire-btn"
                                     onClick={() => handleApplicantAction(applicant.id, 'hired')}
                                     title="Hire"
+                                    disabled={actionLoading}
                                   >
                                     <span className="material-symbols-outlined">check</span>
                                   </button>
@@ -590,6 +579,7 @@ export default function JobRequirements() {
                                     className="modal-action-btn reject-btn"
                                     onClick={() => handleApplicantAction(applicant.id, 'rejected')}
                                     title="Reject"
+                                    disabled={actionLoading}
                                   >
                                     <span className="material-symbols-outlined">close</span>
                                   </button>
@@ -702,9 +692,10 @@ export default function JobRequirements() {
                           handleApplicantAction(selectedApplicant.id, 'shortlisted');
                           setSelectedApplicant(null);
                         }}
+                        disabled={actionLoading}
                       >
                         <span className="material-symbols-outlined">star</span>
-                        Shortlist Candidate
+                        {actionLoading ? 'Processing...' : 'Shortlist Candidate'}
                       </button>
                       <button 
                         className="action-btn reject-btn"
@@ -712,9 +703,10 @@ export default function JobRequirements() {
                           handleApplicantAction(selectedApplicant.id, 'rejected');
                           setSelectedApplicant(null);
                         }}
+                        disabled={actionLoading}
                       >
                         <span className="material-symbols-outlined">close</span>
-                        Reject Application
+                        {actionLoading ? 'Processing...' : 'Reject Application'}
                       </button>
                     </>
                   )}
@@ -726,9 +718,10 @@ export default function JobRequirements() {
                           handleApplicantAction(selectedApplicant.id, 'hired');
                           setSelectedApplicant(null);
                         }}
+                        disabled={actionLoading}
                       >
                         <span className="material-symbols-outlined">check</span>
-                        Hire Candidate
+                        {actionLoading ? 'Processing...' : 'Hire Candidate'}
                       </button>
                       <button 
                         className="action-btn reject-btn"
@@ -736,11 +729,17 @@ export default function JobRequirements() {
                           handleApplicantAction(selectedApplicant.id, 'rejected');
                           setSelectedApplicant(null);
                         }}
+                        disabled={actionLoading}
                       >
                         <span className="material-symbols-outlined">close</span>
-                        Reject Application
+                        {actionLoading ? 'Processing...' : 'Reject Application'}
                       </button>
                     </>
+                  )}
+                  {(selectedApplicant.status === 'hired' || selectedApplicant.status === 'rejected') && (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                      <p>This application has been {selectedApplicant.status}.</p>
+                    </div>
                   )}
                 </div>
               </div>

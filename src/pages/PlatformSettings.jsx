@@ -3,11 +3,14 @@ import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import Sidebar from '../components/Sidebar';
 import './PlatformSettings.css';
+import { redirect, useNavigate } from 'react-router-dom';
+import { hasPermission } from '../hooks/usePermissions';
 
 export default function PlatformSettings() {
+  const navigate = useNavigate();
   const [pricingRows, setPricingRows] = useState([
-    { tier: 'Basic', monthly: '$49', annual: '$490', status: 'Active' },
-    { tier: 'Pro', monthly: '$99', annual: '$990', status: 'Active' },
+    { tier: 'Basic', monthly: '₹499', annual: '₹4900', status: 'Active' },
+    { tier: 'Pro', monthly: '₹999', annual: '₹9900', status: 'Active' },
     { tier: 'Enterprise', monthly: 'Custom', annual: 'Custom', status: 'Active' },
   ]);
 
@@ -33,18 +36,11 @@ export default function PlatformSettings() {
   const [editingPlan, setEditingPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [permissions, setPermissions] = useState({
+    canAccessPlatformSettings: true,
+  });
 
   useEffect(() => {
-    const savedWorkerRules = localStorage.getItem('workerRules');
-    const savedVendorRules = localStorage.getItem('vendorRules');
-    const savedNotifications = localStorage.getItem('notifications');
-    const savedLanguage = localStorage.getItem('language');
-
-    if (savedWorkerRules) setWorkerRules(JSON.parse(savedWorkerRules));
-    if (savedVendorRules) setVendorRules(JSON.parse(savedVendorRules));
-    if (savedNotifications) setNotifications(JSON.parse(savedNotifications));
-    if (savedLanguage) setLanguage(savedLanguage);
-
     fetchSettings();
   }, []);
 
@@ -53,13 +49,13 @@ export default function PlatformSettings() {
       const response = await api.get('/platform-settings');
       if (response.data.success) {
         const settings = response.data.settings;
-        
+
         if (!localStorage.getItem('notifications')) {
           const newNotifications = settings.notifications;
           setNotifications(newNotifications);
           localStorage.setItem('notifications', JSON.stringify(newNotifications));
         }
-        
+
         if (!localStorage.getItem('workerRules')) {
           const newWorkerRules = workerRules.map(rule => ({
             ...rule,
@@ -68,7 +64,7 @@ export default function PlatformSettings() {
           setWorkerRules(newWorkerRules);
           localStorage.setItem('workerRules', JSON.stringify(newWorkerRules));
         }
-        
+
         if (!localStorage.getItem('vendorRules')) {
           const newVendorRules = vendorRules.map(rule => ({
             ...rule,
@@ -77,7 +73,7 @@ export default function PlatformSettings() {
           setVendorRules(newVendorRules);
           localStorage.setItem('vendorRules', JSON.stringify(newVendorRules));
         }
-        
+
         if (!localStorage.getItem('language')) {
           setLanguage(settings.language);
           localStorage.setItem('language', settings.language);
@@ -123,14 +119,14 @@ export default function PlatformSettings() {
     );
     setWorkerRules(newWorkerRules);
     localStorage.setItem('workerRules', JSON.stringify(newWorkerRules));
-    
-    
+
+
     try {
       const workerRulesObj = {};
       newWorkerRules.forEach(rule => {
         workerRulesObj[rule.key] = rule.enabled;
       });
-      
+
       await api.put('/platform-settings/verification-rules', {
         userProfile: 'worker',
         rules: workerRulesObj
@@ -147,14 +143,14 @@ export default function PlatformSettings() {
     );
     setVendorRules(newVendorRules);
     localStorage.setItem('vendorRules', JSON.stringify(newVendorRules));
-    
+
 
     try {
       const vendorRulesObj = {};
       newVendorRules.forEach(rule => {
         vendorRulesObj[rule.key] = rule.enabled;
       });
-      
+
       await api.put('/platform-settings/verification-rules', {
         userProfile: 'vendor',
         rules: vendorRulesObj
@@ -167,12 +163,11 @@ export default function PlatformSettings() {
 
   const handleSaveChanges = async () => {
     try {
-      // Save pricing
       for (const row of pricingRows) {
         if (row.tier !== 'Enterprise') {
           const monthlyPrice = parseFloat(row.monthly.replace('$', '') || 0);
           const annualPrice = parseFloat(row.annual.replace('$', '') || 0);
-          
+
           if (monthlyPrice > 0 || annualPrice > 0) {
             const planName = row.tier.toLowerCase();
             await api.put('/platform-settings/plans', {
@@ -183,7 +178,6 @@ export default function PlatformSettings() {
         }
       }
 
-      // Save notifications
       await api.put('/platform-settings/notifications', notifications);
 
       // Save worker verification rules
@@ -191,7 +185,7 @@ export default function PlatformSettings() {
       workerRules.forEach(rule => {
         workerRulesObj[rule.key] = rule.enabled;
       });
-      
+
       await api.put('/platform-settings/verification-rules', {
         userProfile: 'worker',
         rules: workerRulesObj
@@ -210,7 +204,6 @@ export default function PlatformSettings() {
       // Save language
       await api.put('/platform-settings/language', { language });
 
-      // Update localStorage after successful save
       localStorage.setItem('workerRules', JSON.stringify(workerRules));
       localStorage.setItem('vendorRules', JSON.stringify(vendorRules));
       localStorage.setItem('notifications', JSON.stringify(notifications));
@@ -247,7 +240,7 @@ export default function PlatformSettings() {
           </div>
 
           <div className="platform-header-actions">
-            <button type="button" className="platform-icon-btn" aria-label="Notifications">
+            <button type="button" className="platform-icon-btn" aria-label="Notifications" onClick={() => navigate("/admin/notifications")}>
               <Bell size={16} />
             </button>
             <button
@@ -297,10 +290,10 @@ export default function PlatformSettings() {
                           type="text"
                           value={row.monthly}
                           onChange={(e) => handlePricingChange(row.tier, 'monthly', e.target.value)}
-                          placeholder="$0"
+                          placeholder="₹0"
                         />
                       ) : (
-                        `$${row.monthly}`
+                        `${row.monthly}`
                       )}
                     </td>
                     <td>
@@ -309,10 +302,10 @@ export default function PlatformSettings() {
                           type="text"
                           value={row.annual}
                           onChange={(e) => handlePricingChange(row.tier, 'annual', e.target.value)}
-                          placeholder="$0"
+                          placeholder="₹0"
                         />
                       ) : (
-                        `$${row.annual}`
+                        `${row.annual}`
                       )}
                     </td>
                     <td>

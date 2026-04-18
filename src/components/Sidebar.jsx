@@ -50,11 +50,6 @@ const mainItems = [
     icon: Shield,
   },
   {
-    label: 'Jobs',
-    path: '/admin/jobs',
-    icon: Briefcase,
-  },
-  {
     label: 'Reports',
     path: '/admin/reports',
     icon: BarChart2,
@@ -104,7 +99,6 @@ export default function Sidebar({ onLogout }) {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
 
     if (onLogout) {
       onLogout();

@@ -10,6 +10,7 @@ export default function RequirementsDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [profile, setProfile] = useState({ name: '', email: '', imageUrl: '' });
   const [filters, setFilters] = useState({
     role: "All",
     location: "Global",
@@ -20,6 +21,31 @@ export default function RequirementsDashboard() {
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
+  const fetchAdminProfile = async () => {
+    try {
+      const response = await api.get('/profile/me');
+      if (response.data.user) {
+        const user = response.data.user;
+        const imageUrl = user.profileImage 
+          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}` 
+          : `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`;
+        setProfile({
+          name: user.name || '',
+          email: user.email || '',
+          imageUrl: imageUrl
+        });
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAdminProfile();
+  }, []);
+
   useEffect(() => {
     fetchJobs();
   }, [currentPage, filters]);
@@ -28,15 +54,15 @@ export default function RequirementsDashboard() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      
+
       if (filters.location !== "Global") {
         params.append("location", filters.location);
       }
-      
+
       if (filters.type !== "All") {
         params.append("type", filters.type);
       }
-      
+
       if (searchTerm) {
         params.append("search", searchTerm);
       }
@@ -44,40 +70,33 @@ export default function RequirementsDashboard() {
       const response = await api.get(`/jobs?${params.toString()}`);
       let jobsData = response.data.data || [];
 
-      // Apply client-side filters for status and role
+      // Apply client-side filters
       if (filters.status !== "Any") {
-        jobsData = jobsData.filter(job => job.status === filters.status);
-      }
-      
-      if (filters.role !== "All") {
         jobsData = jobsData.filter(job => 
-          job.title.toLowerCase().includes(filters.role.toLowerCase())
+          job.status?.toLowerCase() === filters.status.toLowerCase()
         );
       }
 
-      // Apply search filter
-      if (searchTerm) {
+      if (filters.role !== "All") {
         jobsData = jobsData.filter(job =>
-          job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (job.jobId && job.jobId.toLowerCase().includes(searchTerm.toLowerCase()))
+          job.title.toLowerCase().includes(filters.role.toLowerCase())
         );
       }
 
       // Calculate pagination
       const total = jobsData.length;
-      setTotalPages(Math.ceil(total / itemsPerPage));
-      
-      // Apply pagination
+      setTotalPages(Math.max(1, Math.ceil(total / itemsPerPage)));
+
       const startIndex = (currentPage - 1) * itemsPerPage;
       const paginatedJobs = jobsData.slice(startIndex, startIndex + itemsPerPage);
-      
+
       setJobs(paginatedJobs);
       setError(null);
     } catch (err) {
       console.error("Failed to fetch jobs:", err);
-      setError("Failed to load job requirements");
+      setError(err.response?.data?.message || "Failed to load job requirements");
       setJobs([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -98,7 +117,7 @@ export default function RequirementsDashboard() {
   const clearFilters = () => {
     setFilters({
       role: "All",
-      location: "Global", 
+      location: "Global",
       status: "Any",
       type: "All"
     });
@@ -110,31 +129,47 @@ export default function RequirementsDashboard() {
     navigate(`/admin/requirements/${jobId}`);
   };
 
-  const exportToCSV = () => {
-    const headers = ["Job ID", "Company", "Role", "Type", "Quantity", "Location", "Applications", "Status", "Date"];
-    const csvData = jobs.map(job => [
-      job.jobId || `REQ-${job._id.slice(-4)}`,
-      job.company,
-      job.title,
-      job.type,
-      job.quantity || "1",
-      job.location,
-      job.applicationsCount || "0",
-      job.status,
-      new Date(job.createdAt).toLocaleDateString()
-    ]);
+  const exportToCSV = async () => {
+    try {
+      // Fetch all jobs without pagination for export
+      const response = await api.get('/jobs');
+      const allJobs = response.data.data || [];
 
-    const csvContent = [headers, ...csvData]
-      .map(row => row.map(field => `"${field}"`).join(","))
-      .join("\n");
+      if (allJobs.length === 0) {
+        alert('No data to export');
+        return;
+      }
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "job-requirements.csv";
-    a.click();
-    window.URL.revokeObjectURL(url);
+      const headers = ["Job ID", "Company", "Role", "Type", "Quantity", "Location", "Applications", "Status", "Date"];
+      const csvData = allJobs.map(job => [
+        job.jobId || `REQ-${job._id.slice(-4).toUpperCase()}`,
+        job.company || 'N/A',
+        job.title || 'N/A',
+        job.type || 'N/A',
+        job.quantity || "1",
+        job.location || 'N/A',
+        job.applicationsCount || "0",
+        job.status || 'Open',
+        new Date(job.createdAt).toLocaleDateString()
+      ]);
+
+      const csvContent = [headers, ...csvData]
+        .map(row => row.map(field => `"${field}"`).join(","))
+        .join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `job-requirements-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Failed to export data. Please try again.');
+    }
   };
 
   const getStatusClass = (status) => {
@@ -169,11 +204,11 @@ export default function RequirementsDashboard() {
 
           <div className="profile">
             <img
-              src="https://i.pravatar.cc/100"
+              src={profile.imageUrl}
               alt="profile"
             />
             <div>
-              <p>Alex Rivera</p>
+              <p>{profile.name}</p>
               <span>Super Admin</span>
             </div>
           </div>
@@ -193,7 +228,7 @@ export default function RequirementsDashboard() {
 
         {/* Filters */}
         <div className="filters">
-          <select 
+          <select
             value={filters.role}
             onChange={(e) => handleFilterChange('role', e.target.value)}
           >
@@ -205,7 +240,7 @@ export default function RequirementsDashboard() {
             <option value="Inspector">Structural Inspector</option>
           </select>
 
-          <select 
+          <select
             value={filters.location}
             onChange={(e) => handleFilterChange('location', e.target.value)}
           >
@@ -217,7 +252,7 @@ export default function RequirementsDashboard() {
             <option value="Seattle">Seattle, WA</option>
           </select>
 
-          <select 
+          <select
             value={filters.status}
             onChange={(e) => handleFilterChange('status', e.target.value)}
           >
@@ -228,7 +263,7 @@ export default function RequirementsDashboard() {
             <option value="Cancelled">Cancelled</option>
           </select>
 
-          <select 
+          <select
             value={filters.type}
             onChange={(e) => handleFilterChange('type', e.target.value)}
           >
@@ -282,7 +317,7 @@ export default function RequirementsDashboard() {
                         </td>
                         <td>{job.company}</td>
                         <td>
-                          <strong 
+                          <strong
                             style={{ cursor: 'pointer', color: '#007bff' }}
                             onClick={() => handleJobClick(job._id)}
                           >
@@ -299,10 +334,10 @@ export default function RequirementsDashboard() {
                           </span>
                         </td>
                         <td>
-                          {new Date(job.createdAt).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric' 
+                          {new Date(job.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
                           })}
                         </td>
                       </tr>
@@ -322,13 +357,13 @@ export default function RequirementsDashboard() {
                 <span>Page {currentPage} of {totalPages}</span>
 
                 <div>
-                  <button 
+                  <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
                   >
                     {"<"}
                   </button>
-                  <button 
+                  <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
                   >
