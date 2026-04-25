@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { usePermissions, hasPermission } from '../hooks/usePermissions';
 import {
   LayoutGrid,
   Bell,
@@ -15,6 +16,7 @@ import {
   HelpCircle,
   BaggageClaim,
   LogOut,
+  SignpostBig
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -48,6 +50,11 @@ const mainItems = [
     label: 'Verifications',
     path: '/admin/verifications',
     icon: Shield,
+  },
+  {
+    label: 'Post Approval',
+    path: '/admin/post-approval',
+    icon: SignpostBig,
   },
   {
     label: 'Reports',
@@ -90,8 +97,35 @@ const financeItems = [
 export default function Sidebar({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const permissions = usePermissions();
+  const adminUser = localStorage.getItem('adminUser');
 
-  const allItems = [...mainItems, ...financeItems, ...systemItems];
+  const filteredMainItems = mainItems.filter(item => {
+    if (!adminUser) return true;
+    if (item.path === '/admin/verifications' || item.path === '/admin/post-approval' || item.path === "/admin/vendors" || item.path === "/admin/workers") {
+      return hasPermission(permissions, 'canVerifyUsers');
+    }
+
+    return true;
+  });
+
+  const filteredFinanceItems = financeItems.filter(item => {
+    if (!adminUser) return true;
+    if (item.path === '/admin/revenue') {
+      return hasPermission(permissions, 'canAccessRevenue');
+    }
+    return true;
+  });
+
+  const filteredSystemItems = systemItems.filter(item => {
+    if (!adminUser) return true;
+    if (item.path === '/admin/platform-settings') {
+      return hasPermission(permissions, 'canAccessPlatformSettings');
+    }
+    return true;
+  });
+
+  const allItems = [...filteredMainItems, ...filteredFinanceItems, ...systemItems];
 
   const activePath = useMemo(() => {
     return allItems.find((item) => location.pathname.startsWith(item.path))?.path;
@@ -122,7 +156,7 @@ export default function Sidebar({ onLogout }) {
 
       <nav className="sidebar-menu">
         <p className="sidebar-group-label">Main</p>
-        {mainItems.map((item) => {
+        {filteredMainItems.map((item) => {
           const Icon = item.icon;
           const active = activePath === item.path;
           return (
@@ -137,8 +171,10 @@ export default function Sidebar({ onLogout }) {
           );
         })}
 
-        <p className="sidebar-group-label sidebar-group-label-finance">Finance</p>
-        {financeItems.map((item) => {
+        {filteredFinanceItems.length > 0 && (
+          <>
+            <p className="sidebar-group-label sidebar-group-label-finance">Finance</p>
+            {filteredFinanceItems.map((item) => {
           const Icon = item.icon;
           const active = activePath === item.path;
           return (
@@ -152,9 +188,11 @@ export default function Sidebar({ onLogout }) {
             </button>
           );
         })}
+          </>
+        )}
 
         <p className="sidebar-group-label sidebar-group-label-finance">System</p>
-        {systemItems.map((item) => {
+        {filteredSystemItems.map((item) => {
           const Icon = item.icon;
           const active = activePath === item.path;
           return (

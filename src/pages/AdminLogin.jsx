@@ -19,16 +19,15 @@ export default function AdminLogin() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [forgotMessage, setForgotMessage] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
-  const [another, setAnother] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
+    // First, try Super Admin login
     try {
-      //First attempt: admin login
       const response = await api.post('/auth/admin/login', {
         email,
         password,
@@ -36,31 +35,29 @@ export default function AdminLogin() {
 
       if (response.data.success && response.data.token) {
         localStorage.setItem('adminToken', response.data.token);
-        navigate('/admin/dashboard');
+        navigate('/admin/dashboard', { replace: true });
         return;
       }
+    } catch (superAdminErr) {
+      // Super admin login failed, try admin user login
+      try {
+        const response = await api.post('/admin-users/login', {
+          email,
+          password,
+        });
 
-      //Second attempt: admin-user login
-      const response2 = await api.post('/admin-users/login', {
-        email,
-        password,
-      });
-
-      if (response2.data.success && response2.data.token) {
-        localStorage.setItem('adminUser', response2.data.token);
-        navigate('/admin/dashboard');
-        return;
+        if (response.data.success && response.data.token) {
+          localStorage.setItem('adminUser', response.data.token);
+          navigate('/admin/dashboard', { replace: true });
+          return;
+        }
+      } catch (adminUserErr) {
+        setError(adminUserErr.response?.data?.message || 'Invalid credentials');
       }
-
-      setError('Login failed. Please try again.');
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
-      console.log('Login error:', err);
     } finally {
       setLoading(false);
     }
   };
-
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
@@ -192,7 +189,7 @@ export default function AdminLogin() {
           </motion.div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSignIn}>
           <motion.div
             className="form-field"
             initial={{ opacity: 0, y: 10 }}
@@ -250,7 +247,7 @@ export default function AdminLogin() {
               <span>Signing in...</span>
             ) : (
               <>
-                Sign In to Dashboard
+                Sign In
                 <ArrowRight size={18} />
               </>
             )}

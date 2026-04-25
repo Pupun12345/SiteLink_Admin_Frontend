@@ -15,6 +15,7 @@ import {
 import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
 import './WorkerVerification.css';
+import { hasPermission, usePermissions } from '../hooks/usePermissions';
 
 export default function WorkerVerification() {
   const [workers, setWorkers] = useState([]);
@@ -45,8 +46,8 @@ export default function WorkerVerification() {
       const response = await api.get('/profile/me');
       if (response.data.user) {
         const user = response.data.user;
-        const imageUrl = user.profileImage 
-          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}` 
+        const imageUrl = user.profileImage
+          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}`
           : `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`;
         setProfile({
           name: user.name || '',
@@ -60,7 +61,7 @@ export default function WorkerVerification() {
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     fetchAdminProfile();
   }, []);
@@ -68,9 +69,14 @@ export default function WorkerVerification() {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
-    
+    localStorage.removeItem('adminUser');
     navigate('/admin/login');
   };
+
+  //permissions access
+  const permissions = usePermissions();
+  const adminUser = localStorage.getItem("adminUser");
+  const canAccess = !adminUser || hasPermission(permissions, 'canVerifyUsers');
 
   const handleExportCSV = () => {
     if (filteredWorkers.length === 0) {
@@ -126,15 +132,11 @@ export default function WorkerVerification() {
       console.log(data.data)
     } catch (err) {
       console.error('Failed to load workers:', err);
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        localStorage.removeItem('adminToken');
-        
-        navigate('/admin/login');
-      }
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleAddWorker = async (e) => {
     e.preventDefault();
@@ -210,7 +212,7 @@ export default function WorkerVerification() {
           const verifyResponse = await api.put(`/admin/workers/${finalWorkerID}/auto-verify`, {
             rating: parseFloat(formData.rating)
           });
-          
+
           console.log('Auto-verify response:', verifyResponse.data);
           toast.success('Worker added and approved successfully!', { id: loadingToast });
         } catch (verifyErr) {
@@ -304,476 +306,539 @@ export default function WorkerVerification() {
   }
 
   return (
-    <div className="verification-page">
-      <Toaster position="top-right" reverseOrder={false} />
-      <Sidebar onLogout={handleLogout} />
+    !canAccess ? (
+      <div
+        style={{
+          display: 'flex',
+          minHeight: '100vh',
+          background: '#f5f7fa',
+        }}
+      >
+        <Sidebar />
 
-      <main className="verification-main">
-        <header className="verification-topbar">
-          <div className="search-bar">
-            <Search size={18} />
-            <input
-              type="text"
-              placeholder="Search workers, ID or trade..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        <main
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: "180px"
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              padding: '40px 50px',
+              borderRadius: '12px',
+              boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+              textAlign: 'center',
+              maxWidth: '500px',
+              width: '100%',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '40px',
+                marginBottom: '15px',
+              }}
+            >
+              🚫
+            </div>
+
+            <h2
+              style={{
+                color: '#ff4d4f',
+                marginBottom: '10px',
+                fontWeight: '600',
+              }}
+            >
+              Access Denied
+            </h2>
+
+            <p
+              style={{
+                color: '#555',
+                fontSize: '16px',
+                lineHeight: '1.6',
+              }}
+            >
+              You do not have permission to access the Worker Verification Page.
+            </p>
           </div>
+        </main>
+      </div>
+    ) : (
+      <div className="verification-page">
+        <Toaster position="top-right" reverseOrder={false} />
+        <Sidebar onLogout={handleLogout} />
 
-          <div className="topbar-actions">
-            <button className="icon-btn" onClick={() => navigate("/admin/notifications")}>
-              <Bell size={20} />
-              <span className="notification-badge"></span>
-            </button>
-            <div className="user-menu">
-              <div className="user-avatar">
-                <img src={`${profile.imageUrl}`} alt="Admin" />
+        <main className="verification-main">
+          <header className="verification-topbar">
+            <div className="search-bar">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Search workers, ID or trade..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="topbar-actions">
+              <button className="icon-btn" onClick={() => navigate("/admin/notifications")}>
+                <Bell size={20} />
+                <span className="notification-badge"></span>
+              </button>
+              <div className="user-menu">
+                <div className="user-avatar">
+                  <img src={`${profile.imageUrl}`} alt="Admin" />
+                </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <div className="verification-content">
-          <div className="page-header">
-            <div>
-              <h1>Worker Verification</h1>
-              <p className="page-subtitle">Review and manage professional certifications for site personnel.</p>
+          <div className="verification-content">
+            <div className="page-header">
+              <div>
+                <h1>Worker Verification</h1>
+                <p className="page-subtitle">Review and manage professional certifications for site personnel.</p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button className="export-btn" onClick={handleExportCSV}>
+                  <Download size={18} />
+                  Export CSV
+                </button>
+                <button className="add-btn" onClick={() => setShowAddForm(!showAddForm)}>
+                  <Plus size={18} />
+                  {showAddForm ? 'Cancel' : 'Add Worker'}
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="export-btn" onClick={handleExportCSV}>
-                <Download size={18} />
-                Export CSV
-              </button>
-              <button className="add-btn" onClick={() => setShowAddForm(!showAddForm)}>
-                <Plus size={18} />
-                {showAddForm ? 'Cancel' : 'Add Worker'}
-              </button>
-            </div>
-          </div>
 
-          {showAddForm && (
-            <div style={{
-              background: 'white',
-              border: '1px solid #e5e7eb',
-              borderRadius: '12px',
-              padding: '24px',
-              marginBottom: '24px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-            }}>
-              <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '700' }}>Add New Worker</h3>
-              <form onSubmit={handleAddWorker}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Full Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Enter worker name"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
+            {showAddForm && (
+              <div style={{
+                background: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                padding: '24px',
+                marginBottom: '24px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              }}>
+                <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '700' }}>Add New Worker</h3>
+                <form onSubmit={handleAddWorker}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Enter worker name"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Email</label>
+                      <input
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="Enter email address"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Daily Wage</label>
+                      <input
+                        type="tel"
+                        required
+                        value={formData.dailyRate}
+                        onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value })}
+                        placeholder="Enter Daily Wage"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Phone</label>
+                      <input
+                        type="tel"
+                        required
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="Enter phone number"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Role</label>
+                      <input
+                        type="text"
+                        value={formData.role}
+                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                        placeholder="e.g., Carpenter, Electrician"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Experience</label>
+                      <select
+                        value={formData.experience}
+                        onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          backgroundColor: 'white'
+                        }}
+                      >
+                        <option value="">Select experience</option>
+                        <option value="0-1 Year">0-1 Year</option>
+                        <option value="1-3 Years">1-3 Years</option>
+                        <option value="3-5 Years">3-5 Years</option>
+                        <option value="5+ Years">5+ Years</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>City</label>
+                      <input
+                        type="text"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        placeholder="Enter city"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Rating (1-5)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        step="0.1"
+                        value={formData.rating}
+                        onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                        placeholder="Enter rating"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Profile Photo (Optional)</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setProfileImage(e.target.files[0])}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      {profileImage && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {profileImage.name}</p>}
+                    </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Document (Optional)</label>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => setDocumentFile(e.target.files[0])}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      {documentFile && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {documentFile.name}</p>}
+                    </div>
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Email</label>
-                    <input
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="Enter email address"
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                    <button
+                      type="button"
+                      onClick={handleCancelAdd}
                       style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Daily Wage</label>
-                    <input
-                      type="tel"
-                      required
-                      value={formData.dailyRate}
-                      onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value })}
-                      placeholder="Enter Daily Wage"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Phone</label>
-                    <input
-                      type="tel"
-                      required
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="Enter phone number"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Role</label>
-                    <input
-                      type="text"
-                      value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      placeholder="e.g., Carpenter, Electrician"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Experience</label>
-                    <select
-                      value={formData.experience}
-                      onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
+                        padding: '10px 20px',
+                        background: '#f3f4f6',
+                        color: '#374151',
+                        border: 'none',
                         borderRadius: '8px',
                         fontSize: '14px',
-                        backgroundColor: 'white'
+                        fontWeight: '600',
+                        cursor: 'pointer'
                       }}
                     >
-                      <option value="">Select experience</option>
-                      <option value="0-1 Year">0-1 Year</option>
-                      <option value="1-3 Years">1-3 Years</option>
-                      <option value="3-5 Years">3-5 Years</option>
-                      <option value="5+ Years">5+ Years</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>City</label>
-                    <input
-                      type="text"
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      placeholder="Enter city"
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
                       style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
+                        padding: '10px 20px',
+                        background: '#10b981',
+                        color: 'white',
+                        border: 'none',
                         borderRadius: '8px',
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: submitting ? 'not-allowed' : 'pointer',
+                        opacity: submitting ? 0.6 : 1
                       }}
-                    />
+                    >
+                      {submitting ? 'Adding...' : 'Add Worker'}
+                    </button>
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Rating (1-5)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="5"
-                      step="0.1"
-                      value={formData.rating}
-                      onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
-                      placeholder="Enter rating"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Profile Photo (Optional)</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setProfileImage(e.target.files[0])}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                    {profileImage && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {profileImage.name}</p>}
-                  </div>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Document (Optional)</label>
-                    <input
-                      type="file"
-                      accept="image/*,.pdf"
-                      onChange={(e) => setDocumentFile(e.target.files[0])}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                    {documentFile && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {documentFile.name}</p>}
-                  </div>
+                </form>
+              </div>
+            )}
+
+            <div className="stats-row">
+              <motion.div
+                className="stat-box"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <p className="stat-box-label">TOTAL REQUESTS</p>
+                <div className="stat-box-value">{workers.length.toLocaleString()}</div>
+                <p className="stat-box-change success">↑ 12% this month</p>
+              </motion.div>
+
+              <motion.div
+                className="stat-box highlight-orange"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+              >
+                <p className="stat-box-label">PENDING REVIEW</p>
+                <div className="stat-box-value">{workers.filter(w => w.status === 'Pending').length.toLocaleString()}</div>
+                <p className="stat-box-change warning">{workers.filter(w => w.status === 'Pending').length} requires review</p>
+              </motion.div>
+
+              <motion.div
+                className="stat-box"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <p className="stat-box-label">APPROVED WORKERS</p>
+                <div className="stat-box-value">{approvedWorkers.length.toLocaleString()}</div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: approvedWorkers.length > 0 ? `${Math.min(100, (approvedWorkers.length / Math.max(1, workers.length)) * 100)}%` : '0%' }}></div>
                 </div>
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
-                  <button
-                    type="button"
-                    onClick={handleCancelAdd}
-                    style={{
-                      padding: '10px 20px',
-                      background: '#f3f4f6',
-                      color: '#374151',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    style={{
-                      padding: '10px 20px',
-                      background: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: submitting ? 'not-allowed' : 'pointer',
-                      opacity: submitting ? 0.6 : 1
-                    }}
-                  >
-                    {submitting ? 'Adding...' : 'Add Worker'}
-                  </button>
+              </motion.div>
+
+              <motion.div
+                className="stat-box"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+              >
+                <p className="stat-box-label">AVG. RATING</p>
+                <div className="stat-box-value">
+                  {averageRating || '—'}
+                  <span className="rating-sub">/5.0</span>
                 </div>
-              </form>
+                <p className="stat-box-change success">
+                  {ratedWorkers.length > 0 ? `★ Based on ${ratedWorkers.length} review${ratedWorkers.length === 1 ? '' : 's'}` : 'No ratings yet'}
+                </p>
+              </motion.div>
             </div>
-          )}
 
-          <div className="stats-row">
-            <motion.div
-              className="stat-box"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <p className="stat-box-label">TOTAL REQUESTS</p>
-              <div className="stat-box-value">{workers.length.toLocaleString()}</div>
-              <p className="stat-box-change success">↑ 12% this month</p>
-            </motion.div>
-
-            <motion.div
-              className="stat-box highlight-orange"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-            >
-              <p className="stat-box-label">PENDING REVIEW</p>
-              <div className="stat-box-value">{workers.filter(w => w.status === 'Pending').length.toLocaleString()}</div>
-              <p className="stat-box-change warning">{workers.filter(w => w.status === 'Pending').length} requires review</p>
-            </motion.div>
-
-            <motion.div
-              className="stat-box"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <p className="stat-box-label">APPROVED WORKERS</p>
-              <div className="stat-box-value">{approvedWorkers.length.toLocaleString()}</div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: approvedWorkers.length > 0 ? `${Math.min(100, (approvedWorkers.length / Math.max(1, workers.length)) * 100)}%` : '0%' }}></div>
+            <div className="filters-section">
+              <div className="filter-group">
+                <div className="filter-dropdown">
+                  <button className="filter-btn" onClick={() => setShowFilterDropdown(!showFilterDropdown)}>
+                    Filter: {statusFilter === 'all' ? 'All Status' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                    <ChevronDown size={16} />
+                  </button>
+                  {showFilterDropdown && (
+                    <div className="dropdown-menu">
+                      <button onClick={() => { setStatusFilter('all'); setShowFilterDropdown(false); }}>All Status</button>
+                      <button onClick={() => { setStatusFilter('pending'); setShowFilterDropdown(false); }}>Pending</button>
+                      <button onClick={() => { setStatusFilter('approved'); setShowFilterDropdown(false); }}>Approved</button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </motion.div>
-
-            <motion.div
-              className="stat-box"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
-            >
-              <p className="stat-box-label">AVG. RATING</p>
-              <div className="stat-box-value">
-                {averageRating || '—'}
-                <span className="rating-sub">/5.0</span>
+              <div className="results-count">
+                SHOWING {paginatedWorkers.length} OF {filteredWorkers.length}
               </div>
-              <p className="stat-box-change success">
-                {ratedWorkers.length > 0 ? `★ Based on ${ratedWorkers.length} review${ratedWorkers.length === 1 ? '' : 's'}` : 'No ratings yet'}
-              </p>
-            </motion.div>
-          </div>
+            </div>
 
-          <div className="filters-section">
-            <div className="filter-group">
-              <div className="filter-dropdown">
-                <button className="filter-btn" onClick={() => setShowFilterDropdown(!showFilterDropdown)}>
-                  Filter: {statusFilter === 'all' ? 'All Status' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
-                  <ChevronDown size={16} />
+            <div className="table-container">
+              <table className="workers-table">
+                <thead>
+                  <tr>
+                    <th>WORKER NAME</th>
+                    <th>ROLE</th>
+                    <th>EXPERIENCE</th>
+                    <th>CITY</th>
+                    <th>RATING</th>
+                    <th>DOCUMENTS</th>
+                    <th>STATUS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedWorkers.map((worker, index) => (
+                    <motion.tr
+                      key={worker._id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => navigate(`/admin/workers/${worker._id}`)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <td>
+                        <div className="worker-cell">
+                          <img
+                            src={
+                              worker.profileImage
+                                ? "http://localhost:5000/" + worker.profileImage.replace(/\\/g, '/')
+                                : `https://ui-avatars.com/api/?name=${encodeURIComponent(worker.name)}&background=3b82f6&color=fff`
+                            }
+                            alt={worker.name}
+                            className="worker-table-avatar"
+                            onError={(e) => {
+                              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(worker.name)}&background=3b82f6&color=fff`;
+                            }}
+                          />
+                          <div>
+                            <div className="worker-name" style={{ fontSize: "1.2rem" }}>{worker.name}</div>
+                            <div className="worker-id">ID: #WK-{worker._id.slice(-4)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{worker.role || 'General Worker'}</td>
+                      <td>{worker.experience || 'N/A'}</td>
+                      <td>{worker.city || 'N/A'}</td>
+                      <td>
+                        {worker.adminRating ? (
+                          <div className="rating-cell">
+                            {[1, 2, 3, 4, 5].map((star) => {
+                              const rating = parseFloat(worker.adminRating);
+                              const isFilled = star <= Math.floor(rating);
+                              const isHalfFilled = star > Math.floor(rating) && star <= Math.ceil(rating) && rating % 1 >= 0.5;
+
+                              return (
+                                <Star
+                                  key={star}
+                                  size={14}
+                                  fill={isFilled ? '#fbbf24' : isHalfFilled ? '#fbbf24' : '#e5e7eb'}
+                                  stroke={isFilled || isHalfFilled ? '#fbbf24' : '#e5e7eb'}
+                                  style={{
+                                    opacity: isHalfFilled ? 0.6 : 1
+                                  }}
+                                />
+                              );
+                            })}
+                            <span>{parseFloat(worker.adminRating).toFixed(1)}/5</span>
+                          </div>
+                        ) : (
+                          <span className="no-rating">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <button className="view-files-btn">
+                          <FileText size={16} />
+                          VIEW FILES
+                        </button>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${getStatusBadgeClass(worker)}`}>
+                          {getStatusText(worker)}
+                        </span>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="pagination">
+              <div className="pagination-info">
+                Showing <strong>{((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong>{Math.min(currentPage * itemsPerPage, filteredWorkers.length)}</strong> of <strong>{filteredWorkers.length}</strong> entries
+              </div>
+              <div className="pagination-controls">
+                <button
+                  className="page-btn"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  &lt;
                 </button>
-                {showFilterDropdown && (
-                  <div className="dropdown-menu">
-                    <button onClick={() => { setStatusFilter('all'); setShowFilterDropdown(false); }}>All Status</button>
-                    <button onClick={() => { setStatusFilter('pending'); setShowFilterDropdown(false); }}>Pending</button>
-                    <button onClick={() => { setStatusFilter('approved'); setShowFilterDropdown(false); }}>Approved</button>
-                  </div>
-                )}
+                {[...Array(Math.min(3, totalPages))].map((_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <button
+                      key={pageNum}
+                      className={`page-btn ${currentPage === pageNum ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(pageNum)}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                {totalPages > 3 && <span className="page-ellipsis">...</span>}
+                <button
+                  className="page-btn"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  &gt;
+                </button>
               </div>
             </div>
-            <div className="results-count">
-              SHOWING {paginatedWorkers.length} OF {filteredWorkers.length}
-            </div>
           </div>
-
-          <div className="table-container">
-            <table className="workers-table">
-              <thead>
-                <tr>
-                  <th>WORKER NAME</th>
-                  <th>ROLE</th>
-                  <th>EXPERIENCE</th>
-                  <th>CITY</th>
-                  <th>RATING</th>
-                  <th>DOCUMENTS</th>
-                  <th>STATUS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedWorkers.map((worker, index) => (
-                  <motion.tr
-                    key={worker._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => navigate(`/admin/workers/${worker._id}`)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <td>
-                      <div className="worker-cell">
-                        <img
-                          src={
-                            worker.profileImage
-                              ? "http://localhost:5000/" + worker.profileImage.replace(/\\/g, '/')
-                              : `https://ui-avatars.com/api/?name=${encodeURIComponent(worker.name)}&background=3b82f6&color=fff`
-                          }
-                          alt={worker.name}
-                          className="worker-table-avatar"
-                          onError={(e) => {
-                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(worker.name)}&background=3b82f6&color=fff`;
-                          }}
-                        />
-                        <div>
-                          <div className="worker-name" style={{ fontSize: "1.2rem" }}>{worker.name}</div>
-                          <div className="worker-id">ID: #WK-{worker._id.slice(-4)}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{worker.role || 'General Worker'}</td>
-                    <td>{worker.experience || 'N/A'}</td>
-                    <td>{worker.city || 'N/A'}</td>
-                    <td>
-                      {worker.adminRating ? (
-                        <div className="rating-cell">
-                          {[1, 2, 3, 4, 5].map((star) => {
-                            const rating = parseFloat(worker.adminRating);
-                            const isFilled = star <= Math.floor(rating);
-                            const isHalfFilled = star > Math.floor(rating) && star <= Math.ceil(rating) && rating % 1 >= 0.5;
-
-                            return (
-                              <Star
-                                key={star}
-                                size={14}
-                                fill={isFilled ? '#fbbf24' : isHalfFilled ? '#fbbf24' : '#e5e7eb'}
-                                stroke={isFilled || isHalfFilled ? '#fbbf24' : '#e5e7eb'}
-                                style={{
-                                  opacity: isHalfFilled ? 0.6 : 1
-                                }}
-                              />
-                            );
-                          })}
-                          <span>{parseFloat(worker.adminRating).toFixed(1)}/5</span>
-                        </div>
-                      ) : (
-                        <span className="no-rating">—</span>
-                      )}
-                    </td>
-                    <td>
-                      <button className="view-files-btn">
-                        <FileText size={16} />
-                        VIEW FILES
-                      </button>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${getStatusBadgeClass(worker)}`}>
-                        {getStatusText(worker)}
-                      </span>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="pagination">
-            <div className="pagination-info">
-              Showing <strong>{((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong>{Math.min(currentPage * itemsPerPage, filteredWorkers.length)}</strong> of <strong>{filteredWorkers.length}</strong> entries
-            </div>
-            <div className="pagination-controls">
-              <button
-                className="page-btn"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                &lt;
-              </button>
-              {[...Array(Math.min(3, totalPages))].map((_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <button
-                    key={pageNum}
-                    className={`page-btn ${currentPage === pageNum ? 'active' : ''}`}
-                    onClick={() => setCurrentPage(pageNum)}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-              {totalPages > 3 && <span className="page-ellipsis">...</span>}
-              <button
-                className="page-btn"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                &gt;
-              </button>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    )
   );
 }

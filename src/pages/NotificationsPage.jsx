@@ -74,7 +74,20 @@ export default function NotificationsPage() {
   });
   const [creating, setCreating] = useState(false);
 
-  const adminUser = useMemo(() => JSON.parse(localStorage.getItem('adminUser') || '{}'), []);
+  const adminUser = useMemo(() => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        // Decode JWT token to get user info
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return { name: payload.name || 'Admin User' };
+      }
+      return { name: 'Admin User' };
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      return { name: 'Admin User' };
+    }
+  }, []);
 
   // Fetch notifications
   const fetchNotifications = async (page = 1, search = '', tabFilter = activeTab) => {

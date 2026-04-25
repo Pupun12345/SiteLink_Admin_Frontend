@@ -1,40 +1,38 @@
 import { useState, useEffect } from 'react';
+import api from '../api/axios';
 
 export const usePermissions = () => {
   const [permissions, setPermissions] = useState({
-    canAccessPlatformSettings: true,
-    canAccessRevenue: true,
-    canVerifyUsers: true,
-    canManageUsers: true,
+    canAccessPlatformSettings: false,
+    canAccessRevenue: false,
+    canVerifyUsers: false,
   });
 
   useEffect(() => {
-    const adminUser = localStorage.getItem('adminUser');
-    if (adminUser) {
-      try {
-        const user = JSON.parse(adminUser);
-        if (user.permissions) {
-          setPermissions(user.permissions);
-        }
-      } catch (error) {
-        console.error('Error parsing admin user:', error);
-      }
-    }
+    fetchPermissions();
   }, []);
+
+  const fetchPermissions = async () => {
+    try {
+      const response = await api.get('/admin-users');
+      const permissions =
+        response.data?.data?.[0]?.permissions; 
+
+      if (permissions) {
+        setPermissions(prev => ({
+          ...prev,
+          ...permissions
+        }));
+      }
+
+    } catch (error) {
+      console.error('Error fetching permissions:', error);
+    }
+  };
 
   return permissions;
 };
 
-export const hasPermission = (permission) => {
-  const adminUser = localStorage.getItem('adminUser');
-  if (!adminUser) return false;
-
-  try {
-    const user = JSON.parse(adminUser);
-    if (!user.permissions) return true;
-    return user.permissions[permission] === true;
-  } catch (error) {
-    console.error('Error checking permission:', error);
-    return false;
-  }
+export const hasPermission = (permissions, checkPermission) => {
+  return permissions?.[checkPermission] === true;
 };

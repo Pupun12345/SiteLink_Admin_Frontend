@@ -300,13 +300,91 @@ export default function JobRequirements() {
 
           <div className="dashboard-grid">
             <div className="left-col">
-              <div className="card">
+              {/* Applicant List - Now in horizontal box */}
+              <div className="card applicants-card">
                 <div className="card-header">
-                  <span className="material-symbols-outlined card-header-icon">subject</span>
-                  Job Description
+                  <div className="card-header-left">
+                    <span className="material-symbols-outlined card-header-icon">groups</span>
+                    Application List
+                  </div>
+                  <span className="total-badge">{filteredApplicants.length} Total</span>
                 </div>
-                <div className="card-body">
-                  <p className="description-text">{job.description || "No description available."}</p>
+
+                <div className="table-wrapper">
+                  <table className="applicant-table">
+                    <thead>
+                      <tr>
+                        <th>Applicant</th>
+                        <th>Role</th>
+                        <th>Experience</th>
+                        <th>Location</th>
+                        <th>Applied</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredApplicants.length > 0 ? (
+                        filteredApplicants.slice(0, 5).map((a) => (
+                          <tr 
+                            key={a.id} 
+                            className="applicant-row"
+                            onClick={() => navigate(`/admin/workers/${a.id}`)}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <td>
+                              <div className="applicant-cell">
+                                <img src={a.avatar || a.img} alt={a.name} className="applicant-avatar" />
+                                <div>
+                                  <p className="applicant-name">{a.name}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="applicant-role">{a.role}</td>
+                            <td className="applicant-experience">{a.experience || 'N/A'}</td>
+                            <td className="applicant-location">{a.location || 'N/A'}</td>
+                            <td className="applied-time">{a.applied}</td>
+                            <td>
+                              <StatusBadge status={a.status} />
+                            </td>
+                            <td>
+                              <button 
+                                className="view-profile-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/admin/workers/${a.id}`);
+                                }}
+                                title="View Profile"
+                              >
+                                <span className="material-symbols-outlined">visibility</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                            No applicants found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="card-footer">
+                  <button 
+                    className="view-all-btn" 
+                    onClick={() => {
+                      console.log('Button clicked - opening modal');
+                      console.log('Current showAllApplicants state:', showAllApplicants);
+                      setShowAllApplicants(true);
+                      console.log('After setting state - showAllApplicants should be true');
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    View All Applicants ({applicants.length})
+                  </button>
                 </div>
               </div>
 
@@ -389,67 +467,14 @@ export default function JobRequirements() {
             </div>
 
             <div className="right-col">
-              <div className="card applicants-card">
+              {/* Job Description - Now in vertical box */}
+              <div className="card">
                 <div className="card-header">
-                  <div className="card-header-left">
-                    <span className="material-symbols-outlined card-header-icon">groups</span>
-                    Application List
-                  </div>
-                  <span className="total-badge">{filteredApplicants.length} Total</span>
+                  <span className="material-symbols-outlined card-header-icon">subject</span>
+                  Job Description
                 </div>
-
-                <div className="table-wrapper">
-                  <table className="applicant-table">
-                    <thead>
-                      <tr>
-                        <th>Applicant</th>
-                        <th>Applied</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredApplicants.length > 0 ? (
-                        filteredApplicants.map((a) => (
-                          <tr key={a.id} className="applicant-row">
-                            <td>
-                              <div className="applicant-cell">
-                                <img src={a.avatar || a.img} alt={a.name} className="applicant-avatar" />
-                                <div>
-                                  <p className="applicant-name">{a.name}</p>
-                                  <p className="applicant-role">{a.role}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="applied-time">{a.applied}</td>
-                            <td>
-                              <StatusBadge status={a.status} />
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-                            No applicants found
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="card-footer">
-                  <button 
-                    className="view-all-btn" 
-                    onClick={() => {
-                      console.log('Button clicked - opening modal');
-                      console.log('Current showAllApplicants state:', showAllApplicants);
-                      setShowAllApplicants(true);
-                      console.log('After setting state - showAllApplicants should be true');
-                    }}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    View All Applicants ({applicants.length})
-                  </button>
+                <div className="card-body">
+                  <p className="description-text">{job.description || "No description available."}</p>
                 </div>
               </div>
             </div>
