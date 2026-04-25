@@ -31,7 +31,8 @@ export default function AdminSettings() {
     newPassword: false,
     confirmPassword: false
   });
-
+ 
+  const adminUser=localStorage.getItem("adminUser")
   const [adminUsers, setAdminUsers] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newAdminForm, setNewAdminForm] = useState({
@@ -42,7 +43,6 @@ export default function AdminSettings() {
       canAccessPlatformSettings: false,
       canAccessRevenue: false,
       canVerifyUsers: true,
-      canManageUsers: true,
     },
   });
 
@@ -222,16 +222,23 @@ export default function AdminSettings() {
         formData.append('profileImage', profileImageFile);
       }
 
+
       const response = await api.put('/profile/admin/edit', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
 
-      if (response.data.message) {
+      console.log('Profile update response:', response.data);
+
+      if (response.data.success) {
         showMessage('success', 'Profile updated successfully!');
         setProfileImageFile(null);
-        fetchProfile();
+        
+        //Reloading the page
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       }
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -477,7 +484,10 @@ export default function AdminSettings() {
           </button>
         </section>
 
-        <section className="settings-panel">
+
+
+        {!adminUser?(
+          <section className="settings-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2>
               <Users size={16} />
@@ -498,7 +508,6 @@ export default function AdminSettings() {
                   <th>Platform Settings</th>
                   <th>Revenue Access</th>
                   <th>Verify Users</th>
-                  <th>Manage Users</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -538,16 +547,6 @@ export default function AdminSettings() {
                       </label>
                     </td>
                     <td>
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={user.permissions.canManageUsers}
-                          onChange={() => handleTogglePermission(user._id, 'canManageUsers')}
-                        />
-                        <span className="slider" />
-                      </label>
-                    </td>
-                    <td>
                       <button
                         type="button"
                         className="delete-btn"
@@ -562,6 +561,7 @@ export default function AdminSettings() {
             </table>
           </div>
         </section>
+        ):("")}
 
         {showCreateModal && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowCreateModal(false)}>
@@ -593,10 +593,6 @@ export default function AdminSettings() {
                   <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                     <input type="checkbox" checked={newAdminForm.permissions.canVerifyUsers} onChange={(e) => setNewAdminForm({ ...newAdminForm, permissions: { ...newAdminForm.permissions, canVerifyUsers: e.target.checked } })} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
                     <span style={{ fontWeight: '400', color: '#2a3a57' }}>Verify Workers/Vendors</span>
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-                    <input type="checkbox" checked={newAdminForm.permissions.canManageUsers} onChange={(e) => setNewAdminForm({ ...newAdminForm, permissions: { ...newAdminForm.permissions, canManageUsers: e.target.checked } })} style={{ width: '18px', height: '18px', cursor: 'pointer' }} />
-                    <span style={{ fontWeight: '400', color: '#2a3a57' }}>Manage Users</span>
                   </label>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>

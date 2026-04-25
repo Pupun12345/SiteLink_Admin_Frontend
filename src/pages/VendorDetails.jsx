@@ -318,6 +318,22 @@ export default function VendorDetails() {
                       <span className="value">{vendor.phone}</span>
                     </div>
                   )}
+                  {vendor.whatsappNumber && (
+                    <div className="card-row">
+                      <span className="label">WhatsApp Number</span>
+                      <span className="value">{vendor.whatsappNumber}</span>
+                    </div>
+                  )}
+                  {vendor.website && (
+                    <div className="card-row">
+                      <span className="label">Website</span>
+                      <span className="value">
+                        <a href={vendor.website} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                          {vendor.website}
+                        </a>
+                      </span>
+                    </div>
+                  )}
                   {vendor.emergencyContact && (
                     <div className="card-row alert-row">
                       <span className="label">Emergency Contact</span>

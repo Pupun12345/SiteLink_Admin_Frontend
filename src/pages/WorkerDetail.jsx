@@ -43,9 +43,14 @@ export default function WorkerDetail() {
   const [activeTab, setActiveTab] = useState('info');
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [requestMessage, setRequestMessage] = useState('');
+  const [showAddSkillModal, setShowAddSkillModal] = useState(false);
+  const [availableSkills, setAvailableSkills] = useState([]);
+  const [selectedSkills, setSelectedSkills] = useState([]);
+  const [customSkillName, setCustomSkillName] = useState('');
 
   useEffect(() => {
     fetchWorkerDetails();
+    fetchAvailableSkills();
   }, [id]);
 
   const getFileUrl = (filePath) => {
@@ -76,6 +81,7 @@ export default function WorkerDetail() {
         ...user,
         status: user.status || 'Pending',
         role: user.role || 'Worker',
+        skills: user.skills || [],
         appliedOn: user.createdAt
           ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
           : 'N/A',
@@ -114,6 +120,84 @@ export default function WorkerDetail() {
       setLoading(false);
     }
   };
+
+  const fetchAvailableSkills = async () => {
+    try {
+      const { data } = await api.get('/skills');
+      setAvailableSkills(data.data || []);
+    } catch (err) {
+      console.error('Failed to fetch skills:', err);
+    }
+  };
+
+  const handleAddSkills = async () => {
+    if (selectedSkills.length === 0 && !customSkillName.trim()) {
+      toast.showToast('Please select at least one skill or enter a custom skill', { type: 'error' });
+      return;
+    }
+
+    if (isProcessing) return;
+    setIsProcessing(true);
+
+    try {
+      const skillsToAdd = [];
+      
+      // Add selected skills from checkboxes
+      selectedSkills.forEach(skillId => {
+        const skill = availableSkills.find(s => s.id === skillId);
+        if (skill) {
+          skillsToAdd.push({
+            skillId: skill.id,
+            skillName: skill.name
+          });
+        }
+      });
+
+      // Add custom skill
+      if (customSkillName.trim()) {
+        const customSkillId = Date.now() + Math.floor(Math.random() * 1000);
+        skillsToAdd.push({
+          skillId: customSkillId,
+          skillName: customSkillName.trim()
+        });
+      }
+
+      await api.put(`/admin/workers/${id}/skills`, { skills: skillsToAdd });
+      await fetchWorkerDetails();
+      toast.showToast('Skills added successfully', { type: 'success' });
+      setShowAddSkillModal(false);
+      setSelectedSkills([]);
+      setCustomSkillName('');
+    } catch (err) {
+      toast.showToast(err.response?.data?.message || 'Failed to add skills', { type: 'error' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRemoveSkill = async (skillId) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+
+    try {
+      await api.delete(`/admin/workers/${id}/skills/${skillId}`);
+      await fetchWorkerDetails();
+      toast.showToast('Skill removed successfully', { type: 'success' });
+    } catch (err) {
+      toast.showToast(err.response?.data?.message || 'Failed to remove skill', { type: 'error' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleToggleSkill = (skillId) => {
+    setSelectedSkills(prev => 
+      prev.includes(skillId) 
+        ? prev.filter(id => id !== skillId)
+        : [...prev, skillId]
+    );
+  };
+
   const handleApprove = () => {
     setShowApprovalConfirm(true);
   };
@@ -519,6 +603,65 @@ export default function WorkerDetail() {
                 </div>
               </div>
 
+              {/* Skills Section */}
+              <div className="card certifications-card">
+                <div className="card-header">
+                  <div className="card-title">SKILLS</div>
+                  <button 
+                    className="view-all-btn" 
+                    onClick={() => setShowAddSkillModal(true)}
+                    style={{ background: '#10b981', color: 'white', padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
+                  >
+                    + Add Skill
+                  </button>
+                </div>
+                <div className="certifications-content">
+                  {worker.skills && worker.skills.length > 0 ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {worker.skills.map((skill, index) => (
+                        <div 
+                          key={index} 
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            background: '#f3f4f6', 
+                            padding: '8px 12px', 
+                            borderRadius: '20px',
+                            fontSize: '14px',
+                            fontWeight: '500'
+                          }}
+                        >
+                          <Wrench size={16} />
+                          <span>{skill.skillName}</span>
+                          <button
+                            onClick={() => handleRemoveSkill(skill.skillId)}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: '#ef4444',
+                              cursor: 'pointer',
+                              padding: '0',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                            title="Remove skill"
+                          >
+                            <XCircle size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="no-data-state">
+                      <Wrench size={48} className="no-data-icon" />
+                      <p className="no-data-text">No skills added</p>
+                      <p className="no-data-subtext">Click "Add Skill" to add skills for this worker</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Work Photos Portfolio */}
               <div className="card portfolio-card">
                 <div className="card-header">
@@ -780,6 +923,134 @@ export default function WorkerDetail() {
                   disabled={isProcessing || !requestMessage.trim()}
                 >
                   Send Request
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showAddSkillModal && (
+          <div 
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowAddSkillModal(false);
+                setSelectedSkills([]);
+                setCustomSkillName('');
+              }
+            }}
+          >
+            <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Add Skills to Worker</h3>
+              <p style={{ margin: '0 0 24px 0', fontSize: '16px', color: '#6b7280' }}>
+                Select skills to add to <strong>{worker.name}</strong>'s profile:
+              </p>
+              
+              {/* Custom Skill Input */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+                  Add Custom Skill
+                </label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={customSkillName}
+                    onChange={(e) => setCustomSkillName(e.target.value)}
+                    placeholder="Enter custom skill name (e.g., Welding, Plumbing)"
+                    style={{
+                      flex: 1,
+                      padding: '10px 14px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && customSkillName.trim()) {
+                        handleAddSkills();
+                      }
+                    }}
+                  />
+                  {customSkillName.trim() && (
+                    <button
+                      onClick={() => setCustomSkillName('')}
+                      style={{
+                        padding: '8px',
+                        background: '#f3f4f6',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                      title="Clear"
+                    >
+                      <XCircle size={18} color="#6b7280" />
+                    </button>
+                  )}
+                </div>
+                <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
+                  Type a skill name and click "Add Skills" or press Enter
+                </p>
+              </div>
+
+              {/* Divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+                <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>OR SELECT FROM LIST</span>
+                <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+              </div>
+
+              {/* Existing Skills Checkboxes */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}>
+                {availableSkills
+                  .filter(skill => !worker.skills.some(ws => ws.skillId === skill.id))
+                  .map(skill => (
+                    <label 
+                      key={skill.id}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px', 
+                        padding: '12px', 
+                        border: selectedSkills.includes(skill.id) ? '2px solid #10b981' : '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        background: selectedSkills.includes(skill.id) ? '#f0fdf4' : 'white',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSkills.includes(skill.id)}
+                        onChange={() => handleToggleSkill(skill.id)}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                      <span style={{ fontSize: '14px', fontWeight: '500' }}>{skill.name}</span>
+                    </label>
+                  ))
+                }
+              </div>
+              {availableSkills.filter(skill => !worker.skills.some(ws => ws.skillId === skill.id)).length === 0 && (
+                <p style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>All available skills have been added to this worker.</p>
+              )}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button 
+                  onClick={() => {
+                    setShowAddSkillModal(false);
+                    setSelectedSkills([]);
+                    setCustomSkillName('');
+                  }}
+                  style={{ padding: '10px 24px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleAddSkills}
+                  disabled={isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())}
+                  style={{ padding: '10px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: (isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())) ? 'not-allowed' : 'pointer', opacity: (isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())) ? 0.6 : 1 }}
+                >
+                  {isProcessing ? 'Adding...' : customSkillName.trim() ? `Add ${selectedSkills.length + 1} Skill${selectedSkills.length + 1 !== 1 ? 's' : ''}` : `Add ${selectedSkills.length} Skill${selectedSkills.length !== 1 ? 's' : ''}`}
                 </button>
               </div>
             </div>

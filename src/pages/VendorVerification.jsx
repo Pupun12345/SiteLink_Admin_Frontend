@@ -14,6 +14,7 @@ import {
 import api from '../api/axios';
 import Sidebar from '../components/Sidebar';
 import './WorkerVerification.css';
+import { hasPermission, usePermissions } from '../hooks/usePermissions';
 
 export default function VendorVerification() {
   const [vendors, setVendors] = useState([]);
@@ -31,6 +32,8 @@ export default function VendorVerification() {
     ownerName: '',
     email: '',
     phone: '',
+    whatsappNumber: '',
+    website: '',
     city: '',
     gstNumber: '',
     projectTypes: '',
@@ -42,7 +45,7 @@ export default function VendorVerification() {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
-    
+
     navigate('/admin/login');
   };
 
@@ -51,8 +54,8 @@ export default function VendorVerification() {
       const response = await api.get('/profile/me');
       if (response.data.user) {
         const user = response.data.user;
-        const imageUrl = user.profileImage 
-          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}` 
+        const imageUrl = user.profileImage
+          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}`
           : `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`;
         setProfile({
           name: user.name || '',
@@ -66,7 +69,7 @@ export default function VendorVerification() {
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     fetchAdminProfile();
   }, []);
@@ -119,43 +122,60 @@ export default function VendorVerification() {
     });
   };
 
+  //Permissions to Access
+  let canAccess = true;
+  const adminUser = localStorage.getItem("adminUser")
+
+  if (adminUser) {
+    const permissions = usePermissions();
+    canAccess = hasPermission(permissions, 'canVerifyUsers');
+  }
+
   const handleAddVendor = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    
+
     const loadingToast = toast.loading('Adding vendor...');
-    
+
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('name', formData.ownerName);
       formDataToSend.append('phone', formData.phone);
-      
+
       if (formData.email) {
         formDataToSend.append('email', formData.email);
       }
-      
+
       formDataToSend.append('password', 'TempPass@123');
       formDataToSend.append('confirmPassword', 'TempPass@123');
       formDataToSend.append('userType', 'vendor');
       formDataToSend.append('ownerName', formData.ownerName);
       formDataToSend.append('companyName', formData.companyName);
-      
+
       if (formData.city) {
         formDataToSend.append('city', formData.city);
       }
-      
+
       if (formData.gstNumber) {
         formDataToSend.append('gstNumber', formData.gstNumber);
       }
-      
+
+      if (formData.whatsappNumber) {
+        formDataToSend.append('whatsappNumber', formData.whatsappNumber);
+      }
+
+      if (formData.website) {
+        formDataToSend.append('website', formData.website);
+      }
+
       if (formData.projectTypes) {
         formDataToSend.append('projectTypes', formData.projectTypes);
       }
-      
+
       if (formData.adminRating) {
         formDataToSend.append('adminRating', formData.adminRating);
       }
-      
+
       if (panCardFile) {
         formDataToSend.append('panCardImage', panCardFile);
       }
@@ -168,7 +188,7 @@ export default function VendorVerification() {
           'Content-Type': 'multipart/form-data',
         },
       });
-      
+
       const vendorOTP = registerResponse.data?.data?.otp;
       console.log('Vendor OTP:', vendorOTP);
 
@@ -193,7 +213,7 @@ export default function VendorVerification() {
           const verifyResponse = await api.put(`/admin/vendors/${finalVendorID}/auto-verify`, {
             rating: parseFloat(formData.adminRating)
           });
-          
+
           console.log('Auto-verify response:', verifyResponse.data);
           toast.success('Vendor added and approved successfully!', { id: loadingToast });
         } catch (verifyErr) {
@@ -207,12 +227,14 @@ export default function VendorVerification() {
         console.error('No vendor ID received');
         toast.error('Vendor added but no ID received. Please verify manually.', { id: loadingToast });
       }
-      
+
       setFormData({
         companyName: '',
         ownerName: '',
         email: '',
         phone: '',
+        whatsappNumber: '',
+        website: '',
         city: '',
         gstNumber: '',
         projectTypes: '',
@@ -225,9 +247,9 @@ export default function VendorVerification() {
     } catch (err) {
       console.error('Full error:', err);
       console.error('Error response:', JSON.stringify(err.response?.data, null, 2));
-      
+
       let errorMsg = 'Failed to add vendor';
-      
+
       if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
         const errors = err.response.data.errors.map(e => `${e.param}: ${e.msg}`).join('\n');
         errorMsg = errors;
@@ -244,7 +266,7 @@ export default function VendorVerification() {
         errorMsg = err.message;
         toast.error(errorMsg, { id: loadingToast });
       }
-      
+
       console.error('Error details:', errorMsg);
     } finally {
       setSubmitting(false);
@@ -258,6 +280,8 @@ export default function VendorVerification() {
       ownerName: '',
       email: '',
       phone: '',
+      whatsappNumber: '',
+      website: '',
       city: '',
       gstNumber: '',
       projectTypes: '',
@@ -275,9 +299,7 @@ export default function VendorVerification() {
     } catch (err) {
       console.error('Failed to fetch vendors:', err);
       if (err.response?.status === 401 || err.response?.status === 403) {
-        localStorage.removeItem('adminToken');
-        
-        navigate('/admin/login');
+        console.error(err);
       }
     } finally {
       setLoading(false);
@@ -316,7 +338,7 @@ export default function VendorVerification() {
 
     window.addEventListener('vendorRated', handleVendorRated);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     return () => {
       window.removeEventListener('vendorRated', handleVendorRated);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -337,13 +359,13 @@ export default function VendorVerification() {
   };
 
   const filteredVendors = vendors.filter(vendor => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       vendor.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor._id?.includes(searchTerm);
-    
+
     if (!matchesSearch) return false;
-    
+
     if (roleFilter && !vendor.projectTypes?.some(type => type.toLowerCase().includes(roleFilter.toLowerCase()))) {
       return false;
     }
@@ -362,456 +384,553 @@ export default function VendorVerification() {
   }
 
   return (
-    <div className="verification-page">
-      <Toaster position="top-right" reverseOrder={false} />
-      <Sidebar onLogout={handleLogout} />
+    !canAccess ? (
+      <div
+        style={{
+          display: 'flex',
+          minHeight: '100vh',
+          background: '#f5f7fa',
+        }}
+      >
+        <Sidebar />
 
-      <main className="verification-main">
-        <header className="verification-topbar">
-          <div className="search-bar">
-            <Search size={18} />
-            <input 
-              type="text" 
-              placeholder="Search vendors, ID or company..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        <main
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft:"180px"
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              padding: '40px 50px',
+              borderRadius: '12px',
+              boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
+              textAlign: 'center',
+              maxWidth: '500px',
+              width: '100%',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '40px',
+                marginBottom: '15px',
+              }}
+            >
+              🚫
+            </div>
+
+            <h2
+              style={{
+                color: '#ff4d4f',
+                marginBottom: '10px',
+                fontWeight: '600',
+              }}
+            >
+              Access Denied
+            </h2>
+
+            <p
+              style={{
+                color: '#555',
+                fontSize: '16px',
+                lineHeight: '1.6',
+              }}
+            >
+              You do not have permission to access the Vendor Verification Page.
+            </p>
           </div>
+        </main>
+      </div>
+    ) : (
+      <div className="verification-page">
+        <Toaster position="top-right" reverseOrder={false} />
+        <Sidebar onLogout={handleLogout} />
 
-          <div className="topbar-actions">
-            <button className="icon-btn">
-              <Bell size={20} />
-              <span className="notification-badge"></span>
-            </button>
-            <div className="user-menu">
-              <div className="user-avatar">
-                <img src={`${profile.imageUrl}`} alt="Admin" />
+        <main className="verification-main">
+          <header className="verification-topbar">
+            <div className="search-bar">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Search vendors, ID or company..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="topbar-actions">
+              <button className="icon-btn">
+                <Bell size={20} />
+                <span className="notification-badge"></span>
+              </button>
+              <div className="user-menu">
+                <div className="user-avatar">
+                  <img src={`${profile.imageUrl}`} alt="Admin" />
+                </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <div className="verification-content">
-          <div className="page-header">
-            <div>
-              <h1>Vendor Verification</h1>
-              <p className="page-subtitle">Review and manage vendor certifications for construction projects.</p>
+          <div className="verification-content">
+            <div className="page-header">
+              <div>
+                <h1>Vendor Verification</h1>
+                <p className="page-subtitle">Review and manage vendor certifications for construction projects.</p>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button className="export-btn" onClick={() => { setLoading(true); fetchVendors(); }}>
+                  ↻ Refresh
+                </button>
+                <button className="export-btn" onClick={handleExportCSV}>
+                  <Download size={18} />
+                  Export CSV
+                </button>
+                <button className="add-btn" onClick={() => setShowAddForm(!showAddForm)}>
+                  <Plus size={18} />
+                  {showAddForm ? 'Cancel' : 'Add Vendor'}
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="export-btn" onClick={() => { setLoading(true); fetchVendors(); }}>
-                ↻ Refresh
-              </button>
-              <button className="export-btn" onClick={handleExportCSV}>
-                <Download size={18} />
-                Export CSV
-              </button>
-              <button className="add-btn" onClick={() => setShowAddForm(!showAddForm)}>
-                <Plus size={18} />
-                {showAddForm ? 'Cancel' : 'Add Vendor'}
-              </button>
-            </div>
-          </div>
 
-          {showAddForm && (
-            <div style={{
-              background: 'white',
-              border: '1px solid #e5e7eb',
-              borderRadius: '12px',
-              padding: '24px',
-              marginBottom: '24px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-            }}>
-              <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '700' }}>Add New Vendor</h3>
-              <form onSubmit={handleAddVendor}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Company Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.companyName}
-                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                      placeholder="Enter company name"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
+            {showAddForm && (
+              <div style={{
+                background: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                padding: '24px',
+                marginBottom: '24px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              }}>
+                <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '700' }}>Add New Vendor</h3>
+                <form onSubmit={handleAddVendor}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Company Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.companyName}
+                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                        placeholder="Enter company name"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Owner Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.ownerName}
+                        onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                        placeholder="Enter owner name"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Email *</label>
+                      <input
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        placeholder="Enter email address"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Phone *</label>
+                      <input
+                        type="tel"
+                        required
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        placeholder="Enter phone number"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>WhatsApp Number *</label>
+                      <input
+                        type="tel"
+                        required
+                        value={formData.whatsappNumber}
+                        onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
+                        placeholder="Enter WhatsApp number"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Website *</label>
+                      <input
+                        type="url"
+                        required
+                        value={formData.website}
+                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                        placeholder="Enter website URL (e.g., https://example.com)"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>City</label>
+                      <input
+                        type="text"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        placeholder="Enter city"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>GST Number</label>
+                      <input
+                        type="text"
+                        value={formData.gstNumber}
+                        onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
+                        placeholder="Enter GST number"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Project Types</label>
+                      <select
+                        value={formData.projectTypes}
+                        onChange={(e) => setFormData({ ...formData, projectTypes: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          backgroundColor: 'white'
+                        }}
+                      >
+                        <option value="">Select project type</option>
+                        <option value="Residential Building">Residential Building</option>
+                        <option value="Commercial Building">Commercial Building</option>
+                        <option value="Industrial Project">Industrial Project</option>
+                        <option value="Infrastructure">Infrastructure</option>
+                        <option value="Renovation">Renovation</option>
+                        <option value="Interior Design">Interior Design</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Rating (1-5)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="5"
+                        step="0.1"
+                        value={formData.adminRating}
+                        onChange={(e) => setFormData({ ...formData, adminRating: e.target.value })}
+                        placeholder="Enter rating"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>PAN Card (Optional)</label>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => setPanCardFile(e.target.files[0])}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      {panCardFile && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {panCardFile.name}</p>}
+                    </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Company Logo (Optional)</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setCompanyLogoFile(e.target.files[0])}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      {companyLogoFile && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {companyLogoFile.name}</p>}
+                    </div>
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Owner Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.ownerName}
-                      onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
-                      placeholder="Enter owner name"
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                    <button
+                      type="button"
+                      onClick={handleCancelAdd}
                       style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Email *</label>
-                    <input
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="Enter email address"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Phone *</label>
-                    <input
-                      type="tel"
-                      required
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="Enter phone number"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>City</label>
-                    <input
-                      type="text"
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      placeholder="Enter city"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>GST Number</label>
-                    <input
-                      type="text"
-                      value={formData.gstNumber}
-                      onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
-                      placeholder="Enter GST number"
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Project Types</label>
-                    <select
-                      value={formData.projectTypes}
-                      onChange={(e) => setFormData({ ...formData, projectTypes: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
+                        padding: '10px 20px',
+                        background: '#f3f4f6',
+                        color: '#374151',
+                        border: 'none',
                         borderRadius: '8px',
                         fontSize: '14px',
-                        backgroundColor: 'white'
+                        fontWeight: '600',
+                        cursor: 'pointer'
                       }}
                     >
-                      <option value="">Select project type</option>
-                      <option value="Residential Building">Residential Building</option>
-                      <option value="Commercial Building">Commercial Building</option>
-                      <option value="Industrial Project">Industrial Project</option>
-                      <option value="Infrastructure">Infrastructure</option>
-                      <option value="Renovation">Renovation</option>
-                      <option value="Interior Design">Interior Design</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Rating (1-5)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="5"
-                      step="0.1"
-                      value={formData.adminRating}
-                      onChange={(e) => setFormData({ ...formData, adminRating: e.target.value })}
-                      placeholder="Enter rating"
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
                       style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
+                        padding: '10px 20px',
+                        background: '#10b981',
+                        color: 'white',
+                        border: 'none',
                         borderRadius: '8px',
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: submitting ? 'not-allowed' : 'pointer',
+                        opacity: submitting ? 0.6 : 1
                       }}
-                    />
+                    >
+                      {submitting ? 'Adding...' : 'Add Vendor'}
+                    </button>
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>PAN Card (Optional)</label>
-                    <input
-                      type="file"
-                      accept="image/*,.pdf"
-                      onChange={(e) => setPanCardFile(e.target.files[0])}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                    {panCardFile && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {panCardFile.name}</p>}
-                  </div>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Company Logo (Optional)</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setCompanyLogoFile(e.target.files[0])}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                    {companyLogoFile && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {companyLogoFile.name}</p>}
-                  </div>
+                </form>
+              </div>
+            )}
+
+            <div className="stats-row">
+              <div className="stat-box">
+                <p className="stat-box-label">TOTAL REQUESTS</p>
+                <div className="stat-box-value">{vendors.length.toLocaleString()}</div>
+                <p className="stat-box-change success">↑ 12% this month</p>
+              </div>
+
+              <div className="stat-box highlight-orange">
+                <p className="stat-box-label">PENDING REVIEW</p>
+                <div className="stat-box-value">{vendors.filter(v => v.verificationStatus === 'pending').length}</div>
+                <p className="stat-box-change warning">8 requires urgent action</p>
+              </div>
+
+              <div className="stat-box">
+                <p className="stat-box-label">APPROVED VENDORS</p>
+                <div className="stat-box-value">{vendors.filter(v => v.verificationStatus === 'verified').length.toLocaleString()}</div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: '75%' }}></div>
                 </div>
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
-                  <button 
-                    type="button" 
-                    onClick={handleCancelAdd}
-                    style={{
-                      padding: '10px 20px',
-                      background: '#f3f4f6',
-                      color: '#374151',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    style={{
-                      padding: '10px 20px',
-                      background: '#10b981',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: submitting ? 'not-allowed' : 'pointer',
-                      opacity: submitting ? 0.6 : 1
-                    }}
-                  >
-                    {submitting ? 'Adding...' : 'Add Vendor'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
+              </div>
 
-          <div className="stats-row">
-            <div className="stat-box">
-              <p className="stat-box-label">TOTAL REQUESTS</p>
-              <div className="stat-box-value">{vendors.length.toLocaleString()}</div>
-              <p className="stat-box-change success">↑ 12% this month</p>
-            </div>
-
-            <div className="stat-box highlight-orange">
-              <p className="stat-box-label">PENDING REVIEW</p>
-              <div className="stat-box-value">{vendors.filter(v => v.verificationStatus === 'pending').length}</div>
-              <p className="stat-box-change warning">8 requires urgent action</p>
-            </div>
-
-            <div className="stat-box">
-              <p className="stat-box-label">APPROVED VENDORS</p>
-              <div className="stat-box-value">{vendors.filter(v => v.verificationStatus === 'verified').length.toLocaleString()}</div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: '75%' }}></div>
+              <div className="stat-box">
+                <p className="stat-box-label">AVG. RATING</p>
+                <div className="stat-box-value">4.8<span className="rating-sub">/5.0</span></div>
+                <p className="stat-box-change success">★ Based on 90+</p>
               </div>
             </div>
 
-            <div className="stat-box">
-              <p className="stat-box-label">AVG. RATING</p>
-              <div className="stat-box-value">4.8<span className="rating-sub">/5.0</span></div>
-              <p className="stat-box-change success">★ Based on 90+</p>
-            </div>
-          </div>
-
-          <div className="filters-section">
-            <div className="filter-group">
-              <div className="filter-dropdown">
-                <button className="filter-btn" onClick={() => setShowFilterDropdown(!showFilterDropdown)}>
-                  Filter: {statusFilter === 'all' ? 'All Status' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
-                  <ChevronDown size={16} />
-                </button>
-                {showFilterDropdown && (
-                  <div className="dropdown-menu">
-                    <button onClick={() => { setStatusFilter('all'); setShowFilterDropdown(false); }}>All Status</button>
-                    <button onClick={() => { setStatusFilter('pending'); setShowFilterDropdown(false); }}>Pending</button>
-                    <button onClick={() => { setStatusFilter('verified'); setShowFilterDropdown(false); }}>Approved</button>
-                    <button onClick={() => { setStatusFilter('rejected'); setShowFilterDropdown(false); }}>Rejected</button>
+            <div className="filters-section">
+              <div className="filter-group">
+                <div className="filter-dropdown">
+                  <button className="filter-btn" onClick={() => setShowFilterDropdown(!showFilterDropdown)}>
+                    Filter: {statusFilter === 'all' ? 'All Status' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                    <ChevronDown size={16} />
+                  </button>
+                  {showFilterDropdown && (
+                    <div className="dropdown-menu">
+                      <button onClick={() => { setStatusFilter('all'); setShowFilterDropdown(false); }}>All Status</button>
+                      <button onClick={() => { setStatusFilter('pending'); setShowFilterDropdown(false); }}>Pending</button>
+                      <button onClick={() => { setStatusFilter('verified'); setShowFilterDropdown(false); }}>Approved</button>
+                      <button onClick={() => { setStatusFilter('rejected'); setShowFilterDropdown(false); }}>Rejected</button>
+                    </div>
+                  )}
+                </div>
+                {roleFilter && (
+                  <div className="filter-pill">
+                    Project Type: {roleFilter}
+                    <button onClick={() => setRoleFilter('')}>
+                      <X size={14} />
+                    </button>
                   </div>
                 )}
               </div>
-              {roleFilter && (
-                <div className="filter-pill">
-                  Project Type: {roleFilter}
-                  <button onClick={() => setRoleFilter('')}>
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
+              <div className="results-count">
+                SHOWING {paginatedVendors.length} OF {filteredVendors.length}
+              </div>
             </div>
-            <div className="results-count">
-              SHOWING {paginatedVendors.length} OF {filteredVendors.length}
-            </div>
-          </div>
 
-          <div className="table-container">
-            <table className="workers-table">
-              <thead>
-                <tr>
-                  <th>VENDOR NAME</th>
-                  <th>PROJECT TYPES</th>
-                  <th>CITY</th>
-                  <th>GST NUMBER</th>
-                  <th>RATING</th>
-                  <th>DOCUMENTS</th>
-                  <th>STATUS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedVendors.map((vendor) => (
-                  <tr key={vendor._id}>
-                    <td>
-                      <div className="worker-cell" onClick={() => navigate(`/admin/vendors/${vendor._id}`)} style={{ cursor: 'pointer' }}>
-                        <img
-                          src={vendor.companyLogo ? `http://localhost:5000/${vendor.companyLogo}` : `https://ui-avatars.com/api/?name=${vendor.companyName || vendor.ownerName}&background=3b82f6&color=fff`}
-                          alt={vendor.companyName || vendor.ownerName}
-                          className="worker-table-avatar"
-                        />
-                        <div>
-                          <div className="vendor-name" style={{fontSize:"1.2rem"}}>{vendor.companyName || vendor.ownerName}</div>
-                          <div className="worker-id">ID: #VN-{vendor._id.slice(-4)}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{vendor.projectTypes?.[0] || 'General'}</td>
-                    <td>{vendor.city || 'N/A'}</td>
-                    <td>{vendor.gstNumber || 'N/A'}</td>
-                    <td>
-                      {vendor.verificationStatus === 'verified' && vendor.adminRating ? (
-                        <div className="rating-cell">
-                          {[1, 2, 3, 4, 5].map((star) => {
-                            const rating = parseFloat(vendor.adminRating);
-                            const isFilled = star <= Math.floor(rating);
-                            const isHalfFilled = star > Math.floor(rating) && star <= Math.ceil(rating) && rating % 1 >= 0.5;
-                            
-                            return (
-                              <Star 
-                                key={star}
-                                size={14} 
-                                fill={isFilled ? '#fbbf24' : isHalfFilled ? '#fbbf24' : '#e5e7eb'} 
-                                stroke={isFilled || isHalfFilled ? '#fbbf24' : '#e5e7eb'}
-                                style={{
-                                  opacity: isHalfFilled ? 0.6 : 1
-                                }}
-                              />
-                            );
-                          })}
-                          <span>{parseFloat(vendor.adminRating).toFixed(1)}/5</span>
-                        </div>
-                      ) : (
-                        <div className="rating-cell">
-                          <span className="no-rating">—</span>
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <button 
-                        className="view-files-btn"
-                        onClick={() => handleViewFiles(vendor)}
-                      >
-                        <FileText size={16} />
-                        VIEW {(vendor.panCardImage ? 1 : 0) + (vendor.companyLogo ? 1 : 0)} FILES
-                      </button>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${getStatusBadgeClass(vendor.verificationStatus)}`}>
-                        {getStatusText(vendor)}
-                      </span>
-                    </td>
+            <div className="table-container">
+              <table className="workers-table">
+                <thead>
+                  <tr>
+                    <th>VENDOR NAME</th>
+                    <th>PROJECT TYPES</th>
+                    <th>CITY</th>
+                    <th>GST NUMBER</th>
+                    <th>RATING</th>
+                    <th>DOCUMENTS</th>
+                    <th>STATUS</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {paginatedVendors.map((vendor) => (
+                    <tr key={vendor._id}>
+                      <td>
+                        <div className="worker-cell" onClick={() => navigate(`/admin/vendors/${vendor._id}`)} style={{ cursor: 'pointer' }}>
+                          <img
+                            src={vendor.companyLogo ? `http://localhost:5000/${vendor.companyLogo}` : `https://ui-avatars.com/api/?name=${vendor.companyName || vendor.ownerName}&background=3b82f6&color=fff`}
+                            alt={vendor.companyName || vendor.ownerName}
+                            className="worker-table-avatar"
+                          />
+                          <div>
+                            <div className="vendor-name" style={{ fontSize: "1.2rem" }}>{vendor.companyName || vendor.ownerName}</div>
+                            <div className="worker-id">ID: #VN-{vendor._id.slice(-4)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{vendor.projectTypes?.[0] || 'General'}</td>
+                      <td>{vendor.city || 'N/A'}</td>
+                      <td>{vendor.gstNumber || 'N/A'}</td>
+                      <td>
+                        {vendor.verificationStatus === 'verified' && vendor.adminRating ? (
+                          <div className="rating-cell">
+                            {[1, 2, 3, 4, 5].map((star) => {
+                              const rating = parseFloat(vendor.adminRating);
+                              const isFilled = star <= Math.floor(rating);
+                              const isHalfFilled = star > Math.floor(rating) && star <= Math.ceil(rating) && rating % 1 >= 0.5;
 
-          <div className="pagination">
-            <div className="pagination-info">
-              Showing <strong>{((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong>{Math.min(currentPage * itemsPerPage, filteredVendors.length)}</strong> of <strong>{filteredVendors.length}</strong> entries
+                              return (
+                                <Star
+                                  key={star}
+                                  size={14}
+                                  fill={isFilled ? '#fbbf24' : isHalfFilled ? '#fbbf24' : '#e5e7eb'}
+                                  stroke={isFilled || isHalfFilled ? '#fbbf24' : '#e5e7eb'}
+                                  style={{
+                                    opacity: isHalfFilled ? 0.6 : 1
+                                  }}
+                                />
+                              );
+                            })}
+                            <span>{parseFloat(vendor.adminRating).toFixed(1)}/5</span>
+                          </div>
+                        ) : (
+                          <div className="rating-cell">
+                            <span className="no-rating">—</span>
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          className="view-files-btn"
+                          onClick={() => handleViewFiles(vendor)}
+                        >
+                          <FileText size={16} />
+                          VIEW {(vendor.panCardImage ? 1 : 0) + (vendor.companyLogo ? 1 : 0)} FILES
+                        </button>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${getStatusBadgeClass(vendor.verificationStatus)}`}>
+                          {getStatusText(vendor)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="pagination-controls">
-              <button
-                className="page-btn"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                &lt;
-              </button>
-              {[...Array(Math.min(3, totalPages))].map((_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <button
-                    key={pageNum}
-                    className={`page-btn ${currentPage === pageNum ? 'active' : ''}`}
-                    onClick={() => setCurrentPage(pageNum)}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-              {totalPages > 3 && <span className="page-ellipsis">...</span>}
-              <button
-                className="page-btn"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                &gt;
-              </button>
+
+            <div className="pagination">
+              <div className="pagination-info">
+                Showing <strong>{((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong>{Math.min(currentPage * itemsPerPage, filteredVendors.length)}</strong> of <strong>{filteredVendors.length}</strong> entries
+              </div>
+              <div className="pagination-controls">
+                <button
+                  className="page-btn"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  &lt;
+                </button>
+                {[...Array(Math.min(3, totalPages))].map((_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <button
+                      key={pageNum}
+                      className={`page-btn ${currentPage === pageNum ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(pageNum)}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                {totalPages > 3 && <span className="page-ellipsis">...</span>}
+                <button
+                  className="page-btn"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  &gt;
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    )
   );
 }

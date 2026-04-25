@@ -608,6 +608,36 @@ img { display: block; }
   margin-top: 1px;
 }
 
+.applicant-experience,
+.applicant-location {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.view-profile-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.view-profile-btn:hover {
+  background: var(--primary);
+  color: var(--surface);
+}
+
+.view-profile-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
 .applied-time {
   font-size: 12.5px;
   color: var(--text-secondary);

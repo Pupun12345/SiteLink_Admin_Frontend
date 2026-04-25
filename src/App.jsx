@@ -16,9 +16,10 @@ import NotificationsPage from './pages/NotificationsPage';
 import SystemMonitoring from './pages/SystemMonitoring';
 import AdminSettings from './pages/AdminSettings';
 import PlatformSettings from './pages/PlatformSettings';
+import PostApproval from './pages/PostApproval';
 
 function ProtectedRoute({ children }) {
-  const token = localStorage.getItem('adminToken');
+  const token = localStorage.getItem('adminToken') || localStorage.getItem('adminUser');
   return token ? children : <Navigate to="/admin/login" />;
 }
 
@@ -105,6 +106,14 @@ function App() {
           element={
             <ProtectedRoute>
               <VerificationOverview />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/post-approval"
+          element={
+            <ProtectedRoute>
+              <PostApproval />
             </ProtectedRoute>
           }
         />

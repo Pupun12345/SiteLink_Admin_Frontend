@@ -71,7 +71,20 @@ export default function ReportsPage() {
     }, {})
   );
 
-  const adminUser = useMemo(() => ({ name: 'Admin' }), []);
+  const adminUser = useMemo(() => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        // Decode JWT token to get user info
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return { name: payload.name || 'Admin User' };
+      }
+      return { name: 'Admin User' };
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      return { name: 'Admin User' };
+    }
+  }, []);
 
   const updateCardState = (cardKey, field, value) => {
     setFormState((prev) => ({
