@@ -37,6 +37,9 @@ export default function JobRequirements() {
   const [selectedApplicant, setSelectedApplicant] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [mapUrl, setMapUrl] = useState("");
+  const [loadingApplicant, setLoadingApplicant] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedApplicantIds, setSelectedApplicantIds] = useState([]);
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -47,19 +50,21 @@ export default function JobRequirements() {
         if (response.data.success) {
           const jobData = response.data.data || {};
           setJob(jobData);
-          
+
           const actualApplicants = (jobData.applicants || []).map(app => ({
             ...app,
-            applied: formatDate(app.applied)
+            applied: formatDate(app.applied),
+            avatar: app.profileImage || app.avatar || app.img || 'https://via.placeholder.com/40',
+            img: app.profileImage || app.avatar || app.img || 'https://via.placeholder.com/40'
           }));
           setApplicants(actualApplicants);
-          
+
           // Generate map URL for location
-          if (jobData.address || jobData.location) {
-            const locationQuery = encodeURIComponent(jobData.address || jobData.location);
+          if (jobData.location) {
+            const locationQuery = encodeURIComponent(jobData.location);
             setMapUrl(`https://www.google.com/maps/search/?api=1&query=${locationQuery}`);
           }
-          
+
           setError(null);
         } else {
           setError(response.data.message || "Job not found");
@@ -82,7 +87,7 @@ export default function JobRequirements() {
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
     const diffMinutes = Math.floor(diffTime / (1000 * 60));
-    
+
     if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
     if (diffHours < 24) return `${diffHours} hours ago`;
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -136,29 +141,136 @@ export default function JobRequirements() {
   };
 
   const handleCloseModal = () => {
+    setModalOpen(false);
     setShowAllApplicants(false);
     setSelectedApplicant(null);
+    setSelectedApplicantIds([]);
+  };
+
+  const handleOpenModal = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setTimeout(() => {
+      setModalOpen(true);
+      setShowAllApplicants(true);
+    }, 0);
+  };
+
+  const fetchApplicantDetails = async (applicantId) => {
+    setLoadingApplicant(true);
+    try {
+      const { data } = await api.get('/admin/vendor-worker', {
+        params: {
+          userType: 'worker',
+          status: 'all',
+          limit: 1000,
+        },
+      });
+      let response = data.data;
+      console.log(response);
+      if (response.data.success) {
+        const fullDetails = response.data.data;
+        const applicantData = applicants.find(a => a.id === applicantId);
+        setSelectedApplicant({ ...applicantData, ...fullDetails });
+        console.log(response);
+      }
+
+    } catch (error) {
+      console.error('Failed to fetch applicant details:', error);
+      alert('Failed to load applicant details');
+    } finally {
+      setLoadingApplicant(false);
+    }
+  };
+
+  const generateCSV = (data) => {
+    const headers = ['Name', 'Phone', 'Email', 'Role', 'Experience', 'Salary Type', 'Salary', 'Work State', 'Work City', 'Skills', 'Status', 'Applied'];
+    const rows = data.map(app => [
+      app.name || '',
+      app.phone || '',
+      app.email || '',
+      app.role || '',
+      app.experience || '',
+      app.salaryType || '',
+      app.salary || '',
+      app.workState || '',
+      app.city || '',
+      app.primarySkill || '',
+      (app.additionalSkills || []).join('; '),
+      app.status || '',
+      app.applied || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    return csvContent;
+  };
+
+  const handleShareWhatsApp = () => {
+    const dataToExport = selectedApplicantIds.length > 0
+      ? filteredApplicants.filter(app => selectedApplicantIds.includes(app.id))
+      : filteredApplicants;
+
+    if (dataToExport.length === 0) {
+      alert('Please select at least one applicant to export');
+      return;
+    }
+
+    const csv = generateCSV(dataToExport);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${job.title.replace(/\s+/g, '_')}_applicants.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    const message = `*Applicants for ${job.title}*\n\nTotal: ${dataToExport.length}\n\nCSV file downloaded. Please attach it manually.`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const handleSelectApplicant = (applicantId) => {
+    setSelectedApplicantIds(prev => {
+      if (prev.includes(applicantId)) {
+        return prev.filter(id => id !== applicantId);
+      } else {
+        return [...prev, applicantId];
+      }
+    });
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedApplicantIds(filteredApplicants.map(app => app.id));
+    } else {
+      setSelectedApplicantIds([]);
+    }
   };
 
   const handleApplicantAction = async (applicantId, action) => {
     setActionLoading(true);
     try {
-      const response = await api.put(`/jobs/${id}/applications/${applicantId}`, { 
+      const response = await api.put(`/jobs/${id}/applications/${applicantId}`, {
         status: action,
-        notes: `Status updated to ${action}` 
+        notes: `Status updated to ${action}`
       });
-      
+
       if (response.data.success) {
-        setApplicants(prev => prev.map(app => 
+        setApplicants(prev => prev.map(app =>
           app.id === applicantId ? { ...app, status: action } : app
         ));
-        
+
         // Refresh job data to update counts
         const jobResponse = await api.get(`/jobs/${id}`);
         if (jobResponse.data.success) {
           setJob(jobResponse.data.data);
         }
-        
+
         alert(`Application ${action} successfully!`);
       }
     } catch (error) {
@@ -173,7 +285,7 @@ export default function JobRequirements() {
     if (!window.confirm(`Are you sure you want to ${newStatus.toLowerCase()} this job?`)) {
       return;
     }
-    
+
     setActionLoading(true);
     try {
       const response = await api.put(`/jobs/${id}`, { status: newStatus });
@@ -201,7 +313,7 @@ export default function JobRequirements() {
     if (!window.confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
       return;
     }
-    
+
     setActionLoading(true);
     try {
       const response = await api.delete(`/jobs/${id}`);
@@ -218,7 +330,6 @@ export default function JobRequirements() {
   };
 
   const displayJobId = job?.jobId || `REQ-${job?._id?.slice(-4).toUpperCase()}`;
-  const mapImage = job?.mapImage || "https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&q=80&w=800";
 
   const filteredApplicants = applicants.filter((a) => {
     const q = search.trim().toLowerCase();
@@ -252,7 +363,7 @@ export default function JobRequirements() {
               />
             </div>
             {job.status === 'Open' && (
-              <button 
+              <button
                 className="btn btn-secondary"
                 onClick={() => handleJobStatusUpdate('Closed')}
                 disabled={actionLoading}
@@ -261,7 +372,7 @@ export default function JobRequirements() {
               </button>
             )}
             {job.status !== 'Cancelled' && (
-              <button 
+              <button
                 className="btn btn-danger"
                 onClick={() => handleJobStatusUpdate('Cancelled')}
                 disabled={actionLoading}
@@ -269,7 +380,7 @@ export default function JobRequirements() {
                 {actionLoading ? 'Processing...' : 'Cancel Job'}
               </button>
             )}
-            <button 
+            <button
               className="btn btn-danger"
               onClick={handleDeleteJob}
               disabled={actionLoading}
@@ -326,13 +437,12 @@ export default function JobRequirements() {
                     <tbody>
                       {filteredApplicants.length > 0 ? (
                         filteredApplicants.slice(0, 5).map((a) => (
-                          <tr 
-                            key={a.id} 
+                          <tr
+                            key={a.id}
                             className="applicant-row"
-                            onClick={() => navigate(`/admin/workers/${a.id}`)}
                             style={{ cursor: 'pointer' }}
                           >
-                            <td>
+                            <td onClick={() => navigate(`/admin/workers`)}>
                               <div className="applicant-cell">
                                 <img src={a.avatar || a.img} alt={a.name} className="applicant-avatar" />
                                 <div>
@@ -340,21 +450,22 @@ export default function JobRequirements() {
                                 </div>
                               </div>
                             </td>
-                            <td className="applicant-role">{a.role}</td>
-                            <td className="applicant-experience">{a.experience || 'N/A'}</td>
-                            <td className="applicant-location">{a.location || 'N/A'}</td>
-                            <td className="applied-time">{a.applied}</td>
-                            <td>
+                            <td onClick={() => navigate(`/admin/workers`)} className="applicant-role">{a.role}</td>
+                            <td onClick={() => navigate(`/admin/workers`)} className="applicant-experience">{a.experience || 'N/A'}</td>
+                            <td onClick={() => navigate(`/admin/workers`)} className="applicant-location">{a.location || 'N/A'}</td>
+                            <td onClick={() => navigate(`/admin/workers`)} className="applied-time">{a.applied}</td>
+                            <td onClick={() => navigate(`/admin/workers`)}>
                               <StatusBadge status={a.status} />
                             </td>
                             <td>
-                              <button 
+                              <button
                                 className="view-profile-btn"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/admin/workers/${a.id}`);
+                                  navigate(`/admin/workers`);
                                 }}
                                 title="View Profile"
+                                style={{ pointerEvents: 'auto' }}
                               >
                                 <span className="material-symbols-outlined">visibility</span>
                               </button>
@@ -373,15 +484,11 @@ export default function JobRequirements() {
                 </div>
 
                 <div className="card-footer">
-                  <button 
-                    className="view-all-btn" 
-                    onClick={() => {
-                      console.log('Button clicked - opening modal');
-                      console.log('Current showAllApplicants state:', showAllApplicants);
-                      setShowAllApplicants(true);
-                      console.log('After setting state - showAllApplicants should be true');
-                    }}
-                    style={{ cursor: 'pointer' }}
+                  <button
+                    className="view-all-btn"
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(e) => handleOpenModal(e)}
                   >
                     View All Applicants ({applicants.length})
                   </button>
@@ -391,20 +498,12 @@ export default function JobRequirements() {
               <div className="card">
                 <div className="card-header">
                   <span className="material-symbols-outlined card-header-icon">verified_user</span>
-                  Worker Requirements
+                  Job Details
                 </div>
                 <div className="card-body">
                   <div className="req-grid">
                     <div className="req-section">
-                      <p className="label-upper">Required Skills</p>
-                      <div className="skill-tags">
-                        {(job.skills && job.skills.length > 0 ? job.skills : ["N/A"]).map((s) => (
-                          <span key={s} className="skill-tag">{s}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="req-section">
-                      <p className="label-upper">Experience</p>
+                      <p className="label-upper">Experience Required</p>
                       <p className="req-value">{job.experience || "N/A"}</p>
                     </div>
                     <div className="req-section">
@@ -412,25 +511,21 @@ export default function JobRequirements() {
                       <p className="req-value">{job.quantity || "1"}</p>
                     </div>
                     <div className="req-section">
-                      <p className="label-upper">Type</p>
-                      <p className="req-value">{job.type || "Unknown"}</p>
+                      <p className="label-upper">Salary Type</p>
+                      <p className="req-value">{job.salaryType ? job.salaryType.charAt(0).toUpperCase() + job.salaryType.slice(1) : "N/A"}</p>
                     </div>
                     <div className="req-section">
-                      <p className="label-upper">Company</p>
-                      <p className="req-value">{job.company || "N/A"}</p>
+                      <p className="label-upper">Salary</p>
+                      <p className="req-value">{job.salary ? `₹${job.salary}` : "N/A"}</p>
                     </div>
-                  </div>
-
-                  <div className="equipment-section">
-                    <p className="label-upper">Equipment Needed</p>
-                    <ul className="equipment-list">
-                      {(job.equipment && job.equipment.length > 0 ? job.equipment : ["No equipment listed"]).map((item) => (
-                        <li key={item} className="equipment-item">
-                          <span className="material-symbols-outlined check-icon">check_circle</span>
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="req-section">
+                      <p className="label-upper">Duration</p>
+                      <p className="req-value">{job.duration || "N/A"}</p>
+                    </div>
+                    <div className="req-section">
+                      <p className="label-upper">Urgent</p>
+                      <p className="req-value">{job.isUrgent ? "Yes" : "No"}</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -441,21 +536,10 @@ export default function JobRequirements() {
                   Location
                 </div>
                 <div className="card-body location-body">
-                  <div className="map-thumb" style={{ backgroundImage: `url(${mapImage})` }}>
-                    {mapUrl && (
-                      <div className="map-overlay">
-                        <button className="view-map-btn" onClick={handleGetDirections}>
-                          <span className="material-symbols-outlined">map</span>
-                          View on Map
-                        </button>
-                      </div>
-                    )}
-                  </div>
                   <div className="location-info">
                     <div>
-                      <p className="label-upper">Project Site</p>
-                      <p className="location-name">{job.projectSite || job.location || "Unknown site"}</p>
-                      <p className="location-address">{job.address || job.location || "Not available"}</p>
+                      <p className="label-upper">Location</p>
+                      <p className="location-name">{job.location || "Not specified"}</p>
                     </div>
                     <button className="directions-btn" onClick={handleGetDirections} disabled={!mapUrl}>
                       Get Directions
@@ -482,16 +566,51 @@ export default function JobRequirements() {
         </div>
 
         {/* All Applicants Modal */}
-        {showAllApplicants && (
-          <div className="modal-overlay" onClick={handleCloseModal}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        {modalOpen && showAllApplicants ? (
+          <div
+            style={{
+              position: 'fixed',
+              top: '0',
+              left: '0',
+              right: '0',
+              bottom: '0',
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: '9999',
+              padding: '20px'
+            }}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) {
+                handleCloseModal();
+              }
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '14px',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                maxWidth: '1200px',
+                width: '100%',
+                maxHeight: '90vh',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
               <div className="modal-header">
                 <h2>All Applicants - {job?.title}</h2>
-                <button className="modal-close" onClick={handleCloseModal}>
+                <button
+                  className="modal-close"
+                  onClick={handleCloseModal}
+                >
                   <span className="material-symbols-outlined">close</span>
                 </button>
               </div>
-              
+
               <div className="modal-body">
                 <div className="applicants-stats">
                   <div className="stat-item">
@@ -519,12 +638,34 @@ export default function JobRequirements() {
                       onChange={(e) => setSearch(e.target.value)}
                     />
                   </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                      {selectedApplicantIds.length} selected
+                    </span>
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleShareWhatsApp}
+                      disabled={selectedApplicantIds.length === 0}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <span className="material-symbols-outlined">share</span>
+                      Export Selected to WhatsApp
+                    </button>
+                  </div>
                 </div>
 
                 <div className="modal-table-wrapper">
                   <table className="modal-applicant-table">
                     <thead>
                       <tr>
+                        <th style={{ width: '40px' }}>
+                          <input
+                            type="checkbox"
+                            onChange={handleSelectAll}
+                            checked={selectedApplicantIds.length === filteredApplicants.length && filteredApplicants.length > 0}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </th>
                         <th>Applicant</th>
                         <th>Experience</th>
                         <th>Location</th>
@@ -539,10 +680,19 @@ export default function JobRequirements() {
                       {filteredApplicants.map((applicant) => (
                         <tr key={applicant.id} className="modal-applicant-row">
                           <td>
+                            <input
+                              type="checkbox"
+                              checked={selectedApplicantIds.includes(applicant.id)}
+                              onChange={() => handleSelectApplicant(applicant.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                            />
+                          </td>
+                          <td>
                             <div className="modal-applicant-cell">
-                              <img 
-                                src={applicant.avatar || applicant.img} 
-                                alt={applicant.name} 
+                              <img
+                                src={applicant.avatar || applicant.img}
+                                alt={applicant.name}
                                 className="modal-applicant-avatar"
                               />
                               <div>
@@ -570,52 +720,17 @@ export default function JobRequirements() {
                           <td><StatusBadge status={applicant.status} /></td>
                           <td>
                             <div className="modal-actions">
-                              {applicant.status === 'pending' && (
-                                <>
-                                  <button 
-                                    className="modal-action-btn shortlist-btn"
-                                    onClick={() => handleApplicantAction(applicant.id, 'shortlisted')}
-                                    title="Shortlist"
-                                    disabled={actionLoading}
-                                  >
-                                    <span className="material-symbols-outlined">star</span>
-                                  </button>
-                                  <button 
-                                    className="modal-action-btn reject-btn"
-                                    onClick={() => handleApplicantAction(applicant.id, 'rejected')}
-                                    title="Reject"
-                                    disabled={actionLoading}
-                                  >
-                                    <span className="material-symbols-outlined">close</span>
-                                  </button>
-                                </>
-                              )}
-                              {applicant.status === 'shortlisted' && (
-                                <>
-                                  <button 
-                                    className="modal-action-btn hire-btn"
-                                    onClick={() => handleApplicantAction(applicant.id, 'hired')}
-                                    title="Hire"
-                                    disabled={actionLoading}
-                                  >
-                                    <span className="material-symbols-outlined">check</span>
-                                  </button>
-                                  <button 
-                                    className="modal-action-btn reject-btn"
-                                    onClick={() => handleApplicantAction(applicant.id, 'rejected')}
-                                    title="Reject"
-                                    disabled={actionLoading}
-                                  >
-                                    <span className="material-symbols-outlined">close</span>
-                                  </button>
-                                </>
-                              )}
-                              <button 
+                              <button
                                 className="modal-action-btn view-btn"
-                                onClick={() => setSelectedApplicant(applicant)}
-                                title="View Profile"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  window.location.href = `/admin/workers`;
+                                }}
+                                title="View Full Profile"
                               >
-                                <span className="material-symbols-outlined">visibility</span>
+                                <span className="material-symbols-outlined">open_in_new</span>
                               </button>
                             </div>
                           </td>
@@ -634,7 +749,7 @@ export default function JobRequirements() {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Applicant Profile Modal */}
         {selectedApplicant && (
@@ -646,128 +761,135 @@ export default function JobRequirements() {
                   <span className="material-symbols-outlined">close</span>
                 </button>
               </div>
-              
-              <div className="modal-body">
-                <div className="profile-header">
-                  <img 
-                    src={selectedApplicant.avatar || selectedApplicant.img} 
-                    alt={selectedApplicant.name} 
-                    className="profile-photo"
-                  />
-                  <div className="profile-info">
-                    <h3>{selectedApplicant.name}</h3>
-                    <p className="profile-role">{selectedApplicant.role}</p>
-                    <StatusBadge status={selectedApplicant.status} />
+
+              {loadingApplicant ? (
+                <div className="modal-body" style={{ textAlign: 'center', padding: '40px' }}>
+                  <div className="loading-spinner"></div>
+                  <p>Loading applicant details...</p>
+                </div>
+              ) : (
+                <div className="modal-body">
+                  <div className="profile-header">
+                    <img
+                      src={selectedApplicant.avatar || selectedApplicant.img}
+                      alt={selectedApplicant.name}
+                      className="profile-photo"
+                    />
+                    <div className="profile-info">
+                      <h3>{selectedApplicant.name}</h3>
+                      <p className="profile-role">{selectedApplicant.role}</p>
+                      <StatusBadge status={selectedApplicant.status} />
+                    </div>
+                  </div>
+
+                  <div className="profile-details">
+                    <div className="detail-section">
+                      <h4>Contact Information</h4>
+                      <div className="detail-grid">
+                        <div className="detail-item">
+                          <span className="detail-label">Phone:</span>
+                          <span className="detail-value">{selectedApplicant.phone || 'Not provided'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Email:</span>
+                          <span className="detail-value">{selectedApplicant.email || 'Not provided'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Location:</span>
+                          <span className="detail-value">{selectedApplicant.location || 'Not specified'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="detail-section">
+                      <h4>Professional Information</h4>
+                      <div className="detail-grid">
+                        <div className="detail-item">
+                          <span className="detail-label">Experience:</span>
+                          <span className="detail-value">{selectedApplicant.experience || 'Not specified'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Daily Rate:</span>
+                          <span className="detail-value">{selectedApplicant.dailyRate ? `₹${selectedApplicant.dailyRate}` : 'Not specified'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Applied On:</span>
+                          <span className="detail-value">{selectedApplicant.applied}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="detail-section">
+                      <h4>Skills</h4>
+                      <div className="skills-grid">
+                        {(selectedApplicant.skills || ['General']).map((skill, index) => (
+                          <span key={index} className="skill-badge">{skill}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="profile-actions">
+                    {selectedApplicant.status === 'pending' && (
+                      <>
+                        <button
+                          className="action-btn shortlist-btn"
+                          onClick={() => {
+                            handleApplicantAction(selectedApplicant.id, 'shortlisted');
+                            setSelectedApplicant(null);
+                          }}
+                          disabled={actionLoading}
+                        >
+                          <span className="material-symbols-outlined">star</span>
+                          {actionLoading ? 'Processing...' : 'Shortlist Candidate'}
+                        </button>
+                        <button
+                          className="action-btn reject-btn"
+                          onClick={() => {
+                            handleApplicantAction(selectedApplicant.id, 'rejected');
+                            setSelectedApplicant(null);
+                          }}
+                          disabled={actionLoading}
+                        >
+                          <span className="material-symbols-outlined">close</span>
+                          {actionLoading ? 'Processing...' : 'Reject Application'}
+                        </button>
+                      </>
+                    )}
+                    {selectedApplicant.status === 'shortlisted' && (
+                      <>
+                        <button
+                          className="action-btn hire-btn"
+                          onClick={() => {
+                            handleApplicantAction(selectedApplicant.id, 'hired');
+                            setSelectedApplicant(null);
+                          }}
+                          disabled={actionLoading}
+                        >
+                          <span className="material-symbols-outlined">check</span>
+                          {actionLoading ? 'Processing...' : 'Hire Candidate'}
+                        </button>
+                        <button
+                          className="action-btn reject-btn"
+                          onClick={() => {
+                            handleApplicantAction(selectedApplicant.id, 'rejected');
+                            setSelectedApplicant(null);
+                          }}
+                          disabled={actionLoading}
+                        >
+                          <span className="material-symbols-outlined">close</span>
+                          {actionLoading ? 'Processing...' : 'Reject Application'}
+                        </button>
+                      </>
+                    )}
+                    {(selectedApplicant.status === 'hired' || selectedApplicant.status === 'rejected') && (
+                      <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                        <p>This application has been {selectedApplicant.status}.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-                
-                <div className="profile-details">
-                  <div className="detail-section">
-                    <h4>Contact Information</h4>
-                    <div className="detail-grid">
-                      <div className="detail-item">
-                        <span className="detail-label">Phone:</span>
-                        <span className="detail-value">{selectedApplicant.phone || 'Not provided'}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Email:</span>
-                        <span className="detail-value">{selectedApplicant.email || 'Not provided'}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Location:</span>
-                        <span className="detail-value">{selectedApplicant.location || 'Not specified'}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="detail-section">
-                    <h4>Professional Information</h4>
-                    <div className="detail-grid">
-                      <div className="detail-item">
-                        <span className="detail-label">Experience:</span>
-                        <span className="detail-value">{selectedApplicant.experience || 'Not specified'}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Daily Rate:</span>
-                        <span className="detail-value">{selectedApplicant.dailyRate ? `₹${selectedApplicant.dailyRate}` : 'Not specified'}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Applied On:</span>
-                        <span className="detail-value">{selectedApplicant.applied}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="detail-section">
-                    <h4>Skills</h4>
-                    <div className="skills-grid">
-                      {(selectedApplicant.skills || ['General']).map((skill, index) => (
-                        <span key={index} className="skill-badge">{skill}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="profile-actions">
-                  {selectedApplicant.status === 'pending' && (
-                    <>
-                      <button 
-                        className="action-btn shortlist-btn"
-                        onClick={() => {
-                          handleApplicantAction(selectedApplicant.id, 'shortlisted');
-                          setSelectedApplicant(null);
-                        }}
-                        disabled={actionLoading}
-                      >
-                        <span className="material-symbols-outlined">star</span>
-                        {actionLoading ? 'Processing...' : 'Shortlist Candidate'}
-                      </button>
-                      <button 
-                        className="action-btn reject-btn"
-                        onClick={() => {
-                          handleApplicantAction(selectedApplicant.id, 'rejected');
-                          setSelectedApplicant(null);
-                        }}
-                        disabled={actionLoading}
-                      >
-                        <span className="material-symbols-outlined">close</span>
-                        {actionLoading ? 'Processing...' : 'Reject Application'}
-                      </button>
-                    </>
-                  )}
-                  {selectedApplicant.status === 'shortlisted' && (
-                    <>
-                      <button 
-                        className="action-btn hire-btn"
-                        onClick={() => {
-                          handleApplicantAction(selectedApplicant.id, 'hired');
-                          setSelectedApplicant(null);
-                        }}
-                        disabled={actionLoading}
-                      >
-                        <span className="material-symbols-outlined">check</span>
-                        {actionLoading ? 'Processing...' : 'Hire Candidate'}
-                      </button>
-                      <button 
-                        className="action-btn reject-btn"
-                        onClick={() => {
-                          handleApplicantAction(selectedApplicant.id, 'rejected');
-                          setSelectedApplicant(null);
-                        }}
-                        disabled={actionLoading}
-                      >
-                        <span className="material-symbols-outlined">close</span>
-                        {actionLoading ? 'Processing...' : 'Reject Application'}
-                      </button>
-                    </>
-                  )}
-                  {(selectedApplicant.status === 'hired' || selectedApplicant.status === 'rejected') && (
-                    <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-                      <p>This application has been {selectedApplicant.status}.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}

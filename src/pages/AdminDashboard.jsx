@@ -28,7 +28,7 @@ import "./AdminDashboard.css";
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [chartData, setChartData] = useState(null);
-  const [profile, setProfile] = useState({ name: '', email: '', imageUrl: '' });
+  const [profile, setProfile] = useState({ name: '', email: '', imageUrl: '',role:'' });
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState("1M");
   const [selectedPeriod, setSelectedPeriod] = useState("1M");
@@ -38,15 +38,23 @@ export default function AdminDashboard() {
   const fetchAdminProfile = async () => {
     try {
       const response = await api.get('/profile/me');
-      if (response.data.user) {
-        const user = response.data.user;
+      console.log('Profile response:', response.data);
+      
+      if (response.data.success && response.data.data) {
+        const user = response.data.data.user;
+        console.log('User data:', user);
+        
         const imageUrl = user.profileImage 
           ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}` 
-          : `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`;
+          : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin')}&background=2b3f57&color=fff`;
+        
+        console.log('Image URL:', imageUrl);
+        
         setProfile({
           name: user.name || '',
           email: user.email || '',
-          imageUrl: imageUrl
+          imageUrl: imageUrl,
+          role: user.userType || user.role || ''
         });
       }
       setLoading(false);
@@ -192,13 +200,17 @@ export default function AdminDashboard() {
             <div className="user-menu">
               <div className="user-avatar">
                 <img
-                  src={`${profile.imageUrl}`}
+                  src={profile.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'Admin')}&background=2b3f57&color=fff`}
                   alt="Admin"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'Admin')}&background=2b3f57&color=fff`;
+                  }}
                 />
               </div>
               <div className="user-info">
                 <p className="user-name">{profile.name || "Admin"}</p>
-                <p className="user-role">Super Admin</p>
+                <p className="user-role">{profile.role}</p>
               </div>
             </div>
           </div>

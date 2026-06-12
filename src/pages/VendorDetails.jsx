@@ -24,13 +24,17 @@ export default function VendorDetails() {
     try {
       setLoading(true);
       const { data } = await api.get(`/admin/vendors/${id}`);
-      setVendor(data.data);
+      const vendorData = data.data;
+
+      console.log('Raw vendor data:', vendorData);
+      console.log('Verification status:', vendorData.verificationStatus);
+
+      setVendor(vendorData);
     } catch (err) {
       console.error('Failed to load vendor:', err);
       setError(err.response?.data?.message || 'Unable to load vendor');
       if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('adminToken');
-        
         navigate('/admin/login');
       }
     } finally {
@@ -88,18 +92,18 @@ export default function VendorDetails() {
 
     setIsProcessing(true);
     try {
-      const response = await api.put(`/admin/users/${id}/rate`, { 
-        rating: parseFloat(rating.toFixed(1)), 
-        comment: ratingComment 
+      const response = await api.put(`/admin/vendors/${id}/rate`, {
+        rating: parseFloat(rating.toFixed(1)),
+        comment: ratingComment
       });
-      
+
       if (response.data.success) {
         setShowRating(false);
         setRating(0.0);
         setRatingComment('');
         await fetchVendor();
         toast.showToast('Vendor rated successfully', { type: 'success' });
-        
+
         sessionStorage.setItem('vendorListRefresh', Date.now().toString());
         window.dispatchEvent(new Event('vendorRated'));
       } else {
@@ -109,7 +113,7 @@ export default function VendorDetails() {
       if (err.response?.status === 401) {
         toast.showToast('Authentication required. Please login again.', { type: 'error' });
         localStorage.removeItem('adminToken');
-        
+
         navigate('/admin/login');
       } else {
         toast.showToast(err.response?.data?.message || err.message || 'Rating failed', { type: 'error' });
@@ -144,7 +148,10 @@ export default function VendorDetails() {
 
   const getStatus = () => {
     if (!vendor) return 'pending';
-    return vendor.verificationStatus || 'pending';
+    const status = (vendor.verificationStatus || 'pending').toLowerCase();
+    if (status === 'verified') return 'verified';
+    if (status === 'rejected') return 'rejected';
+    return 'pending';
   };
 
   const statusText = {
@@ -161,83 +168,103 @@ export default function VendorDetails() {
 
   const vendorImage = vendor?.companyLogo || vendor?.profileImage;
   const vendorImageUrl = vendorImage
-    ? vendorImage.startsWith('http')
+    ? (vendorImage.startsWith('http')
       ? vendorImage
-      : `http://localhost:5000/${vendorImage}`
-    : undefined;
+      : `http://localhost:5000/${vendorImage.replace(/\\/g, '/')}`)
+    : null;
 
   return (
     <div className="dashboard-page">
       <Sidebar />
       <div className="dashboard-content">
-        <header className="vendor-top-card">
-          <div className="vendor-breadcrumbs">
-            <button className="breadcrumb-link" onClick={() => navigate('/admin/vendors')}>Vendors</button>
-            <span className="breadcrumb-sep">›</span>
-            <span className="breadcrumb-current">{vendor?.companyName || 'Vendor Details'}</span>
+        <header className="vendor-top-card" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f9fafb 100%)', padding: '32px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
+          <div className="vendor-breadcrumbs" style={{ marginBottom: '24px' }}>
+            <button className="breadcrumb-link" onClick={() => navigate('/admin/vendors')} style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>Vendors</button>
+            <span className="breadcrumb-sep" style={{ margin: '0 8px', color: '#9ca3af' }}>›</span>
+            <span className="breadcrumb-current" style={{ color: '#6b7280', fontSize: '14px', fontWeight: '500' }}>{vendor?.companyName || 'Vendor Details'}</span>
           </div>
 
-          <div className="vendor-top">
-            <div className="vendor-top-left">
-              <div className="vendor-logo">
+          <div className="vendor-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '32px' }}>
+            <div className="vendor-top-left" style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', flex: 1 }}>
+              <div className="vendor-logo" style={{ position: 'relative' }}>
                 {vendorImageUrl ? (
-                  <img src={vendorImageUrl} alt="Vendor Logo" />
+                  <img src={vendorImageUrl} alt="Vendor Logo" style={{ width: '120px', height: '120px', borderRadius: '16px', objectFit: 'cover', border: '3px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                 ) : (
-                  <div className="vendor-placeholder-logo">
-                    <Building size={34} />
+                  <div className="vendor-placeholder-logo" style={{ width: '120px', height: '120px', borderRadius: '16px', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}>
+                    <Building size={48} />
                   </div>
                 )}
               </div>
-              <div className="vendor-title">
-                <h2>{vendor?.companyName || 'Vendor Details'}</h2>
-                <div className="vendor-meta">
-                  <span className="vendor-id">
-                    Vendor ID: <strong>{vendor?._id ? `VND-${vendor._id.slice(-6).toUpperCase()}` : '—'}</strong>
+              <div className="vendor-title" style={{ flex: 1 }}>
+                <h2 style={{ fontSize: '32px', fontWeight: '700', color: '#1f2937', marginBottom: '8px', lineHeight: '1.2' }}>{vendor?.companyName || 'Vendor Details'}</h2>
+                <div className="vendor-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+                  <span className="vendor-id" style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    Vendor ID: <strong style={{ color: '#1f2937' }}>{vendor?._id ? `VND-${vendor._id.slice(-6).toUpperCase()}` : '—'}</strong>
                   </span>
-                  <span className="vendor-submitted">
-                    Submitted on {vendor?.createdAt ? new Date(vendor.createdAt).toLocaleDateString() : '—'}
+                  <span className="vendor-submitted" style={{ fontSize: '14px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    Designation: <strong style={{ color: '#1f2937', textTransform: 'uppercase' }}>{vendor?.role ? vendor.role : '—'}</strong>
                   </span>
                 </div>
+                {vendor?.adminRating && getStatus() === 'verified' && (
+                  <div className="vendor-rating" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', borderRadius: '8px', border: '1px solid #fbbf24' }}>
+                    <span className="rating-stars" style={{ fontSize: '16px' }}>{'⭐'.repeat(vendor.adminRating)}</span>
+                    <span className="rating-value" style={{ fontSize: '14px', fontWeight: '600', color: '#92400e' }}>{vendor.adminRating}/5</span>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="vendor-top-right">
-              <span className={statusClass[getStatus()]}>{statusText[getStatus()]}</span>
-              {vendor?.adminRating && getStatus() === 'verified' && (
-                <div className="vendor-rating">
-                  <span className="rating-stars">{'⭐'.repeat(vendor.adminRating)}</span>
-                  <span className="rating-value">{vendor.adminRating}/5</span>
-                </div>
-              )}
-              <div className="action-buttons">
+            <div className="vendor-top-right" style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-end', minWidth: '200px' }}>
+              <span className={statusClass[getStatus()]} style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{statusText[getStatus()]}</span>
+              <div className="action-buttons" style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
                 {getStatus() === 'pending' && (
                   <>
                     <button
                       className="reject-btn"
                       onClick={() => setShowReject(true)}
                       disabled={isProcessing}
+                      style={{ padding: '12px 20px', fontSize: '14px', fontWeight: '600', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                     >
-                      <XCircle size={18} />
+                      <XCircle size={16} />
                       Reject Vendor
                     </button>
                     <button
                       className="approve-btn"
                       onClick={handleVerify}
                       disabled={isProcessing}
+                      style={{ padding: '12px 20px', fontSize: '14px', fontWeight: '600', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                     >
-                      <CheckCircle size={18} />
+                      <CheckCircle size={16} />
                       Approve Vendor
                     </button>
                   </>
                 )}
                 {getStatus() === 'verified' && (
-                  <button
-                    className="rate-btn"
-                    onClick={() => setShowRating(true)}
-                    disabled={isProcessing}
-                  >
-                    ⭐ Rate Vendor
-                  </button>
+                  <>
+                    <button
+                      className="reject-btn"
+                      onClick={() => setShowReject(true)}
+                      disabled={isProcessing}
+                      style={{ padding: '12px 20px', fontSize: '14px', fontWeight: '600', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      <XCircle size={16} />
+                      Reject Vendor
+                    </button>
+                    <button
+                      className="rate-btn"
+                      onClick={() => {
+                        setShowRating(true);
+                        if (vendor?.adminRating) {
+                          setRating(vendor.adminRating);
+                          setRatingComment(vendor.adminRatingComment || '');
+                        }
+                      }}
+                      disabled={isProcessing}
+                      style={{ padding: '12px 20px', fontSize: '14px', fontWeight: '600', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      ⭐ {vendor?.adminRating ? 'Update Rating' : 'Rate Vendor'}
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -270,8 +297,14 @@ export default function VendorDetails() {
                   )}
                   {vendor.city && (
                     <div className="card-row">
-                      <span className="label">Registered Address</span>
+                      <span className="label">Work City</span>
                       <span className="value">{vendor.city}</span>
+                    </div>
+                  )}
+                  {vendor.workState && (
+                    <div className="card-row">
+                      <span className="label">Work State</span>
+                      <span className="value">{vendor.workState}</span>
                     </div>
                   )}
                   {vendor.website && (
@@ -280,16 +313,10 @@ export default function VendorDetails() {
                       <span className="value">{vendor.website}</span>
                     </div>
                   )}
-                  {vendor.panNumber && (
+                  {vendor.workArea && (
                     <div className="card-row">
-                      <span className="label">Tax ID / PAN</span>
-                      <span className="value">{vendor.panNumber}</span>
-                    </div>
-                  )}
-                  {vendor.licenseNumber && (
-                    <div className="card-row">
-                      <span className="label">License Number</span>
-                      <span className="value">{vendor.licenseNumber}</span>
+                      <span className="label">Work Area</span>
+                      <span className="value">{vendor.workArea}</span>
                     </div>
                   )}
                 </div>
@@ -300,10 +327,10 @@ export default function VendorDetails() {
                   <h3>Contact Information</h3>
                 </div>
                 <div className="card-body">
-                  {vendor.ownerName && (
+                  {vendor.name && (
                     <div className="card-row">
-                      <span className="label">Primary Contact Person</span>
-                      <span className="value">{vendor.ownerName}</span>
+                      <span className="label">Vendor Name</span>
+                      <span className="value">{vendor.name}</span>
                     </div>
                   )}
                   {vendor.email && (
@@ -348,7 +375,6 @@ export default function VendorDetails() {
               <div className="card">
                 <div className="card-header">
                   <h3>Legal Documents</h3>
-                  <button className="upload-btn">Upload Additional Document</button>
                 </div>
                 <div className="card-body">
                   {vendor.panCardImage && (
@@ -363,13 +389,13 @@ export default function VendorDetails() {
                         </div>
                       </div>
                       <div className="doc-actions">
-                        <button 
+                        <button
                           className="doc-action"
                           onClick={() => handleViewFile(vendor.panCardImage)}
                         >
                           View
                         </button>
-                        <button 
+                        <button
                           className="doc-action"
                           onClick={() => handleDownloadFile(vendor.panCardImage, 'pan-card')}
                         >
@@ -395,34 +421,6 @@ export default function VendorDetails() {
                     </div>
                   )}
 
-                  {vendor.companyLogo && (
-                    <div className="document-row">
-                      <div className="document-meta">
-                        <div className="doc-icon">
-                          <FileText size={18} />
-                        </div>
-                        <div>
-                          <div className="doc-title">Company Logo</div>
-                          <div className="doc-size">Image</div>
-                        </div>
-                      </div>
-                      <div className="doc-actions">
-                        <button 
-                          className="doc-action"
-                          onClick={() => handleViewFile(vendor.companyLogo)}
-                        >
-                          View
-                        </button>
-                        <button 
-                          className="doc-action"
-                          onClick={() => handleDownloadFile(vendor.companyLogo, 'company-logo')}
-                        >
-                          <Download size={16} />
-                          Download
-                        </button>
-                      </div>
-                    </div>
-                  )}
 
                   {!vendor.panCardImage && !vendor.gstNumber && !vendor.companyLogo && (
                     <div className="no-documents">
@@ -436,7 +434,7 @@ export default function VendorDetails() {
         )}
 
         {showReject && (
-          <div 
+          <div
             className="modal-overlay visible"
             onMouseDown={(e) => {
               if (e.target === e.currentTarget) {
@@ -464,7 +462,7 @@ export default function VendorDetails() {
         )}
 
         {showRating && (
-          <div 
+          <div
             className="modal-overlay visible"
             onMouseDown={(e) => {
               if (e.target === e.currentTarget) {
@@ -475,7 +473,7 @@ export default function VendorDetails() {
             <div className="rating-modal-container">
               <div className="rating-modal-header">
                 <h3>Rate Vendor</h3>
-                <button 
+                <button
                   className="rating-modal-close"
                   type="button"
                   onClick={() => setShowRating(false)}
@@ -483,23 +481,23 @@ export default function VendorDetails() {
                   ×
                 </button>
               </div>
-              
+
               <div className="rating-modal-body">
                 <p className="rating-modal-description">
                   Rate <strong>{vendor?.companyName}</strong> based on their profile, documentation, and business credentials.
                 </p>
-                
+
                 <div className="rating-input-section">
                   <div className="rating-display">
                     <span className="rating-label">Current Rating:</span>
                     <span className="rating-value">{rating.toFixed(1)}/5.0</span>
                   </div>
-                  
+
                   <div className="rating-stars-container">
                     {[1, 2, 3, 4, 5].map(starValue => {
                       const isFilled = starValue <= Math.floor(rating);
                       const isHalfFilled = starValue > Math.floor(rating) && starValue <= Math.ceil(rating) && rating % 1 >= 0.5;
-                      
+
                       return (
                         <button
                           key={starValue}
@@ -512,7 +510,7 @@ export default function VendorDetails() {
                       );
                     })}
                   </div>
-                  
+
                   <div className="rating-slider-section">
                     <input
                       type="range"
@@ -536,7 +534,7 @@ export default function VendorDetails() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="rating-comment-section">
                   <label htmlFor="vendor-rating-comment" className="comment-label">
                     Additional Comments (Optional)
@@ -551,9 +549,9 @@ export default function VendorDetails() {
                   />
                 </div>
               </div>
-              
+
               <div className="rating-modal-footer">
-                <button 
+                <button
                   type="button"
                   className="rating-btn rating-btn-cancel"
                   onClick={() => {
@@ -564,7 +562,7 @@ export default function VendorDetails() {
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="button"
                   className="rating-btn rating-btn-submit"
                   onClick={handleRateVendor}

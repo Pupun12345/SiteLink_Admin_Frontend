@@ -54,17 +54,24 @@ export default function AdminSettings() {
   const fetchProfile = async () => {
     try {
       const response = await api.get('/profile/me');
-      if (response.data.user) {
-        const user = response.data.user;
+      console.log('Profile response:', response.data);
+      
+      if (response.data.success && response.data.data) {
+        const user = response.data.data.user;
+        console.log('User data:', user);
+        
         setProfile(prev => ({
           ...prev,
           name: user.name || '',
           email: user.email || '',
           profileImage: user.profileImage || ''
         }));
+        
         const imageUrl = user.profileImage 
           ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}` 
-          : `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`;
+          : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin')}&background=2b3f57&color=fff`;
+        
+        console.log('Image URL:', imageUrl);
         setProfileImagePreview(imageUrl);
       }
       setLoading(false);
@@ -221,8 +228,7 @@ export default function AdminSettings() {
       if (profileImageFile) {
         formData.append('profileImage', profileImageFile);
       }
-
-
+      
       const response = await api.put('/profile/admin/edit', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -268,7 +274,9 @@ export default function AdminSettings() {
         newPassword: passwordForm.newPassword
       });
 
-      if (response.data.message) {
+      console.log('Change password response:', response.data);
+
+      if (response.data.success) {
         showMessage('success', 'Password changed successfully!');
         setPasswordForm({
           currentPassword: '',
@@ -283,6 +291,7 @@ export default function AdminSettings() {
       }
     } catch (error) {
       console.error('Error changing password:', error);
+      console.error('Error response:', error.response?.data);
       showMessage('error', error.response?.data?.message || 'Failed to change password');
     }
   };
@@ -345,7 +354,14 @@ export default function AdminSettings() {
 
           <div className="profile-grid">
             <div className="profile-avatar-area">
-              <img src={profileImagePreview} alt="Profile" />
+              <img 
+                src={profileImagePreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'Admin')}&background=2b3f57&color=fff`} 
+                alt="Profile"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'Admin')}&background=2b3f57&color=fff`;
+                }}
+              />
               <label className="image-upload-label">
                 <input
                   type="file"
@@ -384,8 +400,8 @@ export default function AdminSettings() {
                   value={profile.role}
                   onChange={handleProfileChange}
                 >
-                  <option>Enterprise Admin</option>
-                  <option>Operations Admin</option>
+                  <option>Super Admin</option>
+                  <option>Admin User</option>
                 </select>
               </label>
               <label>
@@ -470,8 +486,7 @@ export default function AdminSettings() {
           </div>
 
           <p className="security-hint">
-            Password must be at least 12 characters long and include uppercase, numbers, and special
-            characters.
+            Password must be at least 6 characters long.
           </p>
 
           <button 
