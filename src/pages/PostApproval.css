@@ -285,39 +285,32 @@
   gap: 6px;
 }
 
-.category-badge {
-  margin-left: auto;
+.feeling-badge,
+.video-badge {
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
-}
-
-.category-badge.work {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.category-badge.project {
   background: #fef3c7;
   color: #92400e;
 }
 
-.category-badge.skill {
-  background: #dcfce7;
-  color: #166534;
+.video-badge {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
-.category-badge.general {
-  background: #f3f4f6;
-  color: #374151;
+.post-video {
+  margin-top: 12px;
 }
 
-.category-badge.announcement {
-  background: #fce7f3;
-  color: #9f1239;
+.post-video video {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
 }
+
+
 
 .post-actions {
   display: flex;
@@ -369,17 +362,18 @@
 }
 
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 20px;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 10000 !important;
+  padding: 20px !important;
+  overflow-y: auto !important;
 }
 
 .modal-content {
@@ -429,7 +423,8 @@
 }
 
 .cancel-btn,
-.confirm-reject-btn {
+.confirm-reject-btn,
+.create-btn {
   padding: 10px 24px;
   border: none;
   border-radius: 8px;
@@ -460,6 +455,141 @@
 .confirm-reject-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.create-btn {
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.create-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.create-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 15px;
+  box-sizing: border-box;
+  outline: none;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.form-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.file-upload-area {
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  background: #f9fafb;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.file-upload-area:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.file-input {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.create-modal {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.create-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.create-modal::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.create-modal::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.create-modal::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.content-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.job-badge {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.post-badge {
+  background: #ede9fe;
+  color: #6b21a8;
+}
+
+.quantity-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #fef3c7;
+  color: #92400e;
 }
 
 @media (max-width: 768px) {

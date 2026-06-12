@@ -75,7 +75,52 @@ export default function UserProfilePage() {
       setLoading(true);
       try {
         const res = await api.get(`/admin/users/${id}`);
-        setUser(res.data.data);
+        const userData = res.data.data;
+        
+        // Transform data to match expected format
+        const transformedUser = {
+          _id: userData.id || userData._id,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role || userData.userType,
+          userType: userData.userType,
+          profileImage: userData.profileImage,
+          createdAt: userData.createdAt,
+          city: userData.workCity || userData.city,
+          workState: userData.workState,
+          phone: userData.phone,
+          join: userData.createdAt ? new Date(userData.createdAt).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }) : "",
+          // Worker specific fields
+          primarySkill: userData.primarySkill,
+          skills: userData.skills,
+          willingtoRelocate: userData.willingtoRelocate,
+          posts: userData.posts,
+          location: userData.location,
+          salaryType: userData.salaryType,
+          salary: userData.salary,
+          experience: userData.experience,
+          // Vendor specific fields
+          gstNumber: userData.gstNumber,
+          companyName: userData.companyName,
+          companyLogo: userData.companyLogo,
+          designation: userData.designation,
+          workArea: userData.workArea,
+          whatsappNumber: userData.whatsappNumber,
+          website: userData.website,
+          jobPosts: userData.jobPosts,
+          verified: false,
+          twoFactor: false,
+          lastPasswordChange: "N/A",
+          accountStatus: "ACTIVE",
+          department: userData.userType === 'worker' ? 'Workers' : 'Vendors',
+          employeeId: userData.id || userData._id,
+        };
+        
+        setUser(transformedUser);
         setError(null);
       } catch (err) {
         setError("Failed to load user profile");
@@ -155,7 +200,7 @@ export default function UserProfilePage() {
             <div className="avatar-wrap">
               <img
                 className="avatar-img"
-                src={user.avatar || "https://randomuser.me/api/portraits/lego/1.jpg"}
+                src={user.profileImage ? `http://localhost:5000/${user.profileImage}` : "https://randomuser.me/api/portraits/lego/1.jpg"}
                 alt={user.name}
                 onError={(e) => e.target.src = "https://randomuser.me/api/portraits/lego/1.jpg"}
               />

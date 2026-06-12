@@ -37,6 +37,8 @@ export default function PlatformSettings() {
   const [editingPlan, setEditingPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [skills, setSkills] = useState([]);
+  const [newSkill, setNewSkill] = useState('');
 
   useEffect(() => {
     const savedWorkerRules = localStorage.getItem('workerRules');
@@ -85,6 +87,10 @@ export default function PlatformSettings() {
         if (!localStorage.getItem('language')) {
           setLanguage(settings.language);
           localStorage.setItem('language', settings.language);
+        }
+
+        if (settings.skills) {
+          setSkills(settings.skills);
         }
       }
     } catch (error) {
@@ -220,6 +226,25 @@ export default function PlatformSettings() {
     }
   };
 
+  const handleAddSkill = async () => {
+    if (!newSkill.trim()) {
+      showMessage('error', 'Please enter a skill name');
+      return;
+    }
+
+    try {
+      const response = await api.post('/platform-settings/skills', { skill: newSkill.trim() });
+      if (response.data.success) {
+        setSkills(response.data.skills);
+        setNewSkill('');
+        showMessage('success', 'Skill added successfully!');
+      }
+    } catch (error) {
+      console.error('Error adding skill:', error);
+      showMessage('error', error.response?.data?.message || 'Failed to add skill');
+    }
+  };
+
   if (loading) {
     return (
       <div className="dashboard-page platform-settings-page">
@@ -341,6 +366,34 @@ export default function PlatformSettings() {
             </section>
 
             <aside className="platform-side-stack">
+              <section className="platform-card">
+                <h3>Skills Management</h3>
+                <p>Add skills for workers and vendors.</p>
+                <div className="skill-input-group">
+                  <input
+                    type="text"
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    placeholder="Enter skill name"
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddSkill()}
+                    className="skill-input"
+                  />
+                  <button type="button" onClick={handleAddSkill} className="skill-add-btn">Add</button>
+                </div>
+                <div className="skills-list">
+                  {skills.length > 0 ? (
+                    skills.map((skill) => (
+                      <div key={skill.id} className="skill-item">
+                        <span className="skill-id">{skill.id}</span>
+                        <span className="skill-name">{skill.name}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="no-skills-text">No skills added yet</p>
+                  )}
+                </div>
+              </section>
+
               <section className="platform-card">
                 <h3>Language Settings</h3>
                 <p>Set the default platform language.</p>

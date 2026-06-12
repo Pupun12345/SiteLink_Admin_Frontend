@@ -29,30 +29,50 @@ export default function WorkerVerification() {
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
     phone: '',
-    role: '',
-    experience: '',
-    city: '',
-    rating: '',
-    dailyRate: '',
+    primarySkillId: '',
+    secondarySkillId: [],
+    otherSkill: '',
+    dateOfBirth: '',
+    gender: '',
+    totalExperience: '',
+    experienceDescription: '',
+    workStateID: '',
+    workCityID: '',
+    willingtoRelocate: false,
+    salaryType: 'daily',
+    salary: '',
+    location: '',
   });
   const [profileImage, setProfileImage] = useState(null);
-  const [documentFile, setDocumentFile] = useState(null);
+  const [workSamplesPhoto, setWorkSamplesPhoto] = useState([]);
+  const [experienceCertificate, setExperienceCertificate] = useState(null);
+  const [governmentID, setGovernmentID] = useState(null);
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [skills, setSkills] = useState([]);
   const navigate = useNavigate();
 
   const fetchAdminProfile = async () => {
     try {
       const response = await api.get('/profile/me');
-      if (response.data.user) {
-        const user = response.data.user;
-        const imageUrl = user.profileImage
-          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}`
-          : `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`;
+      console.log('Profile response:', response.data);
+      
+      if (response.data.success && response.data.data) {
+        const user = response.data.data.user;
+        console.log('User data:', user);
+        
+        const imageUrl = user.profileImage 
+          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}` 
+          : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin')}&background=2b3f57&color=fff`;
+        
+        console.log('Image URL:', imageUrl);
+        
         setProfile({
           name: user.name || '',
           email: user.email || '',
-          imageUrl: imageUrl
+          imageUrl: imageUrl,
+          role: user.role || ''
         });
       }
       setLoading(false);
@@ -64,7 +84,50 @@ export default function WorkerVerification() {
 
   useEffect(() => {
     fetchAdminProfile();
+    fetchStates();
+    fetchSkills();
   }, []);
+
+  const fetchStates = async () => {
+    try {
+      const response = await api.get('/profile/states');
+      if (response.data.success) {
+        setStates(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching states:', error);
+    }
+  };
+
+  const fetchCities = async (stateId) => {
+    try {
+      const response = await api.get(`/profile/cities/${stateId}`);
+      if (response.data.success) {
+        setCities(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching cities:', error);
+    }
+  };
+
+  const fetchSkills = async () => {
+    try {
+      const response = await api.get('/profile/skills');
+      if (response.data.success) {
+        setSkills(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+    }
+  };
+
+  const handleStateChange = (stateId) => {
+    setFormData({ ...formData, workStateID: stateId, workCityID: '' });
+    setCities([]);
+    if (stateId) {
+      fetchCities(stateId);
+    }
+  };
 
 
   const handleLogout = () => {
@@ -84,16 +147,21 @@ export default function WorkerVerification() {
       return;
     }
 
-    const headers = ['Worker Name', 'Role', 'Experience', 'City', 'Phone', 'Email', 'Rating', 'Status', 'Applied Date'];
+    const headers = ['Worker Name', 'Role', 'Experience', 'City', 'Phone', 'Email','Primary Skill','Additional Skills', 'Wiiling to Relocate', 'Salary Type','Salary','Status','Rating', 'Applied Date'];
     const rows = filteredWorkers.map(worker => [
       worker.name || '',
-      worker.role || 'General Worker',
+      worker.role || 'N/A',
       worker.experience || 'N/A',
       worker.city || 'N/A',
       worker.phone || 'N/A',
       worker.email || 'N/A',
-      worker.adminRating ? `${parseFloat(worker.adminRating).toFixed(1)}/5` : 'Not Rated',
+      worker.primarySkill || 'N/A',
+      worker.skills || 'N/A',
+      worker.willingtoRelocate || 'N/A',
+      worker.salaryType || 'N/A',
+      worker.salary || 'N/A',
       worker.status || 'Pending',
+      worker.adminRating ? `${parseFloat(worker.adminRating).toFixed(1)}/5` : 'Not Rated',
       worker.join || 'N/A'
     ]);
 
@@ -120,7 +188,7 @@ export default function WorkerVerification() {
   const fetchWorkers = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/admin/users', {
+      const { data } = await api.get('/admin/vendor-worker', {
         params: {
           userType: 'worker',
           status: 'all',
@@ -128,10 +196,26 @@ export default function WorkerVerification() {
         },
       });
 
-      setWorkers(data.data || []);
-      console.log(data.data)
+      const workersData = data.data || [];
+      
+      const formattedWorkers = workersData.map(worker => ({
+        ...worker,
+        name: worker.name || 'Unknown',
+        role: worker.primarySkill?.name || worker.role || 'General Worker',
+        experience: worker.experience || 'N/A',
+        city: worker.city || 'N/A',
+        status: worker.verificationStatus || 'Pending',
+        adminRating: worker.adminRating || null,
+        profileImage: worker.profileImage || null,
+        phone: worker.phone || 'N/A',
+        email: worker.email || 'N/A',
+        join: worker.join || 'N/A'
+      }));
+
+      setWorkers(formattedWorkers);
     } catch (err) {
       console.error('Failed to load workers:', err);
+      toast.error('Failed to load workers');
     } finally {
       setLoading(false);
     }
@@ -141,121 +225,63 @@ export default function WorkerVerification() {
   const handleAddWorker = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-
     const loadingToast = toast.loading('Adding worker...');
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('phone', formData.phone);
-
-      if (formData.email) {
-        formDataToSend.append('email', formData.email);
+      // Admin creates worker profile directly
+      const profileData = new FormData();
+      profileData.append('phone', formData.phone);
+      profileData.append('name', formData.name);
+      profileData.append('primarySkillId', formData.primarySkillId);
+      if (formData.secondarySkillId.length > 0) {
+        formData.secondarySkillId.forEach(id => profileData.append('secondarySkillId', id));
       }
-
-      formDataToSend.append('password', 'TempPass@123'); // Temporary password
-      formDataToSend.append('confirmPassword', 'TempPass@123');
-      formDataToSend.append('userType', 'worker');
-
-      if (formData.city) {
-        formDataToSend.append('city', formData.city);
+      if (formData.otherSkill) profileData.append('otherSkill', formData.otherSkill);
+      if (formData.dateOfBirth) profileData.append('dateOfBirth', formData.dateOfBirth);
+      if (formData.gender) profileData.append('gender', formData.gender);
+      if (formData.totalExperience) profileData.append('totalExperience', formData.totalExperience);
+      if (formData.experienceDescription) profileData.append('experienceDescription', formData.experienceDescription);
+      if (formData.workStateID) profileData.append('workStateID', formData.workStateID);
+      if (formData.workCityID) profileData.append('workCityID', formData.workCityID);
+      profileData.append('willingtoRelocate', formData.willingtoRelocate);
+      if (formData.salaryType) profileData.append('salaryType', formData.salaryType);
+      if (formData.salary) profileData.append('salary', formData.salary);
+      if (formData.location) profileData.append('location', formData.location);
+      if (profileImage) profileData.append('profileImage', profileImage);
+      if (workSamplesPhoto.length > 0) {
+        workSamplesPhoto.forEach(file => profileData.append('workSamplesPhoto', file));
       }
+      if (experienceCertificate) profileData.append('experienceCertificate', experienceCertificate);
+      if (governmentID) profileData.append('governmentID', governmentID);
 
-      if (formData.experience) {
-        formDataToSend.append('experience', formData.experience);
-      }
-
-      if (formData.rating) {
-        formDataToSend.append('adminRating', formData.rating);
-      }
-
-      if (formData.dailyRate) {
-        formDataToSend.append('dailyRate', formData.dailyRate);
-      }
-
-      if (profileImage) {
-        formDataToSend.append('profileImage', profileImage);
-      }
-      if (documentFile) {
-        formDataToSend.append('aadhaarFrontImage', documentFile);
-      }
-
-      const registerResponse = await api.post('/auth/register', formDataToSend, {
+      await api.post('/profile/worker/create', profileData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      // Get the worker ID from response
-      const workerOTP = registerResponse.data?.data?.otp;
-      console.log('Worker OTP:', workerOTP);
-
-      const workerResponse = await api.post("/auth/verify-otp", {
-        phone: formData.phone,
-        otp: workerOTP
-      });
-
-
-      const workerID = workerResponse?.data?.user?.id || workerResponse?.data?.user?._id || workerResponse?.data?.data?.id || workerResponse?.data?.data?._id;
-      console.log('Worker ID after OTP verification:', workerID);
-
-      const finalWorkerID = workerID || registerResponse.data?.userId;
-      console.log('Final worker ID:', finalWorkerID);
-
-      if (finalWorkerID) {
-        try {
-          console.log('Attempting auto-verify with:', {
-            url: `/admin/workers/${finalWorkerID}/auto-verify`,
-            rating: parseFloat(formData.rating)
-          });
-
-          const verifyResponse = await api.put(`/admin/workers/${finalWorkerID}/auto-verify`, {
-            rating: parseFloat(formData.rating)
-          });
-
-          console.log('Auto-verify response:', verifyResponse.data);
-          toast.success('Worker added and approved successfully!', { id: loadingToast });
-        } catch (verifyErr) {
-          console.error('Failed to auto-approve:', verifyErr);
-          console.error('Error status:', verifyErr.response?.status);
-          console.error('Error data:', verifyErr.response?.data);
-          console.error('Request URL:', verifyErr.config?.url);
-          toast.error(`Worker added but approval failed: ${verifyErr.response?.data?.message || verifyErr.message}. Please approve manually.`, { id: loadingToast });
+          'Content-Type': 'multipart/form-data'
         }
-      } else {
-        console.error('No worker ID received');
-        toast.error('Worker added but no ID received. Please verify manually.', { id: loadingToast });
-      }
+      });
 
-      setFormData({ name: '', email: '', phone: '', role: '', experience: '', city: '', rating: '', dailyRate: '' });
+      toast.success('Worker added successfully!', { id: loadingToast });
+      setFormData({ name: '', phone: '', primarySkillId: '', secondarySkillId: [], otherSkill: '', dateOfBirth: '', gender: '', totalExperience: '', experienceDescription: '', workStateID: '', workCityID: '', willingtoRelocate: false, salaryType: 'daily', salary: '', location: '' });
       setProfileImage(null);
-      setDocumentFile(null);
+      setWorkSamplesPhoto([]);
+      setExperienceCertificate(null);
+      setGovernmentID(null);
+      setCities([]);
       setShowAddForm(false);
       fetchWorkers();
     } catch (err) {
-      console.error('Full error:', err);
-      console.error('Error response:', JSON.stringify(err.response?.data, null, 2));
-
-      let errorMsg = 'Failed to add worker';
-
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to add worker';
       if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
         const errors = err.response.data.errors.map(e => `${e.param}: ${e.msg}`).join('\n');
-        errorMsg = errors;
         toast.error(
           <div style={{ whiteSpace: 'pre-line' }}>
             <strong>Validation Errors:</strong>\n{errors}
           </div>,
           { id: loadingToast, duration: 6000 }
         );
-      } else if (err.response?.data?.message) {
-        errorMsg = err.response.data.message;
-        toast.error(errorMsg, { id: loadingToast });
       } else {
-        errorMsg = err.message;
         toast.error(errorMsg, { id: loadingToast });
       }
-
-      console.error('Error details:', errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -263,34 +289,58 @@ export default function WorkerVerification() {
 
   const handleCancelAdd = () => {
     setShowAddForm(false);
-    setFormData({ name: '', email: '', phone: '', role: '', experience: '', city: '', rating: '', dailyRate: '' });
+    setFormData({ name: '', phone: '', primarySkillId: '', secondarySkillId: [], otherSkill: '', dateOfBirth: '', gender: '', totalExperience: '', experienceDescription: '', workStateID: '', workCityID: '', willingtoRelocate: false, salaryType: 'daily', salary: '', location: '' });
     setProfileImage(null);
-    setDocumentFile(null);
+    setWorkSamplesPhoto([]);
+    setExperienceCertificate(null);
+    setGovernmentID(null);
+    setCities([]);
   };
 
   const getStatusBadgeClass = (worker) => {
-    if (worker.status === 'Verified') return 'status-approved';
-    if (worker.status === 'Pending') return 'status-pending';
-    if (worker.status === 'Rejected') return 'status-rejected';
+    const status = (worker.status || '').toLowerCase();
+    if (status === 'verified' || status === 'approved') return 'status-approved';
+    if (status === 'pending') return 'status-pending';
+    if (status === 'rejected') return 'status-rejected';
     return 'status-pending';
   };
 
   const getStatusText = (worker) => {
-    if (worker.status === 'Verified') return 'APPROVED';
-    if (worker.status === 'Rejected') return 'REJECTED';
+    const status = (worker.status || '').toLowerCase();
+    if (status === 'verified' || status === 'approved') return 'APPROVED';
+    if (status === 'rejected') return 'REJECTED';
     return 'PENDING';
   };
 
-  const approvedWorkers = workers.filter(worker => worker.status === 'Verified');
-  const ratedWorkers = approvedWorkers.filter(worker => typeof worker.adminRating === 'number');
+  const approvedWorkers = workers.filter(worker => 
+    worker.status === 'Verified' || worker.status === 'Approved' || worker.status === 'approved'
+  );
+  const ratedWorkers = workers.filter(worker => 
+    worker.adminRating && typeof worker.adminRating === 'number' && worker.adminRating > 0
+  );
   const averageRating = ratedWorkers.length > 0
-    ? (ratedWorkers.reduce((sum, worker) => sum + worker.adminRating, 0) / ratedWorkers.length).toFixed(1)
+    ? (ratedWorkers.reduce((sum, worker) => sum + parseFloat(worker.adminRating), 0) / ratedWorkers.length).toFixed(1)
     : null;
 
   const filteredWorkers = workers.filter(worker => {
-    if (statusFilter === 'pending' && worker.status !== 'Pending') return false;
-    if (statusFilter === 'approved' && worker.status !== 'Verified') return false;
-    if (searchTerm && !`${worker.name} ${worker.role || ''} ${worker._id}`.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    const workerStatus = (worker.status || '').toLowerCase();
+    
+    if (statusFilter === 'pending' && workerStatus !== 'pending') return false;
+    if (statusFilter === 'approved' && !['verified', 'approved'].includes(workerStatus)) return false;
+    
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const workerName = (worker.name || '').toLowerCase();
+      const workerRole = (worker.role || '').toLowerCase();
+      const workerId = (worker._id || '').toLowerCase();
+      
+      if (!workerName.includes(searchLower) && 
+          !workerRole.includes(searchLower) && 
+          !workerId.includes(searchLower)) {
+        return false;
+      }
+    }
+    
     return true;
   });
 
@@ -391,7 +441,9 @@ export default function WorkerVerification() {
               </button>
               <div className="user-menu">
                 <div className="user-avatar">
-                  <img src={`${profile.imageUrl}`} alt="Admin" />
+                  {profile.imageUrl ? (
+                    <img src={profile.imageUrl} alt="Admin" />
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -428,7 +480,7 @@ export default function WorkerVerification() {
                 <form onSubmit={handleAddWorker}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Full Name</label>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Full Name *</label>
                       <input
                         type="text"
                         required
@@ -445,41 +497,7 @@ export default function WorkerVerification() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Email</label>
-                      <input
-                        type="email"
-                        required
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        placeholder="Enter email address"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Daily Wage</label>
-                      <input
-                        type="tel"
-                        required
-                        value={formData.dailyRate}
-                        onChange={(e) => setFormData({ ...formData, dailyRate: e.target.value })}
-                        placeholder="Enter Daily Wage"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Phone</label>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Phone *</label>
                       <input
                         type="tel"
                         required
@@ -496,26 +514,11 @@ export default function WorkerVerification() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Role</label>
-                      <input
-                        type="text"
-                        value={formData.role}
-                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                        placeholder="e.g., Carpenter, Electrician"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Experience</label>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Primary Skill *</label>
                       <select
-                        value={formData.experience}
-                        onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                        required
+                        value={formData.primarySkillId}
+                        onChange={(e) => setFormData({ ...formData, primarySkillId: e.target.value })}
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -525,20 +528,133 @@ export default function WorkerVerification() {
                           backgroundColor: 'white'
                         }}
                       >
-                        <option value="">Select experience</option>
-                        <option value="0-1 Year">0-1 Year</option>
-                        <option value="1-3 Years">1-3 Years</option>
-                        <option value="3-5 Years">3-5 Years</option>
-                        <option value="5+ Years">5+ Years</option>
+                        <option value="">Select primary skill</option>
+                        {skills.map(skill => (
+                          <option key={skill.id} value={skill.id}>{skill.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Date of Birth</label>
+                      <input
+                        type="date"
+                        value={formData.dateOfBirth}
+                        onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Gender</label>
+                      <select
+                        value={formData.gender}
+                        onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          backgroundColor: 'white'
+                        }}
+                      >
+                        <option value="">Select gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Total Experience (Years)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="60"
+                        value={formData.totalExperience}
+                        onChange={(e) => setFormData({ ...formData, totalExperience: e.target.value })}
+                        placeholder="Enter years of experience"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>State</label>
+                      <select
+                        value={formData.workStateID}
+                        onChange={(e) => handleStateChange(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          backgroundColor: 'white'
+                        }}
+                      >
+                        <option value="">Select state</option>
+                        {states.map(state => (
+                          <option key={state.id} value={state.id}>{state.name}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>City</label>
+                      <select
+                        value={formData.workCityID}
+                        onChange={(e) => setFormData({ ...formData, workCityID: e.target.value })}
+                        disabled={!formData.workStateID}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          backgroundColor: 'white'
+                        }}
+                      >
+                        <option value="">Select city</option>
+                        {cities.map(city => (
+                          <option key={city.id} value={city.id}>{city.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Salary Type</label>
+                      <select
+                        value={formData.salaryType}
+                        onChange={(e) => setFormData({ ...formData, salaryType: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          backgroundColor: 'white'
+                        }}
+                      >
+                        <option value="daily">Daily</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="hourly">Hourly</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Salary</label>
                       <input
-                        type="text"
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        placeholder="Enter city"
+                        type="number"
+                        min="0"
+                        value={formData.salary}
+                        onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                        placeholder="Enter salary amount"
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -549,15 +665,12 @@ export default function WorkerVerification() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Rating (1-5)</label>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Location</label>
                       <input
-                        type="number"
-                        min="1"
-                        max="5"
-                        step="0.1"
-                        value={formData.rating}
-                        onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
-                        placeholder="Enter rating"
+                        type="text"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        placeholder="Enter location"
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -567,8 +680,37 @@ export default function WorkerVerification() {
                         }}
                       />
                     </div>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', fontSize: '14px', fontWeight: '600', marginTop: '30px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.willingtoRelocate}
+                          onChange={(e) => setFormData({ ...formData, willingtoRelocate: e.target.checked })}
+                          style={{ marginRight: '8px', width: '18px', height: '18px' }}
+                        />
+                        Willing to Relocate
+                      </label>
+                    </div>
                     <div style={{ gridColumn: 'span 2' }}>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Profile Photo (Optional)</label>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Experience Description</label>
+                      <textarea
+                        value={formData.experienceDescription}
+                        onChange={(e) => setFormData({ ...formData, experienceDescription: e.target.value })}
+                        placeholder="Describe work experience..."
+                        maxLength="1000"
+                        rows="3"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          resize: 'vertical'
+                        }}
+                      />
+                    </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Profile Photo</label>
                       <input
                         type="file"
                         accept="image/*"
@@ -584,11 +726,11 @@ export default function WorkerVerification() {
                       {profileImage && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {profileImage.name}</p>}
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Document (Optional)</label>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Government ID</label>
                       <input
                         type="file"
                         accept="image/*,.pdf"
-                        onChange={(e) => setDocumentFile(e.target.files[0])}
+                        onChange={(e) => setGovernmentID(e.target.files[0])}
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -597,7 +739,7 @@ export default function WorkerVerification() {
                           fontSize: '14px'
                         }}
                       />
-                      {documentFile && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {documentFile.name}</p>}
+                      {governmentID && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {governmentID.name}</p>}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
@@ -658,8 +800,8 @@ export default function WorkerVerification() {
                 transition={{ delay: 0.15 }}
               >
                 <p className="stat-box-label">PENDING REVIEW</p>
-                <div className="stat-box-value">{workers.filter(w => w.status === 'Pending').length.toLocaleString()}</div>
-                <p className="stat-box-change warning">{workers.filter(w => w.status === 'Pending').length} requires review</p>
+                <div className="stat-box-value">{workers.filter(w => (w.status || '').toLowerCase() === 'pending').length.toLocaleString()}</div>
+                <p className="stat-box-change warning">{workers.filter(w => (w.status || '').toLowerCase() === 'pending').length} requires review</p>
               </motion.div>
 
               <motion.div
@@ -842,3 +984,4 @@ export default function WorkerVerification() {
     )
   );
 }
+

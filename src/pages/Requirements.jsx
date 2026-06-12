@@ -15,7 +15,7 @@ export default function RequirementsDashboard() {
     role: "All",
     location: "Global",
     status: "Any",
-    type: "All"
+    salaryType: "All"
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -24,15 +24,23 @@ export default function RequirementsDashboard() {
   const fetchAdminProfile = async () => {
     try {
       const response = await api.get('/profile/me');
-      if (response.data.user) {
-        const user = response.data.user;
+      console.log('Profile response:', response.data);
+      
+      if (response.data.success && response.data.data) {
+        const user = response.data.data.user;
+        console.log('User data:', user);
+        
         const imageUrl = user.profileImage 
           ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}` 
-          : `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`;
+          : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin')}&background=2b3f57&color=fff`;
+        
+        console.log('Image URL:', imageUrl);
+        
         setProfile({
           name: user.name || '',
           email: user.email || '',
-          imageUrl: imageUrl
+          imageUrl: imageUrl,
+          role: user.role || ''
         });
       }
       setLoading(false);
@@ -41,6 +49,7 @@ export default function RequirementsDashboard() {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchAdminProfile();
@@ -59,8 +68,8 @@ export default function RequirementsDashboard() {
         params.append("location", filters.location);
       }
 
-      if (filters.type !== "All") {
-        params.append("type", filters.type);
+      if (filters.salaryType !== "All") {
+        params.append("salaryType", filters.salaryType);
       }
 
       if (searchTerm) {
@@ -119,7 +128,7 @@ export default function RequirementsDashboard() {
       role: "All",
       location: "Global",
       status: "Any",
-      type: "All"
+      salaryType: "All"
     });
     setSearchTerm("");
     setCurrentPage(1);
@@ -140,14 +149,17 @@ export default function RequirementsDashboard() {
         return;
       }
 
-      const headers = ["Job ID", "Company", "Role", "Type", "Quantity", "Location", "Applications", "Status", "Date"];
+      const headers = ["Job ID", "Company", "Role", "Salary", "Salary Type", "Duration", "Quantity", "Location", "Urgent", "Applications", "Status", "Date"];
       const csvData = allJobs.map(job => [
         job.jobId || `REQ-${job._id.slice(-4).toUpperCase()}`,
         job.company || 'N/A',
         job.title || 'N/A',
-        job.type || 'N/A',
+        job.salary ? `₹${job.salary}` : 'N/A',
+        job.salaryType ? job.salaryType.charAt(0).toUpperCase() + job.salaryType.slice(1) : 'N/A',
+        job.duration || 'N/A',
         job.quantity || "1",
         job.location || 'N/A',
+        job.isUrgent ? 'Yes' : 'No',
         job.applicationsCount || "0",
         job.status || 'Open',
         new Date(job.createdAt).toLocaleDateString()
@@ -264,15 +276,13 @@ export default function RequirementsDashboard() {
           </select>
 
           <select
-            value={filters.type}
-            onChange={(e) => handleFilterChange('type', e.target.value)}
+            value={filters.salaryType}
+            onChange={(e) => handleFilterChange('salaryType', e.target.value)}
           >
-            <option value="All">Type: All</option>
-            <option value="Full-time Contract">Full-time Contract</option>
-            <option value="On-site">On-site</option>
-            <option value="Offshore">Offshore</option>
-            <option value="Heavy Machinery">Heavy Machinery</option>
-            <option value="Contractual">Contractual</option>
+            <option value="All">Salary Type: All</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
           </select>
 
           <button className="clear" onClick={clearFilters}>
@@ -323,7 +333,10 @@ export default function RequirementsDashboard() {
                           >
                             {job.title}
                           </strong>
-                          <div className="role-type">{job.type}</div>
+                          <div className="role-type">
+                            {job.salary ? `₹${job.salary}` : 'N/A'} / {job.salaryType ? job.salaryType.charAt(0).toUpperCase() + job.salaryType.slice(1) : 'N/A'}
+                            {job.isUrgent && <span style={{ color: 'red', marginLeft: '8px' }}>🔥 Urgent</span>}
+                          </div>
                         </td>
                         <td>{job.quantity || "1"}</td>
                         <td>{job.location}</td>

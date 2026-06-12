@@ -21,7 +21,6 @@ export default function VendorVerification() {
   const [profile, setProfile] = useState({ name: '', email: '', imageUrl: '' });
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [roleFilter, setRoleFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,18 +28,23 @@ export default function VendorVerification() {
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     companyName: '',
-    ownerName: '',
+    name: '',
     email: '',
     phone: '',
     whatsappNumber: '',
     website: '',
     city: '',
+    workStateID: '',
+    workCityID: '',
+    workArea: '',
     gstNumber: '',
-    projectTypes: '',
+    designation: '',
     adminRating: '',
   });
-  const [panCardFile, setPanCardFile] = useState(null);
+  const [profileImage, setProfileImage] = useState(null);
   const [companyLogoFile, setCompanyLogoFile] = useState(null);
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -52,8 +56,8 @@ export default function VendorVerification() {
   const fetchAdminProfile = async () => {
     try {
       const response = await api.get('/profile/me');
-      if (response.data.user) {
-        const user = response.data.user;
+      if (response.data.data?.user) {
+        const user = response.data.data.user;
         const imageUrl = user.profileImage
           ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}`
           : `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`;
@@ -70,8 +74,31 @@ export default function VendorVerification() {
     }
   };
 
+  const fetchStates = async () => {
+    try {
+      const response = await api.get('/profile/states');
+      if (response.data.data) setStates(response.data.data);
+    } catch (error) {
+      console.error('Error fetching states:', error);
+    }
+  };
+
+  const fetchCities = async (stateId) => {
+    if (!stateId) {
+      setCities([]);
+      return;
+    }
+    try {
+      const response = await api.get(`/profile/cities/${stateId}`);
+      if (response.data.data) setCities(response.data.data);
+    } catch (error) {
+      console.error('Error fetching cities:', error);
+    }
+  };
+
   useEffect(() => {
     fetchAdminProfile();
+    fetchStates();
   }, []);
 
   const handleExportCSV = () => {
@@ -80,13 +107,17 @@ export default function VendorVerification() {
       return;
     }
 
-    const headers = ['Company Name', 'Owner Name', 'City', 'GST Number', 'Email', 'Status'];
+    const headers = ['Company Name', 'Name', 'GST Number', 'Email', 'Work State', 'Work City', 'Designation', 'Work Area', 'Website', 'Status',];
     const rows = filteredVendors.map(v => [
       v.companyName || '',
-      v.ownerName || '',
-      v.city || '',
+      v.name || '',
       v.gstNumber || '',
       v.email || '',
+      v.workState || '',
+      v.city || '',
+      v.designation || '',
+      v.workArea || '',
+      v.website || '',
       v.verificationStatus || ''
     ]);
 
@@ -108,7 +139,7 @@ export default function VendorVerification() {
 
   const handleViewFiles = (vendor) => {
     const files = [];
-    if (vendor.panCardImage) files.push({ name: 'PAN Card', url: vendor.panCardImage });
+    if (vendor.profileImage) files.push({ name: 'Profile Image', url: vendor.profileImage });
     if (vendor.companyLogo) files.push({ name: 'Company Logo', url: vendor.companyLogo });
 
     if (files.length === 0) {
@@ -117,7 +148,7 @@ export default function VendorVerification() {
     }
 
     files.forEach(file => {
-      const fileUrl = file.url.startsWith('http') ? file.url : `http://localhost:5000/${file.url}`;
+      const fileUrl = file.url.startsWith('http') ? file.url : `http://localhost:5000/${file.url.replace(/\\/g, '/')}`;
       window.open(fileUrl, '_blank');
     });
   };
@@ -133,114 +164,65 @@ export default function VendorVerification() {
 
   const handleAddVendor = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
 
+    // Validate phone format
+    if (!/^[6-9]\d{9}$/.test(formData.phone)) {
+      toast.error('Phone must be 10 digits starting with 6-9', { duration: 3000 });
+      return;
+    }
+
+    setSubmitting(true);
     const loadingToast = toast.loading('Adding vendor...');
 
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.ownerName);
       formDataToSend.append('phone', formData.phone);
-
-      if (formData.email) {
-        formDataToSend.append('email', formData.email);
-      }
-
-      formDataToSend.append('password', 'TempPass@123');
-      formDataToSend.append('confirmPassword', 'TempPass@123');
-      formDataToSend.append('userType', 'vendor');
-      formDataToSend.append('ownerName', formData.ownerName);
+      formDataToSend.append('name', formData.name);
       formDataToSend.append('companyName', formData.companyName);
-
-      if (formData.city) {
-        formDataToSend.append('city', formData.city);
-      }
-
-      if (formData.gstNumber) {
-        formDataToSend.append('gstNumber', formData.gstNumber);
-      }
-
-      if (formData.whatsappNumber) {
-        formDataToSend.append('whatsappNumber', formData.whatsappNumber);
-      }
-
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('designation', formData.designation);
+      formDataToSend.append('workStateID', formData.workStateID);
+      formDataToSend.append('workArea', formData.workArea);
+      formDataToSend.append('workCityID', formData.workCityID);
+      formDataToSend.append('gstNumber', formData.gstNumber);
+      formDataToSend.append('whatsappNumber', formData.whatsappNumber);
       if (formData.website) {
         formDataToSend.append('website', formData.website);
       }
-
-      if (formData.projectTypes) {
-        formDataToSend.append('projectTypes', formData.projectTypes);
-      }
-
-      if (formData.adminRating) {
-        formDataToSend.append('adminRating', formData.adminRating);
-      }
-
-      if (panCardFile) {
-        formDataToSend.append('panCardImage', panCardFile);
+      if (profileImage) {
+        formDataToSend.append('profileImage', profileImage);
       }
       if (companyLogoFile) {
         formDataToSend.append('companyLogo', companyLogoFile);
       }
 
-      const registerResponse = await api.post('/auth/register', formDataToSend, {
+      formDataToSend.append('adminRating', formData.adminRating);
+
+
+      await api.post('/profile/vendor/create', formDataToSend, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      const vendorOTP = registerResponse.data?.data?.otp;
-      console.log('Vendor OTP:', vendorOTP);
-
-      const vendorResponse = await api.post("/auth/verify-otp", {
-        phone: formData.phone,
-        otp: vendorOTP
-      });
-
-      const vendorID = vendorResponse?.data?.user?.id || vendorResponse?.data?.user?._id || vendorResponse?.data?.data?.id || vendorResponse?.data?.data?._id;
-      console.log('Vendor ID after OTP verification:', vendorID);
-
-      const finalVendorID = vendorID || registerResponse.data?.userId;
-      console.log('Final vendor ID:', finalVendorID);
-
-      if (finalVendorID) {
-        try {
-          console.log('Attempting auto-verify with:', {
-            url: `/admin/vendors/${finalVendorID}/auto-verify`,
-            rating: parseFloat(formData.adminRating)
-          });
-
-          const verifyResponse = await api.put(`/admin/vendors/${finalVendorID}/auto-verify`, {
-            rating: parseFloat(formData.adminRating)
-          });
-
-          console.log('Auto-verify response:', verifyResponse.data);
-          toast.success('Vendor added and approved successfully!', { id: loadingToast });
-        } catch (verifyErr) {
-          console.error('Failed to auto-approve:', verifyErr);
-          console.error('Error status:', verifyErr.response?.status);
-          console.error('Error data:', verifyErr.response?.data);
-          console.error('Request URL:', verifyErr.config?.url);
-          toast.error(`Vendor added but approval failed: ${verifyErr.response?.data?.message || verifyErr.message}. Please approve manually.`, { id: loadingToast });
+          'Content-Type': 'multipart/form-data'
         }
-      } else {
-        console.error('No vendor ID received');
-        toast.error('Vendor added but no ID received. Please verify manually.', { id: loadingToast });
-      }
+      });
+
+      toast.success('Vendor added successfully!', { id: loadingToast });
 
       setFormData({
         companyName: '',
-        ownerName: '',
+        name: '',
         email: '',
         phone: '',
         whatsappNumber: '',
         website: '',
         city: '',
         gstNumber: '',
-        projectTypes: '',
         adminRating: '',
+        workStateID: '',
+        workCityID: '',
+        workArea: '',
+        designation: ''
       });
-      setPanCardFile(null);
+      setProfileImage(null);
       setCompanyLogoFile(null);
       setShowAddForm(false);
       fetchVendors();
@@ -266,7 +248,6 @@ export default function VendorVerification() {
         errorMsg = err.message;
         toast.error(errorMsg, { id: loadingToast });
       }
-
       console.error('Error details:', errorMsg);
     } finally {
       setSubmitting(false);
@@ -277,25 +258,51 @@ export default function VendorVerification() {
     setShowAddForm(false);
     setFormData({
       companyName: '',
-      ownerName: '',
+      name: '',
       email: '',
       phone: '',
       whatsappNumber: '',
       website: '',
       city: '',
+      workStateID: '',
+      workCityID: '',
+      workArea: '',
       gstNumber: '',
-      projectTypes: '',
-      adminRating: '',
+      designation: '',
+      adminRating: ''
     });
-    setPanCardFile(null);
+    setProfileImage(null);
     setCompanyLogoFile(null);
   };
 
   const fetchVendors = useCallback(async () => {
     try {
-      const statusParam = statusFilter === 'all' ? '' : `?status=${statusFilter}`;
-      const { data } = await api.get(`/admin/vendors${statusParam}`);
-      setVendors(data.data || []);
+      const { data } = await api.get('/admin/vendor-worker', {
+        params: {
+          userType: 'vendor',
+          status: 'all',
+          limit: 1000,
+        },
+      });
+
+      const vendorsData = data.data || [];
+      const formattedVendors = vendorsData.map(vendor => ({
+        ...vendor,
+        companyName: vendor.companyName || 'Unknown Company',
+        name: vendor.name || 'Unknown',
+        verificationStatus: vendor.verificationStatus || 'pending',
+        gstNumber: vendor.gstNumber || 'N/A',
+        email: vendor.email || 'N/A',
+        companyLogo: vendor.companyLogo || null,
+        profileImage: vendor.profileImage || null,
+        adminRating: vendor.adminRating || null,
+        workState: vendor.workState || null,
+        workCity: vendor.city || null,
+        designation: vendor.designation || null,
+        workArea: vendor.workArea || null,
+      }));
+
+      setVendors(formattedVendors);
     } catch (err) {
       console.error('Failed to fetch vendors:', err);
       if (err.response?.status === 401 || err.response?.status === 403) {
@@ -321,7 +328,7 @@ export default function VendorVerification() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, roleFilter]);
+  }, [statusFilter]);
 
   useEffect(() => {
     const handleVendorRated = () => {
@@ -346,29 +353,31 @@ export default function VendorVerification() {
   }, [fetchVendors]);
 
   const getStatusBadgeClass = (status) => {
-    if (status === 'verified' || status === 'approved') return 'status-approved';
-    if (status === 'pending') return 'status-pending';
-    if (status === 'rejected') return 'status-rejected';
+    const normalizedStatus = (status || '').toLowerCase();
+    if (normalizedStatus === 'verified' || normalizedStatus === 'approved') return 'status-approved';
+    if (normalizedStatus === 'pending') return 'status-pending';
+    if (normalizedStatus === 'rejected') return 'status-rejected';
     return 'status-pending';
   };
 
   const getStatusText = (vendor) => {
-    if (vendor.verificationStatus === 'verified') return 'APPROVED';
-    if (vendor.verificationStatus === 'rejected') return 'REJECTED';
+    const normalizedStatus = (vendor.verificationStatus || '').toLowerCase();
+    if (normalizedStatus === 'verified' || normalizedStatus === 'approved') return 'APPROVED';
+    if (normalizedStatus === 'rejected') return 'REJECTED';
     return 'PENDING';
   };
 
   const filteredVendors = vendors.filter(vendor => {
     const matchesSearch = !searchTerm ||
       vendor.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor._id?.includes(searchTerm);
 
-    if (!matchesSearch) return false;
+    const vendorStatus = (vendor.verificationStatus || '').toLowerCase();
 
-    if (roleFilter && !vendor.projectTypes?.some(type => type.toLowerCase().includes(roleFilter.toLowerCase()))) {
-      return false;
-    }
+    if (!matchesSearch) return false;
+    if (statusFilter === 'pending' && vendorStatus !== 'pending') return false;
+    if (statusFilter === 'approved' && !['verified', 'approved'].includes(vendorStatus)) return false;
     return true;
   });
 
@@ -382,6 +391,7 @@ export default function VendorVerification() {
   if (loading) {
     return <div className="loading-screen">Loading vendors...</div>;
   }
+
 
   return (
     !canAccess ? (
@@ -400,7 +410,7 @@ export default function VendorVerification() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginLeft:"180px"
+            marginLeft: "180px"
           }}
         >
           <div
@@ -509,13 +519,13 @@ export default function VendorVerification() {
                 <form onSubmit={handleAddVendor}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Company Name *</label>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Name *</label>
                       <input
                         type="text"
                         required
-                        value={formData.companyName}
-                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                        placeholder="Enter company name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Enter Name"
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -526,13 +536,13 @@ export default function VendorVerification() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Owner Name *</label>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Company Name *</label>
                       <input
                         type="text"
                         required
-                        value={formData.ownerName}
-                        onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
-                        placeholder="Enter owner name"
+                        value={formData.companyName}
+                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                        placeholder="Enter Company Name"
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -560,13 +570,16 @@ export default function VendorVerification() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Phone *</label>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Phone Number*</label>
                       <input
-                        type="tel"
+                        type="text"
                         required
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="Enter phone number"
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setFormData({ ...formData, phone: value });
+                        }}
+                        placeholder="Enter 10-digit phone (start with 6-9)"
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -575,6 +588,11 @@ export default function VendorVerification() {
                           fontSize: '14px'
                         }}
                       />
+                      {formData.phone && !/^[6-9]\d{9}$/.test(formData.phone) && (
+                        <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px' }}>
+                          Phone must start with 6-9 and be 10 digits
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>WhatsApp Number *</label>
@@ -593,10 +611,27 @@ export default function VendorVerification() {
                         }}
                       />
                     </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Designation *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.designation}
+                        onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                        placeholder="Enter Designation"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
                     <div style={{ gridColumn: 'span 2' }}>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Website *</label>
                       <input
-                        type="url"
+                        type="text"
                         required
                         value={formData.website}
                         onChange={(e) => setFormData({ ...formData, website: e.target.value })}
@@ -611,12 +646,55 @@ export default function VendorVerification() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>City</label>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Work State</label>
+                      <select
+                        value={formData.workStateID}
+                        onChange={(e) => {
+                          setFormData({ ...formData, workStateID: e.target.value, workCityID: '' });
+                          fetchCities(e.target.value);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      >
+                        <option value="">Select State</option>
+                        {states.map(state => (
+                          <option key={state.id} value={state.id}>{state.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Work City</label>
+                      <select
+                        value={formData.workCityID}
+                        onChange={(e) => setFormData({ ...formData, workCityID: e.target.value })}
+                        disabled={!formData.workStateID}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          opacity: !formData.workStateID ? 0.5 : 1
+                        }}
+                      >
+                        <option value="">Select City</option>
+                        {cities.map(city => (
+                          <option key={city.id} value={city.id}>{city.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Work Area</label>
                       <input
                         type="text"
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        placeholder="Enter city"
+                        value={formData.workArea}
+                        onChange={(e) => setFormData({ ...formData, workArea: e.target.value })}
+                        placeholder="Enter Work Area"
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -642,29 +720,6 @@ export default function VendorVerification() {
                         }}
                       />
                     </div>
-                    <div style={{ gridColumn: 'span 2' }}>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Project Types</label>
-                      <select
-                        value={formData.projectTypes}
-                        onChange={(e) => setFormData({ ...formData, projectTypes: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          backgroundColor: 'white'
-                        }}
-                      >
-                        <option value="">Select project type</option>
-                        <option value="Residential Building">Residential Building</option>
-                        <option value="Commercial Building">Commercial Building</option>
-                        <option value="Industrial Project">Industrial Project</option>
-                        <option value="Infrastructure">Infrastructure</option>
-                        <option value="Renovation">Renovation</option>
-                        <option value="Interior Design">Interior Design</option>
-                      </select>
-                    </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Rating (1-5)</label>
                       <input
@@ -685,11 +740,11 @@ export default function VendorVerification() {
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>PAN Card (Optional)</label>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Profile Image (Optional)</label>
                       <input
                         type="file"
                         accept="image/*,.pdf"
-                        onChange={(e) => setPanCardFile(e.target.files[0])}
+                        onChange={(e) => setProfileImage(e.target.files[0])}
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -698,7 +753,7 @@ export default function VendorVerification() {
                           fontSize: '14px'
                         }}
                       />
-                      {panCardFile && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {panCardFile.name}</p>}
+                      {profileImage && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {profileImage.name}</p>}
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Company Logo (Optional)</label>
@@ -795,19 +850,10 @@ export default function VendorVerification() {
                     <div className="dropdown-menu">
                       <button onClick={() => { setStatusFilter('all'); setShowFilterDropdown(false); }}>All Status</button>
                       <button onClick={() => { setStatusFilter('pending'); setShowFilterDropdown(false); }}>Pending</button>
-                      <button onClick={() => { setStatusFilter('verified'); setShowFilterDropdown(false); }}>Approved</button>
-                      <button onClick={() => { setStatusFilter('rejected'); setShowFilterDropdown(false); }}>Rejected</button>
+                      <button onClick={() => { setStatusFilter('approved'); setShowFilterDropdown(false); }}>Approved</button>
                     </div>
                   )}
                 </div>
-                {roleFilter && (
-                  <div className="filter-pill">
-                    Project Type: {roleFilter}
-                    <button onClick={() => setRoleFilter('')}>
-                      <X size={14} />
-                    </button>
-                  </div>
-                )}
               </div>
               <div className="results-count">
                 SHOWING {paginatedVendors.length} OF {filteredVendors.length}
@@ -819,7 +865,7 @@ export default function VendorVerification() {
                 <thead>
                   <tr>
                     <th>VENDOR NAME</th>
-                    <th>PROJECT TYPES</th>
+                    <th>DESIGNATION</th>
                     <th>CITY</th>
                     <th>GST NUMBER</th>
                     <th>RATING</th>
@@ -833,21 +879,30 @@ export default function VendorVerification() {
                       <td>
                         <div className="worker-cell" onClick={() => navigate(`/admin/vendors/${vendor._id}`)} style={{ cursor: 'pointer' }}>
                           <img
-                            src={vendor.companyLogo ? `http://localhost:5000/${vendor.companyLogo}` : `https://ui-avatars.com/api/?name=${vendor.companyName || vendor.ownerName}&background=3b82f6&color=fff`}
-                            alt={vendor.companyName || vendor.ownerName}
+                            src={
+                              vendor.companyLogo
+                                ? `http://localhost:5000/${vendor.companyLogo.replace(/\\/g, '/')}`
+                                : vendor.profileImage
+                                  ? `http://localhost:5000/${vendor.profileImage.replace(/\\/g, '/')}`
+                                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(vendor.companyName || vendor.name || 'Vendor')}&background=3b82f6&color=fff`
+                            }
+                            alt={vendor.companyName || vendor.name}
                             className="worker-table-avatar"
+                            onError={(e) => {
+                              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(vendor.companyName || vendor.name || 'Vendor')}&background=3b82f6&color=fff`;
+                            }}
                           />
                           <div>
-                            <div className="vendor-name" style={{ fontSize: "1.2rem" }}>{vendor.companyName || vendor.ownerName}</div>
-                            <div className="worker-id">ID: #VN-{vendor._id.slice(-4)}</div>
+                            <div className="vendor-name" style={{ fontSize: "1.2rem" }}>{vendor.name}</div>
+                            <div className="vendor">Company Name: {vendor.companyName}</div>
                           </div>
                         </div>
                       </td>
-                      <td>{vendor.projectTypes?.[0] || 'General'}</td>
+                      <td>{vendor.designation}</td>
                       <td>{vendor.city || 'N/A'}</td>
                       <td>{vendor.gstNumber || 'N/A'}</td>
                       <td>
-                        {vendor.verificationStatus === 'verified' && vendor.adminRating ? (
+                        {vendor.adminRating ? (
                           <div className="rating-cell">
                             {[1, 2, 3, 4, 5].map((star) => {
                               const rating = parseFloat(vendor.adminRating);
@@ -880,7 +935,7 @@ export default function VendorVerification() {
                           onClick={() => handleViewFiles(vendor)}
                         >
                           <FileText size={16} />
-                          VIEW {(vendor.panCardImage ? 1 : 0) + (vendor.companyLogo ? 1 : 0)} FILES
+                          VIEW {(vendor.profileImage ? 1 : 0) + (vendor.companyLogo ? 1 : 0)} FILES
                         </button>
                       </td>
                       <td>

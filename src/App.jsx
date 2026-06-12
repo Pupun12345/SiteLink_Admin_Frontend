@@ -6,6 +6,7 @@ import VendorVerification from './pages/VendorVerification';
 import WorkerVerification from './pages/WorkerVerification';
 import VendorDetails from './pages/VendorDetails';
 import WorkerDetail from './pages/WorkerDetail';
+import UserDetail from './pages/UserDetail';
 import VerificationOverview from './pages/VerificationOverview';
 import PlaceholderPage from './pages/PlaceholderPage';
 import RequirementsDashboard from './pages/Requirements';
@@ -65,7 +66,7 @@ function App() {
           path="/admin/user-profile/:id"
           element={
             <ProtectedRoute>
-              <UserProfilePage />
+              <UserDetail />
             </ProtectedRoute>
           }
         />

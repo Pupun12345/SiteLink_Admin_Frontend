@@ -77,27 +77,51 @@ export default function WorkerDetail() {
       const user = data.data;
       if (!user) throw new Error('Worker not found');
 
+      console.log('Raw verificationStatus from backend:', user.verificationStatus);
+
       const mapped = {
         ...user,
-        status: user.status || 'Pending',
-        role: user.role || 'Worker',
+        id: user.id || user._id,
+        status: user.verificationStatus || 'pending',
+        role: user.primarySkill || user.role || 'Worker',
         skills: user.skills || [],
         appliedOn: user.createdAt
           ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
           : 'N/A',
-        expectedWage: user.dailyRate ? `₹${user.dailyRate}/day` : 'N/A',
-        locations: user.city ? [{ name: user.city, isPrimary: true }] : [],
+        expectedWage: user.salary ? `₹${user.salary}/${user.salaryType || 'day'}` : 'N/A',
+        experience: user.experience || 'N/A',
+        dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A',
+        age: user.dateOfBirth ? Math.floor((new Date() - new Date(user.dateOfBirth)) / (365.25 * 24 * 60 * 60 * 1000)) : (user.age || 'N/A'),
+        gender: user.gender || 'N/A',
+        experienceDescription: user.experienceDescription || 'No description provided',
+        willingtoRelocate: user.willingtoRelocate || false,
+        location: user.location || 'N/A',
+        workState: user.workState || 'N/A',
+        workCity: user.city || 'N/A',
+        salaryType: user.salaryType || 'N/A',
+        locations: [
+          ...(user.workState && user.city ? [{ name: `${user.city}, ${user.workState}`, isPrimary: true }] : []),
+          ...(user.location && user.location !== 'N/A' ? [{ name: user.location, isPrimary: false }] : [])
+        ],
         documents: [
           buildDocument('Aadhaar Front', 'NATIONAL ID PROOF', user.aadhaarFrontImage),
           buildDocument('Aadhaar Back', 'ID BACK', user.aadhaarBackImage),
           buildDocument('Medical Certificate', 'HEALTH CLEARANCE', user.medicalCertificate),
+          buildDocument('Government ID', 'IDENTITY PROOF', user.governmentID),
+          buildDocument('Experience Certificate', 'EXPERIENCE PROOF', user.experienceCertificate),
         ].filter(doc => doc !== null),
         certifications: (user.certificates || []).filter(cert => cert && cert.trim()).map(cert => ({ 
           name: cert, 
           icon: '📜',
           downloadLink: null
         })),
-        workPhotos: (user.workPhotos || []).filter(photo => photo && (typeof photo === 'string' || photo.url || photo.path)),
+        workPhotos: [
+          ...(user.workSamplesPhoto || []).map(photo => ({ 
+            url: getFileUrl(photo),
+            path: photo 
+          })),
+          ...(user.workPhotos || user.posts || []).filter(photo => photo && (typeof photo === 'string' || photo.url || photo.path || photo.images))
+        ],
         contactInfo: {
           email: user.email || 'N/A',
           phone: user.phone || 'N/A',
@@ -107,13 +131,20 @@ export default function WorkerDetail() {
         ratedAt: user.ratedAt ? new Date(user.ratedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null,
       };
 
+      console.log('Worker Data:', {
+        dateOfBirth: user.dateOfBirth,
+        age: user.age,
+        mappedAge: mapped.age,
+        mappedDOB: mapped.dateOfBirth,
+        gender: mapped.gender
+      });
+
       setWorker(mapped);
     } catch (err) {
       console.error('Failed to load worker details:', err);
       setError(err.response?.data?.message || err.message || 'Unable to load worker');
       if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem('adminToken');
-        
         navigate('/admin/login');
       }
     } finally {
@@ -393,52 +424,121 @@ export default function WorkerDetail() {
             <div className="profile-main">
               <div className="profile-avatar-container">
                 <div className="profile-avatar-large">
-                  <User size={80} strokeWidth={1.5} />
+                  {worker.profileImage ? (
+                    <img 
+                      src={getFileUrl(worker.profileImage)} 
+                      alt={worker.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div style={{ display: worker.profileImage ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                    <User size={80} strokeWidth={1.5} />
+                  </div>
                 </div>
-                <div className="status-badge pending">PENDING REVIEW</div>
+                <div className={`status-badge ${worker.status.toLowerCase()}`}>
+                  {worker.status.toUpperCase()}
+                </div>
               </div>
               
               <div className="profile-details-main">
-                <div className="worker-name">{worker.name}</div>
-                <div className="applied-date">
-                  <Calendar size={16} />
-                  Applied on {worker.appliedOn}
+                <div style={{ marginBottom: '8px' }}>
+                  <div className="worker-name" style={{ fontSize: '32px', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>{worker.name}</div>
+                  <div className="applied-date" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6b7280', fontSize: '14px' }}>
+                    <Calendar size={14} />
+                    Applied on {worker.appliedOn}
+                  </div>
                 </div>
                 
-                <div className="worker-stats">
-                  <div className="stat-item">
-                    <div className="stat-label">PRIMARY ROLE</div>
-                    <div className="stat-value">
-                      <Briefcase size={16} className="role-icon" />
-                      {worker.role || 'Electrician'}
+                <div className="worker-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '20px', marginTop: '20px' }}>
+                  <div className="stat-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="stat-label" style={{ fontSize: '11px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.5px' }}>PRIMARY ROLE</div>
+                    <div className="stat-value" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px', fontWeight: '600', color: '#1f2937' }}>
+                      <Briefcase size={16} className="role-icon" style={{ color: '#3b82f6' }} />
+                      {worker.role}
                     </div>
                   </div>
-                  <div className="stat-item">
-                    <div className="stat-label">EXPERIENCE</div>
-                    <div className="stat-value">{worker.experience || '8 Years'}</div>
+                  <div className="stat-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="stat-label" style={{ fontSize: '11px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.5px' }}>EXPERIENCE</div>
+                    <div className="stat-value" style={{ fontSize: '15px', fontWeight: '600', color: '#1f2937' }}>{worker.experience}</div>
                   </div>
-                  <div className="stat-item">
-                    <div className="stat-label">EXPECTED WAGE</div>
-                    <div className="stat-value">{worker.expectedWage || '$45/hr'}</div>
+                  <div className="stat-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="stat-label" style={{ fontSize: '11px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.5px' }}>EXPECTED WAGE</div>
+                    <div className="stat-value" style={{ fontSize: '15px', fontWeight: '600', color: '#10b981' }}>{worker.expectedWage}</div>
                   </div>
-                  <div className="stat-item">
-                    <div className="stat-label">AGE</div>
-                    <div className="stat-value">{worker.age || '28'} Years</div>
+                  <div className="stat-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="stat-label" style={{ fontSize: '11px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.5px' }}>AGE</div>
+                    <div className="stat-value" style={{ fontSize: '15px', fontWeight: '600', color: '#1f2937' }}>{worker.age !== 'N/A' ? `${worker.age} Years` : 'N/A'}</div>
+                  </div>
+                  <div className="stat-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="stat-label" style={{ fontSize: '11px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.5px' }}>GENDER</div>
+                    <div className="stat-value" style={{ fontSize: '15px', fontWeight: '600', color: '#1f2937', textTransform: 'capitalize' }}>{worker.gender}</div>
+                  </div>
+                  <div className="stat-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="stat-label" style={{ fontSize: '11px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.5px' }}>RELOCATE</div>
+                    <div className="stat-value" style={{ fontSize: '15px', fontWeight: '600', color: worker.willingtoRelocate ? '#10b981' : '#ef4444' }}>
+                      {worker.willingtoRelocate ? '✓ Yes' : '✗ No'}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="profile-actions">
-              <button className="btn-danger" onClick={handleReject} disabled={isProcessing}>
-                Reject Worker
+            <div className="profile-actions" style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '200px' }}>
+              {worker.adminRating && (
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  gap: '8px', 
+                  padding: '16px', 
+                  background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', 
+                  borderRadius: '12px',
+                  border: '1px solid #fbbf24',
+                  boxShadow: '0 2px 8px rgba(251, 191, 36, 0.2)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Star size={20} fill="#fbbf24" stroke="#fbbf24" />
+                    <div style={{ fontWeight: '700', fontSize: '18px', color: '#92400e' }}>
+                      {worker.adminRating.toFixed(1)}/5.0
+                    </div>
+                  </div>
+                  {worker.adminRatingComment && (
+                    <div style={{ fontSize: '13px', color: '#78350f', lineHeight: '1.4' }}>
+                      {worker.adminRatingComment}
+                    </div>
+                  )}
+                  {worker.ratedAt && (
+                    <div style={{ fontSize: '11px', color: '#92400e', fontWeight: '500' }}>
+                      Rated on {worker.ratedAt}
+                    </div>
+                  )}
+                </div>
+              )}
+              <button className="btn-danger" onClick={handleReject} disabled={isProcessing || worker.status.toLowerCase() === 'rejected'} style={{ padding: '12px 20px', fontSize: '14px', fontWeight: '600', borderRadius: '8px' }}>
+                {worker.status.toLowerCase() === 'rejected' ? 'Already Rejected' : 'Reject Worker'}
               </button>
-              <button className="btn-primary" onClick={handleApprove} disabled={isProcessing || worker.status === 'Verified'}>
-                {worker.status === 'Verified' ? 'Already Approved' : 'Approve Worker'}
-              </button>
-              {worker.status === 'Verified' && (
-                <button className="btn-primary" onClick={() => setShowRating(true)} disabled={isProcessing}>
-                  ⭐ Rate Worker
+              {worker.status.toLowerCase() !== 'verified' && (
+                <button className="btn-primary" onClick={handleApprove} disabled={isProcessing} style={{ padding: '12px 20px', fontSize: '14px', fontWeight: '600', borderRadius: '8px' }}>
+                  Approve Worker
+                </button>
+              )}
+              {worker.status.toLowerCase() === 'verified' && (
+                <button 
+                  className="btn-primary" 
+                  onClick={() => {
+                    setShowRating(true);
+                    if (worker.adminRating) {
+                      setRating(worker.adminRating);
+                      setRatingComment(worker.adminRatingComment || '');
+                    }
+                  }} 
+                  disabled={isProcessing}
+                  style={{ padding: '12px 20px', fontSize: '14px', fontWeight: '600', borderRadius: '8px' }}
+                >
+                  ⭐ {worker.adminRating ? 'Update Rating' : 'Rate Worker'}
                 </button>
               )}
             </div>
@@ -448,6 +548,44 @@ export default function WorkerDetail() {
           <div className="content-grid">
             {/* Left Column */}
             <div className="left-column">
+              {/* Worker Details Card */}
+              <div className="card locations-card">
+                <div className="card-header">
+                  <div className="card-title">
+                    <User size={18} className="location-icon" />
+                    Worker Details
+                  </div>
+                </div>
+                <div className="locations-content">
+                  <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                      <span style={{ fontWeight: '600', color: '#6b7280' }}>Date of Birth:</span>
+                      <span style={{ color: '#1f2937' }}>{worker.dateOfBirth}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                      <span style={{ fontWeight: '600', color: '#6b7280' }}>Gender:</span>
+                      <span style={{ color: '#1f2937', textTransform: 'capitalize' }}>{worker.gender}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                      <span style={{ fontWeight: '600', color: '#6b7280' }}>Salary Type:</span>
+                      <span style={{ color: '#1f2937', textTransform: 'capitalize' }}>{worker.salaryType || 'N/A'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #e5e7eb', paddingBottom: '12px' }}>
+                      <span style={{ fontWeight: '600', color: '#6b7280' }}>Willing to Relocate:</span>
+                      <span style={{ color: worker.willingtoRelocate ? '#10b981' : '#ef4444', fontWeight: '600' }}>
+                        {worker.willingtoRelocate ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                    {worker.experienceDescription && worker.experienceDescription !== 'No description provided' && (
+                      <div style={{ paddingTop: '8px' }}>
+                        <span style={{ fontWeight: '600', color: '#6b7280', display: 'block', marginBottom: '8px' }}>Experience Description:</span>
+                        <p style={{ color: '#1f2937', lineHeight: '1.6', margin: 0 }}>{worker.experienceDescription}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Preferred Locations */}
               <div className="card locations-card">
                 <div className="card-header">
