@@ -5,8 +5,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
 import './PostApproval.css';
-
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 // Helper function to get proper image URL
 const getImageUrl = (path) => {

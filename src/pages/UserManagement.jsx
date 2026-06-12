@@ -4,6 +4,7 @@ import Sidebar from "../components/Sidebar";
 import "./UserManagement.css";
 import api from "../api/axios";
 import { hasPermission, usePermissions } from "../hooks/usePermissions";
+const BACKEND_URL=import.meta.env.VITE_API_URL;
 
 const statusColors = {
   Active: "active",
@@ -396,7 +397,7 @@ export default function UserManagement() {
                         <td>
                           <div className="user-cell">
                             <img
-                              src={u.profileImage ? `http://localhost:5000/${u.profileImage}` : "https://randomuser.me/api/portraits/lego/1.jpg"}
+                              src={u.profileImage ? `${BACKEND_URL}/${u.profileImage}` : "https://randomuser.me/api/portraits/lego/1.jpg"}
                               alt={u.name}
                               className="user-avatar"
                               onError={(e) => e.target.src = "https://randomuser.me/api/portraits/lego/1.jpg"}
