@@ -16,7 +16,7 @@ import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
 import './WorkerVerification.css';
 import { hasPermission, usePermissions } from '../hooks/usePermissions';
-const BACKEND_URL=import.meta.env.VITE_API_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function WorkerVerification() {
   const [workers, setWorkers] = useState([]);
@@ -58,17 +58,17 @@ export default function WorkerVerification() {
     try {
       const response = await api.get('/profile/me');
       console.log('Profile response:', response.data);
-      
+
       if (response.data.success && response.data.data) {
         const user = response.data.data.user;
         console.log('User data:', user);
-        
-        const imageUrl = user.profileImage 
-          ? `${BACKEND_URL}/${user.profileImage.replace(/\\/g, '/')}` 
+
+        const imageUrl = user.profileImage
+          ? `${BACKEND_URL}/${user.profileImage.replace(/\\/g, '/')}`
           : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin')}&background=2b3f57&color=fff`;
-        
+
         console.log('Image URL:', imageUrl);
-        
+
         setProfile({
           name: user.name || '',
           email: user.email || '',
@@ -148,7 +148,7 @@ export default function WorkerVerification() {
       return;
     }
 
-    const headers = ['Worker Name', 'Role', 'Experience', 'City', 'Phone', 'Email','Primary Skill','Additional Skills', 'Wiiling to Relocate', 'Salary Type','Salary','Status','Rating', 'Applied Date'];
+    const headers = ['Worker Name', 'Role', 'Experience', 'City', 'Phone', 'Email', 'Primary Skill', 'Additional Skills', 'Wiiling to Relocate', 'Salary Type', 'Salary', 'Status', 'Rating', 'Applied Date'];
     const rows = filteredWorkers.map(worker => [
       worker.name || '',
       worker.role || 'N/A',
@@ -198,7 +198,7 @@ export default function WorkerVerification() {
       });
 
       const workersData = data.data || [];
-      
+
       const formattedWorkers = workersData.map(worker => ({
         ...worker,
         name: worker.name || 'Unknown',
@@ -313,10 +313,10 @@ export default function WorkerVerification() {
     return 'PENDING';
   };
 
-  const approvedWorkers = workers.filter(worker => 
+  const approvedWorkers = workers.filter(worker =>
     worker.status === 'Verified' || worker.status === 'Approved' || worker.status === 'approved'
   );
-  const ratedWorkers = workers.filter(worker => 
+  const ratedWorkers = workers.filter(worker =>
     worker.adminRating && typeof worker.adminRating === 'number' && worker.adminRating > 0
   );
   const averageRating = ratedWorkers.length > 0
@@ -325,23 +325,23 @@ export default function WorkerVerification() {
 
   const filteredWorkers = workers.filter(worker => {
     const workerStatus = (worker.status || '').toLowerCase();
-    
+
     if (statusFilter === 'pending' && workerStatus !== 'pending') return false;
     if (statusFilter === 'approved' && !['verified', 'approved'].includes(workerStatus)) return false;
-    
+
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       const workerName = (worker.name || '').toLowerCase();
       const workerRole = (worker.role || '').toLowerCase();
       const workerId = (worker._id || '').toLowerCase();
-      
-      if (!workerName.includes(searchLower) && 
-          !workerRole.includes(searchLower) && 
-          !workerId.includes(searchLower)) {
+
+      if (!workerName.includes(searchLower) &&
+        !workerRole.includes(searchLower) &&
+        !workerId.includes(searchLower)) {
         return false;
       }
     }
-    
+
     return true;
   });
 
@@ -884,8 +884,14 @@ export default function WorkerVerification() {
                           <img
                             src={
                               worker.profileImage
-                                ? "${BACKEND_URL}/" + worker.profileImage.replace(/\\/g, '/')
-                                : `https://ui-avatars.com/api/?name=${encodeURIComponent(worker.name)}&background=3b82f6&color=fff`
+                                ? (
+                                  worker.profileImage.startsWith('http')
+                                    ? worker.profileImage
+                                    : `${BACKEND_URL}/${worker.profileImage.replace(/\\/g, '/')}`
+                                )
+                                : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                  worker.name
+                                )}&background=3b82f6&color=fff`
                             }
                             alt={worker.name}
                             className="worker-table-avatar"
