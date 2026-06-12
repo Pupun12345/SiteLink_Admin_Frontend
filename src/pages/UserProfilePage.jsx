@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import "./UserProfilePage.css";
 import Sidebar from "../components/Sidebar";
 import api from "../api/axios";
+const BACKEND_URL=import.meta.env.VITE_API_URL;
 
 const activityLog = [
   {
@@ -200,7 +201,7 @@ export default function UserProfilePage() {
             <div className="avatar-wrap">
               <img
                 className="avatar-img"
-                src={user.profileImage ? `http://localhost:5000/${user.profileImage}` : "https://randomuser.me/api/portraits/lego/1.jpg"}
+                src={user.profileImage ? `${BACKEND_URL}/${user.profileImage}` : "https://randomuser.me/api/portraits/lego/1.jpg"}
                 alt={user.name}
                 onError={(e) => e.target.src = "https://randomuser.me/api/portraits/lego/1.jpg"}
               />

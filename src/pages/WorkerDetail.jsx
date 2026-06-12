@@ -25,6 +25,7 @@ import { useToast } from '../components/ToastProvider';
 import api from '../api/axios';
 import './WorkerDetail.css';
 import Sidebar from '../components/Sidebar';
+const BACKEND_URL=import.meta.env.VITE_API_URL;
 
 export default function WorkerDetail() {
   const { id } = useParams();
@@ -55,7 +56,7 @@ export default function WorkerDetail() {
 
   const getFileUrl = (filePath) => {
     if (!filePath) return null;
-    return filePath.startsWith('http') ? filePath : `http://localhost:5000/${filePath}`;
+    return filePath.startsWith('http') ? filePath : `${BACKEND_URL}/${filePath}`;
   };
 
   const buildDocument = (name, type, filePath) => {

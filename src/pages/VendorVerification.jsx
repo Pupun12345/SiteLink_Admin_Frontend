@@ -15,6 +15,7 @@ import api from '../api/axios';
 import Sidebar from '../components/Sidebar';
 import './WorkerVerification.css';
 import { hasPermission, usePermissions } from '../hooks/usePermissions';
+const BACKEND_URL=import.meta.env.VITE_API_URL;
 
 export default function VendorVerification() {
   const [vendors, setVendors] = useState([]);
@@ -59,7 +60,7 @@ export default function VendorVerification() {
       if (response.data.data?.user) {
         const user = response.data.data.user;
         const imageUrl = user.profileImage
-          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}`
+          ? `${BACKEND_URL}/${user.profileImage.replace(/\\/g, '/')}`
           : `https://ui-avatars.com/api/?name=${user.name || 'Admin'}&background=2b3f57&color=fff`;
         setProfile({
           name: user.name || '',
@@ -148,7 +149,7 @@ export default function VendorVerification() {
     }
 
     files.forEach(file => {
-      const fileUrl = file.url.startsWith('http') ? file.url : `http://localhost:5000/${file.url.replace(/\\/g, '/')}`;
+      const fileUrl = file.url.startsWith('http') ? file.url : `${BACKEND_URL}/${file.url.replace(/\\/g, '/')}`;
       window.open(fileUrl, '_blank');
     });
   };
@@ -881,9 +882,9 @@ export default function VendorVerification() {
                           <img
                             src={
                               vendor.companyLogo
-                                ? `http://localhost:5000/${vendor.companyLogo.replace(/\\/g, '/')}`
+                                ? `${BACKEND_URL}/${vendor.companyLogo.replace(/\\/g, '/')}`
                                 : vendor.profileImage
-                                  ? `http://localhost:5000/${vendor.profileImage.replace(/\\/g, '/')}`
+                                  ? `${BACKEND_URL}/${vendor.profileImage.replace(/\\/g, '/')}`
                                   : `https://ui-avatars.com/api/?name=${encodeURIComponent(vendor.companyName || vendor.name || 'Vendor')}&background=3b82f6&color=fff`
                             }
                             alt={vendor.companyName || vendor.name}

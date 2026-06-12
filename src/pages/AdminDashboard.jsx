@@ -24,6 +24,7 @@ import { motion } from "framer-motion";
 import Sidebar from "../components/Sidebar";
 import api from "../api/axios";
 import "./AdminDashboard.css";
+const BACKEND_URL=import.meta.env.VITE_API_URL;
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -45,7 +46,7 @@ export default function AdminDashboard() {
         console.log('User data:', user);
         
         const imageUrl = user.profileImage 
-          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}` 
+          ? `${BACKEND_URL}/${user.profileImage.replace(/\\/g, '/')}` 
           : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin')}&background=2b3f57&color=fff`;
         
         console.log('Image URL:', imageUrl);

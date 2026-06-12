@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar';
 import { useToast } from '../components/ToastProvider';
 import api from '../api/axios';
 import './VendorDetails.css';
+const BACKEND_URL=import.meta.env.VITE_API_URL;
 
 export default function VendorDetails() {
   const { id } = useParams();
@@ -128,7 +129,7 @@ export default function VendorDetails() {
       toast.showToast('File not available', { type: 'error' });
       return;
     }
-    const url = fileUrl.startsWith('http') ? fileUrl : `http://localhost:5000/${fileUrl}`;
+    const url = fileUrl.startsWith('http') ? fileUrl : `${BACKEND_URL}/${fileUrl}`;
     const a = document.createElement('a');
     a.href = url;
     a.download = fileName || 'document';
@@ -142,7 +143,7 @@ export default function VendorDetails() {
       toast.showToast('File not available', { type: 'error' });
       return;
     }
-    const url = fileUrl.startsWith('http') ? fileUrl : `http://localhost:5000/${fileUrl}`;
+    const url = fileUrl.startsWith('http') ? fileUrl : `${BACKEND_URL}/${fileUrl}`;
     window.open(url, '_blank');
   };
 
@@ -170,7 +171,7 @@ export default function VendorDetails() {
   const vendorImageUrl = vendorImage
     ? (vendorImage.startsWith('http')
       ? vendorImage
-      : `http://localhost:5000/${vendorImage.replace(/\\/g, '/')}`)
+      : `${BACKEND_URL}/${vendorImage.replace(/\\/g, '/')}`)
     : null;
 
   return (

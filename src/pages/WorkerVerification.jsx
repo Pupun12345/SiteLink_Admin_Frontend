@@ -16,6 +16,7 @@ import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
 import './WorkerVerification.css';
 import { hasPermission, usePermissions } from '../hooks/usePermissions';
+const BACKEND_URL=import.meta.env.VITE_API_URL;
 
 export default function WorkerVerification() {
   const [workers, setWorkers] = useState([]);
@@ -63,7 +64,7 @@ export default function WorkerVerification() {
         console.log('User data:', user);
         
         const imageUrl = user.profileImage 
-          ? `http://localhost:5000/${user.profileImage.replace(/\\/g, '/')}` 
+          ? `${BACKEND_URL}/${user.profileImage.replace(/\\/g, '/')}` 
           : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin')}&background=2b3f57&color=fff`;
         
         console.log('Image URL:', imageUrl);
@@ -883,7 +884,7 @@ export default function WorkerVerification() {
                           <img
                             src={
                               worker.profileImage
-                                ? "http://localhost:5000/" + worker.profileImage.replace(/\\/g, '/')
+                                ? "${BACKEND_URL}/" + worker.profileImage.replace(/\\/g, '/')
                                 : `https://ui-avatars.com/api/?name=${encodeURIComponent(worker.name)}&background=3b82f6&color=fff`
                             }
                             alt={worker.name}

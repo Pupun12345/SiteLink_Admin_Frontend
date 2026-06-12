@@ -5,6 +5,7 @@ import { useToast } from '../components/ToastProvider';
 import api from '../api/axios';
 import './UserDetail.css';
 import Sidebar from '../components/Sidebar';
+const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function UserDetail() {
   const { id } = useParams();
@@ -54,10 +55,10 @@ export default function UserDetail() {
     setSaving(true);
     try {
       const updates = {};
-      const allowedFields = ['name', 'email', 'phone', 'workCity', 'workState', 'location', 'role', 'primarySkill', 
-        'experience', 'salary', 'salaryType', 'willingtoRelocate', 'companyName', 'gstNumber', 
+      const allowedFields = ['name', 'email', 'phone', 'workCity', 'workState', 'location', 'role', 'primarySkill',
+        'experience', 'salary', 'salaryType', 'willingtoRelocate', 'companyName', 'gstNumber',
         'role', 'workArea', 'whatsappNumber', 'website'];
-      
+
       Object.keys(editedData).forEach(key => {
         if (editedData[key] !== user[key] && allowedFields.includes(key)) {
           updates[key] = editedData[key];
@@ -123,9 +124,9 @@ export default function UserDetail() {
             <div className="profile-info">
               <div className="profile-avatar">
                 {user.profileImage ? (
-                  <img src={`http://localhost:5000/${user.profileImage}`} alt={user.name} />
+                  <img src={`${BACKEND_URL}/${user.profileImage}`} alt={user.name} />
                 ) : user.companyLogo ? (
-                  <img src={`http://localhost:5000/${user.companyLogo}`} alt={user.companyName} />
+                  <img src={`${BACKEND_URL}/${user.companyLogo}`} alt={user.companyName} />
                 ) : (
                   <User size={48} strokeWidth={1.5} />
                 )}
@@ -149,7 +150,7 @@ export default function UserDetail() {
                   {editMode ? (
                     <input type="text" value={editedData.name || ''} onChange={(e) => handleInputChange('name', e.target.value)} />
                   ) : (
-                    <span>{user.name|| 'N/A'}</span>
+                    <span>{user.name || 'N/A'}</span>
                   )}
                 </div>
                 <div className="field">
@@ -266,7 +267,7 @@ export default function UserDetail() {
                         <option value="false">No</option>
                       </select>
                     ) : (
-                      <span>{JSON.stringify(user.willingtoRelocate).toUpperCase()?"Yes":"No"}</span>
+                      <span>{JSON.stringify(user.willingtoRelocate).toUpperCase() ? "Yes" : "No"}</span>
                     )}
                   </div>
                 </div>
