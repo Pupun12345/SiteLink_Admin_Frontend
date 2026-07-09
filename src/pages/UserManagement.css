@@ -207,6 +207,7 @@
 
 .table-filters {
   display: flex;
+  align-items: center;
   gap: 10px;
   flex-shrink: 0;
   flex-wrap: nowrap;
@@ -769,4 +770,178 @@
   .user-mgmt-table td {
     padding: 8px 6px;
   }
+}
+
+/* ===== TABLE RESPONSIVENESS ===== */
+
+.user-mgmt-table-card {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.user-mgmt-table {
+  min-width: 850px;
+}
+
+/* ===== TABLET ===== */
+@media (max-width: 992px) {
+  .user-mgmt-main {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .user-mgmt-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .user-mgmt-header-actions {
+    width: 100%;
+  }
+
+  .export-btn {
+    width: 100%;
+  }
+
+  .table-filters {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .table-filters select {
+    flex: 1;
+    min-width: 150px;
+  }
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 768px) {
+
+  .user-mgmt-main {
+    padding: 16px;
+  }
+
+  .user-mgmt-header h1 {
+    font-size: 24px;
+  }
+
+  .user-mgmt-header p {
+    font-size: 13px;
+  }
+
+  .user-mgmt-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .user-mgmt-table-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .search-bar {
+    width: 100%;
+  }
+
+  .table-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .table-filters div {
+    display: none;
+  }
+
+  .table-filters select {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .user-cell {
+    gap: 8px;
+  }
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .user-name {
+    font-size: 13px;
+  }
+
+  .user-email {
+    font-size: 11px;
+  }
+
+  .action-icon {
+    font-size: 14px;
+    margin-right: 2px;
+    padding: 2px 4px;
+  }
+
+  .user-mgmt-table-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pagination {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ===== SMALL MOBILE ===== */
+@media (max-width: 480px) {
+
+  .user-mgmt-main {
+    padding: 12px;
+  }
+
+  .user-mgmt-header h1 {
+    font-size: 20px;
+  }
+
+  .stat-box {
+    padding: 16px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .search-bar {
+    padding: 8px 10px;
+  }
+
+  .search-bar input {
+    font-size: 13px;
+  }
+
+  .table-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-btn {
+    width: 100%;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 18px;
+  }
+}
+
+.user-mgmt-table-card {
+    overflow-x: auto;
+}
+
+.user-mgmt-table {
+    min-width: 850px;
 }

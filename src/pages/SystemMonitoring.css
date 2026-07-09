@@ -586,3 +586,339 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+
+
+/* Responsive Fixes */
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+.monitor-content {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Header */
+
+.monitor-header {
+  flex-wrap: wrap;
+}
+
+.monitor-header-actions {
+  flex-wrap: wrap;
+}
+
+.timeframe-selector {
+  flex-wrap: wrap;
+}
+
+.monitor-light-btn,
+.monitor-primary-btn,
+.monitor-icon-btn {
+  flex-shrink: 0;
+}
+
+/* Cards */
+
+.monitor-stat-card {
+  min-width: 0;
+}
+
+.monitor-stat-card strong {
+  word-break: break-word;
+}
+
+.monitor-card-title {
+  word-break: break-word;
+}
+
+/* Mid Panels */
+
+.monitor-panel {
+  min-width: 0;
+}
+
+.monitor-panel h3 {
+  word-break: break-word;
+}
+
+/* Traffic */
+
+.traffic-bars {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.traffic-summary {
+  min-width: 0;
+}
+
+.traffic-stat {
+  min-width: 0;
+}
+
+.stat-value {
+  word-break: break-word;
+}
+
+/* System Info */
+
+.info-row {
+  gap: 10px;
+}
+
+.info-row span:last-child {
+  text-align: right;
+  word-break: break-word;
+}
+
+/* Alerts */
+
+.alert-header {
+  gap: 10px;
+}
+
+.alert-title {
+  min-width: 0;
+}
+
+.alert-title span {
+  word-break: break-word;
+}
+
+.alert-footer {
+  gap: 10px;
+}
+
+.alert-service {
+  word-break: break-word;
+}
+
+/* Logs */
+
+.monitor-table-wrap {
+  overflow-x: auto;
+}
+
+.monitor-table-wrap table {
+  min-width: 700px;
+}
+
+.log-message {
+  max-width: 260px;
+}
+
+/* Tablets */
+
+@media (max-width: 1024px) {
+
+  .monitor-content {
+    padding: 18px 16px 24px;
+  }
+
+  .monitor-header h1 {
+    font-size: 34px;
+  }
+
+  .monitor-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .monitor-header-actions {
+    width: 100%;
+  }
+
+  .timeframe-selector {
+    width: 100%;
+  }
+
+  .monitor-cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .traffic-summary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 768px) {
+
+  .monitor-content {
+    padding: 14px 12px 20px;
+    margin-left: 0 !important;
+  }
+
+  .monitor-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .monitor-header h1 {
+    font-size: 28px;
+  }
+
+  .monitor-header p {
+    font-size: 14px;
+  }
+
+  .monitor-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .timeframe-selector {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .timeframe-selector button {
+    flex: 1;
+  }
+
+  .monitor-primary-btn,
+  .monitor-icon-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .monitor-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .monitor-stat-card strong {
+    font-size: 28px;
+  }
+
+  .monitor-mid-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .traffic-summary {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .traffic-stat {
+    text-align: left;
+  }
+
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .info-row span:last-child {
+    text-align: left;
+  }
+
+  .alert-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .alert-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .alert-time {
+    font-size: 12px;
+  }
+
+  .monitor-panel {
+    padding: 12px;
+  }
+
+  .monitor-panel h3 {
+    font-size: 22px;
+  }
+
+  .log-message {
+    max-width: 180px;
+  }
+}
+
+/* Small Phones */
+
+@media (max-width: 480px) {
+
+  .monitor-content {
+    padding: 12px 10px 18px;
+  }
+
+  .monitor-header h1 {
+    font-size: 24px;
+  }
+
+  .monitor-light-btn,
+  .monitor-primary-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .timeframe-selector {
+    flex-direction: column;
+  }
+
+  .timeframe-selector button {
+    width: 100%;
+  }
+
+  .monitor-stat-card {
+    padding: 12px;
+  }
+
+  .monitor-stat-card strong {
+    font-size: 24px;
+  }
+
+  .monitor-card-title {
+    font-size: 12px;
+  }
+
+  .traffic-bars {
+    height: 140px;
+    gap: 4px;
+    padding: 10px;
+  }
+
+  .traffic-summary {
+    padding-top: 12px;
+  }
+
+  .stat-value {
+    font-size: 16px;
+  }
+
+  .monitor-panel h3 {
+    font-size: 20px;
+  }
+
+  .alert-item {
+    padding: 12px;
+  }
+
+  .alert-title {
+    font-size: 14px;
+  }
+
+  .alert-message {
+    font-size: 13px;
+  }
+
+  .log-message {
+    max-width: 140px;
+  }
+}

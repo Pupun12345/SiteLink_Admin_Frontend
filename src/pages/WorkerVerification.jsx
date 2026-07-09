@@ -23,9 +23,11 @@ export default function WorkerVerification() {
   const [profile, setProfile] = useState({ name: '', email: '', imageUrl: '' });
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [subscriptionFilter, setSubscriptionFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [showSubscriptionDropdown, setShowSubscriptionDropdown] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -43,7 +45,7 @@ export default function WorkerVerification() {
     willingtoRelocate: false,
     salaryType: 'daily',
     salary: '',
-    location: '',
+    location: ''
   });
   const [profileImage, setProfileImage] = useState(null);
   const [workSamplesPhoto, setWorkSamplesPhoto] = useState([]);
@@ -64,7 +66,7 @@ export default function WorkerVerification() {
         console.log('User data:', user);
 
         const imageUrl = user.profileImage
-          ? `${BACKEND_URL}/${user.profileImage.replace(/\\/g, '/')}`
+          ? user.profileImage
           : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin')}&background=2b3f57&color=fff`;
 
         console.log('Image URL:', imageUrl);
@@ -148,7 +150,7 @@ export default function WorkerVerification() {
       return;
     }
 
-    const headers = ['Worker Name', 'Role', 'Experience', 'City', 'Phone', 'Email', 'Primary Skill', 'Additional Skills', 'Wiiling to Relocate', 'Salary Type', 'Salary', 'Status', 'Rating', 'Applied Date'];
+    const headers = ['Worker Name', 'Role', 'Experience', 'City', 'Phone', 'Email', 'Primary Skill', 'Additional Skills', 'Wiiling to Relocate', 'Salary Type', 'Salary', 'Rating', 'Applied Date', 'Subscription', 'Status'];
     const rows = filteredWorkers.map(worker => [
       worker.name || '',
       worker.role || 'N/A',
@@ -161,9 +163,11 @@ export default function WorkerVerification() {
       worker.willingtoRelocate || 'N/A',
       worker.salaryType || 'N/A',
       worker.salary || 'N/A',
-      worker.status || 'Pending',
       worker.adminRating ? `${parseFloat(worker.adminRating).toFixed(1)}/5` : 'Not Rated',
-      worker.join || 'N/A'
+      worker.join || 'N/A',
+      worker.subscription ? "Subscribed" : "Not Subscribed",
+      worker.status || 'Pending',
+      worker.experienceCertificate ? true : false
     ]);
 
     const csvContent = [
@@ -210,7 +214,11 @@ export default function WorkerVerification() {
         profileImage: worker.profileImage || null,
         phone: worker.phone || 'N/A',
         email: worker.email || 'N/A',
-        join: worker.join || 'N/A'
+        join: worker.join || 'N/A',
+        subscription: worker.subscription || false,
+        subscriptionPlan: worker.subscriptionPlan || null,
+        subscriptionEndDate: worker.subscriptionEndDate || null,
+        experienceCertificate: worker.experienceCertificate || null
       }));
 
       setWorkers(formattedWorkers);
@@ -316,18 +324,16 @@ export default function WorkerVerification() {
   const approvedWorkers = workers.filter(worker =>
     worker.status === 'Verified' || worker.status === 'Approved' || worker.status === 'approved'
   );
-  const ratedWorkers = workers.filter(worker =>
-    worker.adminRating && typeof worker.adminRating === 'number' && worker.adminRating > 0
-  );
-  const averageRating = ratedWorkers.length > 0
-    ? (ratedWorkers.reduce((sum, worker) => sum + parseFloat(worker.adminRating), 0) / ratedWorkers.length).toFixed(1)
-    : null;
+  const subscribedWorkers = workers.filter(worker => worker.subscription === true);
 
   const filteredWorkers = workers.filter(worker => {
     const workerStatus = (worker.status || '').toLowerCase();
 
     if (statusFilter === 'pending' && workerStatus !== 'pending') return false;
     if (statusFilter === 'approved' && !['verified', 'approved'].includes(workerStatus)) return false;
+
+    if (subscriptionFilter === 'subscribed' && !worker.subscription) return false;
+    if (subscriptionFilter === 'not-subscribed' && worker.subscription) return false;
 
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -742,6 +748,22 @@ export default function WorkerVerification() {
                       />
                       {governmentID && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {governmentID.name}</p>}
                     </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Experience Certificate</label>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => setExperienceCertificate(e.target.files[0])}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      {experienceCertificate && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {experienceCertificate.name}</p>}
+                    </div>
                   </div>
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
                     <button
@@ -824,13 +846,10 @@ export default function WorkerVerification() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
               >
-                <p className="stat-box-label">AVG. RATING</p>
-                <div className="stat-box-value">
-                  {averageRating || '—'}
-                  <span className="rating-sub">/5.0</span>
-                </div>
+                <p className="stat-box-label">SUBSCRIPTIONS</p>
+                <div className="stat-box-value">{subscribedWorkers.length.toLocaleString()}</div>
                 <p className="stat-box-change success">
-                  {ratedWorkers.length > 0 ? `★ Based on ${ratedWorkers.length} review${ratedWorkers.length === 1 ? '' : 's'}` : 'No ratings yet'}
+                  {subscribedWorkers.length > 0 ? `${((subscribedWorkers.length / workers.length) * 100).toFixed(0)}% of total workers` : 'No subscriptions yet'}
                 </p>
               </motion.div>
             </div>
@@ -850,6 +869,19 @@ export default function WorkerVerification() {
                     </div>
                   )}
                 </div>
+                <div className="filter-dropdown">
+                  <button className="filter-btn" onClick={() => setShowSubscriptionDropdown(!showSubscriptionDropdown)}>
+                    Subscription: {subscriptionFilter === 'all' ? 'All' : subscriptionFilter === 'subscribed' ? 'Subscribed' : 'Not Subscribed'}
+                    <ChevronDown size={16} />
+                  </button>
+                  {showSubscriptionDropdown && (
+                    <div className="dropdown-menu">
+                      <button onClick={() => { setSubscriptionFilter('all'); setShowSubscriptionDropdown(false); }}>All</button>
+                      <button onClick={() => { setSubscriptionFilter('subscribed'); setShowSubscriptionDropdown(false); }}>Subscribed</button>
+                      <button onClick={() => { setSubscriptionFilter('not-subscribed'); setShowSubscriptionDropdown(false); }}>Not Subscribed</button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="results-count">
                 SHOWING {paginatedWorkers.length} OF {filteredWorkers.length}
@@ -865,6 +897,7 @@ export default function WorkerVerification() {
                     <th>EXPERIENCE</th>
                     <th>CITY</th>
                     <th>RATING</th>
+                    <th>SUBSCRIPTION</th>
                     <th>DOCUMENTS</th>
                     <th>STATUS</th>
                   </tr>
@@ -883,15 +916,10 @@ export default function WorkerVerification() {
                         <div className="worker-cell">
                           <img
                             src={
-                              worker.profileImage
-                                ? (
-                                  worker.profileImage.startsWith('http')
-                                    ? worker.profileImage
-                                    : `${BACKEND_URL}/${worker.profileImage.replace(/\\/g, '/')}`
-                                )
-                                : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                                  worker.name
-                                )}&background=3b82f6&color=fff`
+                              worker.profileImage ||
+                              `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                worker.name
+                              )}&background=3b82f6&color=fff`
                             }
                             alt={worker.name}
                             className="worker-table-avatar"
@@ -908,8 +936,8 @@ export default function WorkerVerification() {
                       <td>{worker.role || 'General Worker'}</td>
                       <td>{worker.experience || 'N/A'}</td>
                       <td>{worker.city || 'N/A'}</td>
-                      <td>
-                        {worker.adminRating ? (
+                      <td style={{ maxWidth: '180px' }}>
+                        {worker.adminRating && worker.subscription ? (
                           <div className="rating-cell">
                             {[1, 2, 3, 4, 5].map((star) => {
                               const rating = parseFloat(worker.adminRating);
@@ -931,7 +959,26 @@ export default function WorkerVerification() {
                             <span>{parseFloat(worker.adminRating).toFixed(1)}/5</span>
                           </div>
                         ) : (
-                          <span className="no-rating">—</span>
+                          <span className="no-rating" style={{ color: '#9ca3af', fontSize: '0.75rem', display: 'block', whiteSpace: 'normal', lineHeight: '1.4' }}>
+                            {!worker.subscription
+                              ? 'No active subscription'
+                              : worker.status.toLowerCase() === 'rejected'
+                                ? 'Worker rejected'
+                                : worker.status.toLowerCase() !== 'verified'
+                                  ? 'Not verified yet'
+                                  : !worker.adminRating 
+                                    ? 'No rating given yet'
+                                    : ''}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {worker.subscription ? (
+                          <span className="subscription-badge active">
+                            ✓ Active
+                          </span>
+                        ) : (
+                          <span className="subscription-badge inactive">✕ Not Subscribed</span>
                         )}
                       </td>
                       <td>

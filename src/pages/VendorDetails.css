@@ -80,7 +80,9 @@
 .vendor-logo img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .vendor-title h2 {
@@ -356,11 +358,14 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: hidden;
 }
 
 .company-logo img {
   max-height: 120px;
   max-width: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
   border-radius: 14px;
 }
@@ -832,4 +837,357 @@
 .rating-btn-submit:disabled {
   background-color: #9ca3af;
   cursor: not-allowed;
+}
+
+
+/* Responsive Fixes */
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+.dashboard-content {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Sidebar Fix */
+
+@media (max-width: 1080px) {
+  .dashboard-content {
+    margin-left: 0 !important;
+    padding: 20px 16px 28px;
+  }
+}
+
+/* Vendor Header */
+
+.vendor-top {
+  flex-wrap: wrap;
+}
+
+.vendor-top-left {
+  min-width: 0;
+  flex: 1;
+}
+
+.vendor-title {
+  min-width: 0;
+}
+
+.vendor-title h2 {
+  word-break: break-word;
+}
+
+.vendor-meta {
+  flex-wrap: wrap;
+}
+
+.vendor-top-right {
+  flex-wrap: wrap;
+}
+
+/* Buttons */
+
+.action-buttons {
+  width: 100%;
+}
+
+.reject-btn,
+.approve-btn,
+.rate-btn {
+  min-width: 160px;
+}
+
+/* Grid */
+
+.vendor-details-grid {
+  min-width: 0;
+}
+
+.left-column,
+.right-column {
+  min-width: 0;
+}
+
+.card {
+  min-width: 0;
+}
+
+/* Card Rows */
+
+.card-row {
+  gap: 12px;
+}
+
+.label {
+  flex-shrink: 0;
+}
+
+.value {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Documents */
+
+.document-row {
+  gap: 12px;
+}
+
+.document-meta {
+  min-width: 0;
+}
+
+.doc-title,
+.doc-size {
+  word-break: break-word;
+}
+
+.doc-actions {
+  flex-wrap: wrap;
+}
+
+.doc-action {
+  flex-shrink: 0;
+}
+
+/* Modals */
+
+.reject-modal,
+.rating-modal-container {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Large Tablets */
+
+@media (max-width: 992px) {
+
+  .vendor-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vendor-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vendor-top-right {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .action-buttons {
+    justify-content: stretch;
+  }
+
+  .reject-btn,
+  .approve-btn,
+  .rate-btn {
+    flex: 1;
+  }
+
+  .vendor-title h2 {
+    font-size: 28px;
+  }
+}
+
+/* Tablets */
+
+@media (max-width: 768px) {
+
+  .dashboard-content {
+    padding: 16px 12px 24px;
+  }
+
+  .vendor-top-card {
+    padding: 18px;
+  }
+
+  .vendor-breadcrumbs {
+    flex-wrap: wrap;
+  }
+
+  .vendor-top-left {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .vendor-logo img,
+  .vendor-placeholder-logo {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+  }
+
+  .vendor-title h2 {
+    font-size: 24px;
+  }
+
+  .vendor-meta {
+    justify-content: center;
+  }
+
+  .vendor-top-right {
+    align-items: stretch;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .reject-btn,
+  .approve-btn,
+  .rate-btn {
+    width: 100%;
+  }
+
+  .card-header,
+  .card-body {
+    padding: 18px;
+  }
+
+  .card-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .value {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .document-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .doc-actions {
+    width: 100%;
+  }
+
+  .doc-action {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .reject-actions,
+  .rating-modal-footer {
+    flex-direction: column;
+  }
+
+  .reject-actions button,
+  .rating-btn {
+    width: 100%;
+  }
+
+  .rating-modal-header,
+  .rating-modal-body,
+  .rating-modal-footer {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .rating-stars-container {
+    flex-wrap: wrap;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 480px) {
+
+  .dashboard-content {
+    padding: 12px 10px 20px;
+  }
+
+  .vendor-top-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .vendor-title h2 {
+    font-size: 22px;
+  }
+
+  .vendor-meta {
+    font-size: 12px;
+  }
+
+  .status-pill {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .card-header h3 {
+    font-size: 15px;
+  }
+
+  .label,
+  .value {
+    font-size: 13px;
+  }
+
+  .doc-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .doc-title {
+    font-size: 13px;
+  }
+
+  .doc-size {
+    font-size: 11px;
+  }
+
+  .rating-star {
+    font-size: 26px;
+  }
+
+  .rating-modal-header h3 {
+    font-size: 18px;
+  }
+
+  .rating-display {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .rating-scale-labels {
+    padding: 0;
+  }
+}
+
+/* Extra Small Phones */
+
+@media (max-width: 360px) {
+
+  .vendor-title h2 {
+    font-size: 20px;
+  }
+
+  .vendor-logo img,
+  .vendor-placeholder-logo {
+    width: 85px;
+    height: 85px;
+    object-fit: contain;
+  }
+
+  .card-header,
+  .card-body {
+    padding: 14px;
+  }
+
+  .doc-actions {
+    flex-direction: column;
+  }
+
+  .doc-action {
+    width: 100%;
+  }
 }

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { usePermissions, hasPermission } from '../hooks/usePermissions';
 import {
@@ -16,7 +16,9 @@ import {
   HelpCircle,
   BaggageClaim,
   LogOut,
-  SignpostBig
+  SignpostBig,
+  Menu,
+  X
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -99,6 +101,22 @@ export default function Sidebar({ onLogout }) {
   const location = useLocation();
   const permissions = usePermissions();
   const adminUser = localStorage.getItem('adminUser');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
   const filteredMainItems = mainItems.filter(item => {
     if (!adminUser) return true;
@@ -143,7 +161,23 @@ export default function Sidebar({ onLogout }) {
   };
 
   return (
-    <aside className="app-sidebar">
+    <>
+      <button 
+        className={`hamburger-menu-btn ${isMobileMenuOpen ? 'menu-open' : ''}`}
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        aria-label="Toggle menu"
+      >
+        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      {isMobileMenuOpen && (
+        <div 
+          className="sidebar-overlay" 
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      <aside className={`app-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-brand">
         <div className="brand-icon">
           <img src="/SiteLinkIcon.png" alt="SiteLink Logo" />
@@ -219,5 +253,6 @@ export default function Sidebar({ onLogout }) {
         </button>
       </div>
     </aside>
+    </>
   );
 }

@@ -530,3 +530,301 @@
 .cancel-btn:hover {
   background: #f8fafc;
 }
+
+
+/* =====================================================
+   SETTINGS PAGE LAYOUT FIX
+===================================================== */
+
+/* Fix parent containers */
+.admin-settings-content,
+.dashboard-content {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Prevent settings panels from shrinking */
+.settings-panel {
+  width: 100%;
+  min-width: 0;
+}
+
+/* =====================================================
+   PROFILE SECTION FIX
+===================================================== */
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.profile-avatar-area {
+  width: 100%;
+  max-width: 220px;
+  margin: 0 auto;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.password-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* Prevent form overflow */
+.profile-form-grid input,
+.profile-form-grid select,
+.password-form-grid input,
+.modal-form input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* =====================================================
+   HEADER FIX
+===================================================== */
+
+.admin-settings-header {
+  flex-wrap: wrap;
+}
+
+.admin-settings-header-actions {
+  flex-wrap: wrap;
+}
+
+.save-btn,
+.mini-icon-btn {
+  flex-shrink: 0;
+}
+
+/* =====================================================
+   TABLE FIX
+===================================================== */
+
+.admin-users-table {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-users-table table {
+  min-width: 700px;
+}
+
+/* =====================================================
+   MODAL FIX
+===================================================== */
+
+.modal-content {
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* =====================================================
+   TABLETS
+===================================================== */
+
+@media (max-width: 1200px) {
+
+  /* Sidebar likely becomes overlay */
+  .dashboard-content,
+  .admin-settings-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 992px) {
+
+  .admin-settings-content {
+    padding: 18px 16px;
+  }
+
+  .admin-settings-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .admin-settings-header-actions {
+    justify-content: flex-end;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-avatar-area {
+    max-width: 100%;
+  }
+
+  .profile-form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .password-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .twofa-methods {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 768px) {
+
+  .admin-settings-content {
+    padding: 14px 12px 20px;
+  }
+
+  .admin-settings-header h1 {
+    font-size: 30px;
+  }
+
+  .admin-settings-header p {
+    font-size: 13px;
+  }
+
+  .admin-settings-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .settings-panel {
+    padding: 14px;
+  }
+
+  .settings-panel h2 {
+    font-size: 22px;
+  }
+
+  .profile-form-grid,
+  .password-form-grid,
+  .twofa-methods {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-avatar-area img {
+    width: 88px;
+    height: 88px;
+  }
+
+  .modal-actions {
+    flex-wrap: wrap;
+  }
+
+  .modal-actions button {
+    flex: 1;
+  }
+}
+
+/* =====================================================
+   SMALL MOBILE
+===================================================== */
+
+@media (max-width: 480px) {
+
+  .admin-settings-content {
+    padding: 12px 10px 18px;
+  }
+
+  .admin-settings-header h1 {
+    font-size: 26px;
+  }
+
+  .admin-settings-header p {
+    font-size: 12px;
+  }
+
+  .admin-settings-header-actions {
+    flex-direction: column;
+  }
+
+  .save-btn,
+  .mini-icon-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .settings-panel {
+    padding: 12px;
+  }
+
+  .settings-panel h2 {
+    font-size: 20px;
+  }
+
+  .profile-avatar-area img {
+    width: 80px;
+    height: 80px;
+  }
+
+  .image-upload-label {
+    width: 100%;
+    text-align: center;
+  }
+
+  .message-banner {
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+
+  .modal-content {
+    width: 100%;
+    padding: 18px;
+    border-radius: 10px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions button,
+  .cancel-btn,
+  .delete-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* =====================================================
+   EXTRA SMALL DEVICES
+===================================================== */
+
+@media (max-width: 360px) {
+
+  .admin-settings-header h1 {
+    font-size: 22px;
+  }
+
+  .settings-panel h2 {
+    font-size: 18px;
+  }
+
+  .profile-avatar-area img {
+    width: 72px;
+    height: 72px;
+  }
+
+  .profile-form-grid input,
+  .profile-form-grid select,
+  .password-form-grid input,
+  .modal-form input {
+    font-size: 13px;
+  }
+}

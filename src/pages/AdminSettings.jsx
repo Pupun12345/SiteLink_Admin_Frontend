@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import Sidebar from '../components/Sidebar';
 import './AdminSettings.css';
-const BACKEND_URL=import.meta.env.VITE_API_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function AdminSettings() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
-  
+
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -32,8 +32,8 @@ export default function AdminSettings() {
     newPassword: false,
     confirmPassword: false
   });
- 
-  const adminUser=localStorage.getItem("adminUser")
+
+  const adminUser = localStorage.getItem("adminUser")
   const [adminUsers, setAdminUsers] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newAdminForm, setNewAdminForm] = useState({
@@ -56,22 +56,24 @@ export default function AdminSettings() {
     try {
       const response = await api.get('/profile/me');
       console.log('Profile response:', response.data);
-      
+
       if (response.data.success && response.data.data) {
         const user = response.data.data.user;
         console.log('User data:', user);
-        
+
         setProfile(prev => ({
           ...prev,
           name: user.name || '',
           email: user.email || '',
           profileImage: user.profileImage || ''
         }));
-        
-        const imageUrl = user.profileImage 
-          ? `${BACKEND_URL}/${user.profileImage.replace(/\\/g, '/')}` 
-          : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin')}&background=2b3f57&color=fff`;
-        
+
+        const imageUrl = user.profileImage
+          ? user.profileImage
+          : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+            user.name || 'Admin'
+          )}&background=2b3f57&color=fff`;
+
         console.log('Image URL:', imageUrl);
         setProfileImagePreview(imageUrl);
       }
@@ -86,7 +88,7 @@ export default function AdminSettings() {
   useEffect(() => {
     fetchProfile();
     fetchAdminUsers();
-  },[]);
+  }, []);
 
   const fetchAdminUsers = async () => {
     try {
@@ -130,7 +132,7 @@ export default function AdminSettings() {
 
   const handleDeleteAdmin = async (id) => {
     if (!window.confirm('Are you sure you want to delete this admin user?')) return;
-    
+
     try {
       const response = await api.delete(`/admin-users/${id}`);
       if (response.data.success) {
@@ -185,7 +187,7 @@ export default function AdminSettings() {
         showMessage('error', 'Image size must be less than 2MB');
         return;
       }
-      
+
       if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
         showMessage('error', 'Only JPG and PNG formats are allowed');
         return;
@@ -229,7 +231,7 @@ export default function AdminSettings() {
       if (profileImageFile) {
         formData.append('profileImage', profileImageFile);
       }
-      
+
       const response = await api.put('/profile/admin/edit', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -241,7 +243,7 @@ export default function AdminSettings() {
       if (response.data.success) {
         showMessage('success', 'Profile updated successfully!');
         setProfileImageFile(null);
-        
+
         //Reloading the page
         setTimeout(() => {
           window.location.reload();
@@ -270,6 +272,8 @@ export default function AdminSettings() {
         return;
       }
 
+      console.log('Sending password change request...');
+
       const response = await api.put('/profile/change-password', {
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword
@@ -292,14 +296,14 @@ export default function AdminSettings() {
       }
     } catch (error) {
       console.error('Error changing password:', error);
-      console.error('Error response:', error.response?.data);
+      console.error('Error response:', error.response);
       showMessage('error', error.response?.data?.message || 'Failed to change password');
     }
   };
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
-    
+
     navigate('/admin/login');
   };
 
@@ -326,7 +330,7 @@ export default function AdminSettings() {
           </div>
 
           <div className="admin-settings-header-actions">
-            <button type="button" className="mini-icon-btn" aria-label="Notifications" onClick={()=>navigate("/admin/notifications")}> 
+            <button type="button" className="mini-icon-btn" aria-label="Notifications" onClick={() => navigate("/admin/notifications")}>
               <Bell size={16} />
             </button>
             <button type="button" className="save-btn" onClick={handleSaveProfile}>
@@ -355,8 +359,8 @@ export default function AdminSettings() {
 
           <div className="profile-grid">
             <div className="profile-avatar-area">
-              <img 
-                src={profileImagePreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'Admin')}&background=2b3f57&color=fff`} 
+              <img
+                src={profileImagePreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'Admin')}&background=2b3f57&color=fff`}
                 alt="Profile"
                 onError={(e) => {
                   e.target.onerror = null;
@@ -378,7 +382,7 @@ export default function AdminSettings() {
             <div className="profile-form-grid">
               <label>
                 <span>Full Name</span>
-                <input 
+                <input
                   type="text"
                   name="name"
                   value={profile.name}
@@ -387,7 +391,7 @@ export default function AdminSettings() {
               </label>
               <label>
                 <span>Email Address</span>
-                <input 
+                <input
                   type="email"
                   name="email"
                   value={profile.email}
@@ -396,7 +400,7 @@ export default function AdminSettings() {
               </label>
               <label>
                 <span>Role</span>
-                <select 
+                <select
                   name="role"
                   value={profile.role}
                   onChange={handleProfileChange}
@@ -407,7 +411,7 @@ export default function AdminSettings() {
               </label>
               <label>
                 <span>Timezone</span>
-                <select 
+                <select
                   name="timezone"
                   value={profile.timezone}
                   onChange={handleProfileChange}
@@ -430,7 +434,7 @@ export default function AdminSettings() {
             <label>
               <span>Current Password</span>
               <div className="password-input-wrapper">
-                <input 
+                <input
                   type={showPasswords.currentPassword ? "text" : "password"}
                   name="currentPassword"
                   value={passwordForm.currentPassword}
@@ -449,7 +453,7 @@ export default function AdminSettings() {
             <label>
               <span>New Password</span>
               <div className="password-input-wrapper">
-                <input 
+                <input
                   type={showPasswords.newPassword ? "text" : "password"}
                   name="newPassword"
                   value={passwordForm.newPassword}
@@ -468,7 +472,7 @@ export default function AdminSettings() {
             <label>
               <span>Confirm New Password</span>
               <div className="password-input-wrapper">
-                <input 
+                <input
                   type={showPasswords.confirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   value={passwordForm.confirmPassword}
@@ -490,7 +494,7 @@ export default function AdminSettings() {
             Password must be at least 6 characters long.
           </p>
 
-          <button 
+          <button
             type="button"
             className="save-btn"
             onClick={handleChangePassword}
@@ -502,82 +506,82 @@ export default function AdminSettings() {
 
 
 
-        {!adminUser?(
+        {!adminUser ? (
           <section className="settings-panel">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>
-              <Users size={16} />
-              Admin Users Management
-            </h2>
-            <button type="button" className="save-btn" onClick={() => setShowCreateModal(true)}>
-              <Plus size={14} />
-              Create Admin User
-            </button>
-          </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2>
+                <Users size={16} />
+                Admin Users Management
+              </h2>
+              <button type="button" className="save-btn" onClick={() => setShowCreateModal(true)}>
+                <Plus size={14} />
+                Create Admin User
+              </button>
+            </div>
 
-          <div className="admin-users-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Platform Settings</th>
-                  <th>Revenue Access</th>
-                  <th>Verify Users</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {adminUsers.map((user) => (
-                  <tr key={user._id}>
-                    <td>{user.name}</td>
-                    <td>{user.email}</td>
-                    <td>
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={user.permissions.canAccessPlatformSettings}
-                          onChange={() => handleTogglePermission(user._id, 'canAccessPlatformSettings')}
-                        />
-                        <span className="slider" />
-                      </label>
-                    </td>
-                    <td>
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={user.permissions.canAccessRevenue}
-                          onChange={() => handleTogglePermission(user._id, 'canAccessRevenue')}
-                        />
-                        <span className="slider" />
-                      </label>
-                    </td>
-                    <td>
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={user.permissions.canVerifyUsers}
-                          onChange={() => handleTogglePermission(user._id, 'canVerifyUsers')}
-                        />
-                        <span className="slider" />
-                      </label>
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="delete-btn"
-                        onClick={() => handleDeleteAdmin(user._id)}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
+            <div className="admin-users-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Platform Settings</th>
+                    <th>Revenue Access</th>
+                    <th>Verify Users</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        ):("")}
+                </thead>
+                <tbody>
+                  {adminUsers.map((user) => (
+                    <tr key={user._id}>
+                      <td>{user.name}</td>
+                      <td>{user.email}</td>
+                      <td>
+                        <label className="switch">
+                          <input
+                            type="checkbox"
+                            checked={user.permissions.canAccessPlatformSettings}
+                            onChange={() => handleTogglePermission(user._id, 'canAccessPlatformSettings')}
+                          />
+                          <span className="slider" />
+                        </label>
+                      </td>
+                      <td>
+                        <label className="switch">
+                          <input
+                            type="checkbox"
+                            checked={user.permissions.canAccessRevenue}
+                            onChange={() => handleTogglePermission(user._id, 'canAccessRevenue')}
+                          />
+                          <span className="slider" />
+                        </label>
+                      </td>
+                      <td>
+                        <label className="switch">
+                          <input
+                            type="checkbox"
+                            checked={user.permissions.canVerifyUsers}
+                            onChange={() => handleTogglePermission(user._id, 'canVerifyUsers')}
+                          />
+                          <span className="slider" />
+                        </label>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="delete-btn"
+                          onClick={() => handleDeleteAdmin(user._id)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : ("")}
 
         {showCreateModal && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowCreateModal(false)}>

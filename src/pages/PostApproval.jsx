@@ -11,8 +11,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 const getImageUrl = (path) => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
-  if (path.startsWith('/uploads')) return `${API_BASE_URL}${path}`;
-  return `${API_BASE_URL}/uploads/${path}`;
+  // Remove leading slash if present to avoid double slashes
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${API_BASE_URL}${cleanPath}`;
 };
 
 // Helper function to get user avatar
@@ -20,11 +21,11 @@ const getUserAvatar = (item) => {
   // Try multiple sources for the image
   const posterImage = item?.posterImage || item?.postedBy?.profileImage;
   const posterName = item?.posterName || item?.postedBy?.name || 'User';
-  
+
   if (posterImage) {
     return getImageUrl(posterImage);
   }
-  
+
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(posterName)}&background=random&color=fff&size=128`;
 };
 
@@ -46,6 +47,8 @@ export default function PostApproval() {
     title: '',
     company: '',
     location: '',
+    latitude: '',
+    longitude: '',
     quantity: '1',
     salary: '',
     salaryType: 'daily',
@@ -54,6 +57,23 @@ export default function PostApproval() {
     description: '',
     experience: ''
   });
+  const [groupedAmenities, setGroupedAmenities] = useState([]);
+  const [selectedAmenities, setSelectedAmenities] = useState([]);
+  const [loadingAmenities, setLoadingAmenities] = useState(false);
+
+  const fetchGroupedAmenities = async () => {
+    setLoadingAmenities(true);
+    try {
+      const { data } = await api.get('/amenities/grouped');
+      if (data.success) {
+        setGroupedAmenities(data.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch amenities:', err);
+    } finally {
+      setLoadingAmenities(false);
+    }
+  };
 
   useEffect(() => {
     fetchPendingPosts();
@@ -62,21 +82,12 @@ export default function PostApproval() {
   const fetchPendingPosts = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get(`/community/posts/pending?page=${currentPage}&limit=20`);
-      console.log('Fetched pending posts:', data.data);
-      // Log first item to check image paths
-      if (data.data && data.data.length > 0) {
-        console.log('First post sample:', {
-          posterImage: data.data[0].posterImage,
-          images: data.data[0].images,
-          video: data.data[0].video
-        });
-      }
+      const { data } = await api.get(`/community/jobs/pending?page=${currentPage}&limit=20`);
       setPosts(data.data || []);
       setError(null);
     } catch (err) {
       console.error('Failed to fetch pending posts:', err);
-      setError(err.response?.data?.message || 'Failed to load pending posts');
+      setError(err.response?.data?.message || 'Failed to load pending jobs');
     } finally {
       setLoading(false);
     }
@@ -85,15 +96,12 @@ export default function PostApproval() {
   const handleApprove = async (item) => {
     if (isProcessing) return;
     setIsProcessing(true);
-
-    const loadingToast = toast.loading(`Approving ${item.contentType}...`);
-
+    const loadingToast = toast.loading('Approving job...');
     try {
-      await api.put(`/community/posts/${item._id}/approve`, { contentType: item.contentType });
+      await api.put(`/community/jobs/${item._id}/approve`);
       setPosts(prev => prev.filter(p => p._id !== item._id));
-      toast.success(`${item.contentType === 'job' ? 'Job' : 'Post'} approved successfully!`, { id: loadingToast });
+      toast.success('Job approved successfully!', { id: loadingToast });
     } catch (err) {
-      console.error('Failed to approve:', err);
       toast.error(err.response?.data?.message || 'Failed to approve', { id: loadingToast });
     } finally {
       setIsProcessing(false);
@@ -118,17 +126,13 @@ export default function PostApproval() {
     const loadingToast = toast.loading(`Rejecting ${selectedPost.contentType}...`);
 
     try {
-      await api.put(`/community/posts/${selectedPost._id}/reject`, { 
-        reason: rejectReason,
-        contentType: selectedPost.contentType 
-      });
+      await api.put(`/community/jobs/${selectedPost._id}/reject`, { reason: rejectReason });
       setPosts(prev => prev.filter(p => p._id !== selectedPost._id));
       setShowRejectModal(false);
       setSelectedPost(null);
       setRejectReason('');
-      toast.success(`${selectedPost.contentType === 'job' ? 'Job' : 'Post'} rejected successfully!`, { id: loadingToast });
+      toast.success('Job rejected successfully!', { id: loadingToast });
     } catch (err) {
-      console.error('Failed to reject:', err);
       toast.error(err.response?.data?.message || 'Failed to reject', { id: loadingToast });
     } finally {
       setIsProcessing(false);
@@ -142,13 +146,43 @@ export default function PostApproval() {
         return;
       }
     } else {
-      if (!newJob.title.trim() || !newJob.company.trim() || !newJob.location.trim() || !newJob.description.trim() || !newJob.experience) {
-        toast.error('Please fill in all required job fields');
+      // Validate required fields
+      if (!newJob.title.trim()) {
+        toast.error('Job title is required');
         return;
       }
+      if (!newJob.company.trim()) {
+        toast.error('Company name is required');
+        return;
+      }
+      if (!newJob.location.trim()) {
+        toast.error('Location is required');
+        return;
+      }
+      if (!newJob.description.trim()) {
+        toast.error('Job description is required');
+        return;
+      }
+      if (!newJob.experience) {
+        toast.error('Experience is required');
+        return;
+      }
+
       const expValue = parseInt(newJob.experience);
       if (isNaN(expValue) || expValue < 0 || expValue > 60) {
         toast.error('Experience must be between 0 and 60 years');
+        return;
+      }
+
+      const salaryValue = parseFloat(newJob.salary);
+      if (newJob.salary && (isNaN(salaryValue) || salaryValue < 0)) {
+        toast.error('Invalid salary amount');
+        return;
+      }
+
+      const qtyValue = parseInt(newJob.quantity);
+      if (isNaN(qtyValue) || qtyValue < 1) {
+        toast.error('Quantity must be at least 1');
         return;
       }
     }
@@ -163,11 +197,11 @@ export default function PostApproval() {
         const formData = new FormData();
         formData.append('content', newPost.content);
         if (newPost.feeling) formData.append('feeling', newPost.feeling);
-        
+
         if (newPost.images.length > 0) {
           newPost.images.forEach(img => formData.append('images', img));
         }
-        
+
         if (newPost.video) {
           formData.append('video', newPost.video);
         }
@@ -176,7 +210,7 @@ export default function PostApproval() {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       } else {
-        await api.post('/jobs', {
+        const jobData = {
           title: newJob.title.trim(),
           company: newJob.company.trim(),
           location: newJob.location.trim(),
@@ -187,9 +221,24 @@ export default function PostApproval() {
           duration: newJob.duration.trim(),
           description: newJob.description.trim(),
           experience: parseInt(newJob.experience) || 0
-        });
+        };
+
+        // Only add latitude/longitude if they have values
+        if (newJob.latitude && newJob.latitude.trim()) {
+          jobData.latitude = newJob.latitude.trim();
+        }
+        if (newJob.longitude && newJob.longitude.trim()) {
+          jobData.longitude = newJob.longitude.trim();
+        }
+
+        // Add selected amenities
+        if (selectedAmenities.length > 0) {
+          jobData.amenities = selectedAmenities;
+        }
+
+        await api.post('/jobs', jobData);
       }
-      
+
       // Reset form
       setCreateType('post');
       setNewPost({ content: '', feeling: '', images: [], video: null });
@@ -197,6 +246,8 @@ export default function PostApproval() {
         title: '',
         company: '',
         location: '',
+        latitude: '',
+        longitude: '',
         quantity: '1',
         salary: '',
         salaryType: 'daily',
@@ -205,7 +256,7 @@ export default function PostApproval() {
         description: '',
         experience: ''
       });
-      toast.success(`${createType === 'post' ? 'Post' : 'Job'} created and pending approval!`, { id: loadingToast });
+      toast.success(`${createType === 'post' ? 'Post' : 'Job'} created`, { id: loadingToast });
       // Refresh the list
       fetchPendingPosts();
       // Close modal after a slight delay to show success message
@@ -214,6 +265,7 @@ export default function PostApproval() {
       }, 500);
     } catch (err) {
       console.error(`Failed to create ${createType}:`, err);
+      console.error('Error response:', err.response?.data);
       toast.error(err.response?.data?.message || `Failed to create ${createType}`, { id: loadingToast });
     } finally {
       setIsProcessing(false);
@@ -246,18 +298,12 @@ export default function PostApproval() {
   const filteredPosts = posts.filter(item => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
-    if (item.contentType === 'job') {
-      return (
-        item.title?.toLowerCase().includes(search) ||
-        item.company?.toLowerCase().includes(search) ||
-        item.description?.toLowerCase().includes(search) ||
-        item.location?.toLowerCase().includes(search)
-      );
-    }
     return (
-      item.content?.toLowerCase().includes(search) ||
-      item.posterName?.toLowerCase().includes(search) ||
-      item.feeling?.toLowerCase().includes(search)
+      item.title?.toLowerCase().includes(search) ||
+      item.company?.toLowerCase().includes(search) ||
+      item.description?.toLowerCase().includes(search) ||
+      item.location?.toLowerCase().includes(search) ||
+      item.posterName?.toLowerCase().includes(search)
     );
   });
 
@@ -279,21 +325,21 @@ export default function PostApproval() {
       <main className="dashboard-content post-approval-content">
         <header className="post-approval-header">
           <div>
-            <h1>Post & Job Approval</h1>
-            <p>Review and approve community posts and jobs before they go live</p>
+            <h1>Job Approval</h1>
+            <p>Review and approve job postings before they go live</p>
           </div>
           <div className="header-actions">
             <div className="search-bar">
               <input
                 type="text"
-                placeholder="Search posts and jobs..."
+                placeholder="Search jobs..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
-                className="create-post-btn" 
+              <button
+                className="create-post-btn"
                 onClick={() => {
                   console.log('Create Post button clicked');
                   setCreateType('post');
@@ -327,12 +373,14 @@ export default function PostApproval() {
                 <Plus size={18} />
                 Create Post
               </button>
-              <button 
-                className="create-job-btn" 
+              <button
+                className="create-job-btn"
                 onClick={() => {
                   console.log('Create Job button clicked');
                   setCreateType('job');
                   setShowCreateModal(true);
+                  setSelectedAmenities([]);
+                  fetchGroupedAmenities();
                   console.log('showCreateModal set to true');
                 }}
                 style={{
@@ -371,20 +419,8 @@ export default function PostApproval() {
 
         <div className="stats-row">
           <div className="stat-box">
-            <p className="stat-label">PENDING ITEMS</p>
+            <p className="stat-label">PENDING JOBS</p>
             <div className="stat-value">{filteredPosts.length}</div>
-          </div>
-          <div className="stat-box">
-            <p className="stat-label">POSTS</p>
-            <div className="stat-value" style={{ color: '#667eea' }}>
-              {filteredPosts.filter(p => p.contentType === 'post').length}
-            </div>
-          </div>
-          <div className="stat-box">
-            <p className="stat-label">JOBS</p>
-            <div className="stat-value" style={{ color: '#10b981' }}>
-              {filteredPosts.filter(p => p.contentType === 'job').length}
-            </div>
           </div>
           <div className="stat-box">
             <p className="stat-label">URGENT (&lt; 10 min)</p>
@@ -409,13 +445,13 @@ export default function PostApproval() {
             <div className="no-posts">
               <CheckCircle size={64} color="#10b981" />
               <h3>All caught up!</h3>
-              <p>No pending posts or jobs to review at the moment.</p>
+              <p>No pending jobs to review at the moment.</p>
             </div>
           ) : (
             filteredPosts.map((item) => {
               const timeRemaining = getTimeRemaining(item.createdAt);
               const isJob = item.contentType === 'job';
-              
+
               return (
                 <div key={item._id} className="post-card">
                   <div className="post-header">
@@ -478,10 +514,10 @@ export default function PostApproval() {
                         {item.description}
                       </p>
                       {item.isUrgent && (
-                        <div style={{ 
-                          marginTop: '12px', 
-                          padding: '8px 12px', 
-                          background: '#fef2f2', 
+                        <div style={{
+                          marginTop: '12px',
+                          padding: '8px 12px',
+                          background: '#fef2f2',
                           border: '1px solid #fecaca',
                           borderRadius: '8px',
                           display: 'inline-block'
@@ -495,8 +531,8 @@ export default function PostApproval() {
                       <p>{item.content}</p>
                       {item.video && (
                         <div className="post-video">
-                          <video 
-                            controls 
+                          <video
+                            controls
                             style={{ width: '100%', borderRadius: '8px', marginTop: '12px' }}
                             onError={(e) => {
                               console.error('Video load error:', item.video);
@@ -564,7 +600,7 @@ export default function PostApproval() {
         </div>
 
         {showCreateModal && (
-          <div 
+          <div
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 console.log('Modal overlay clicked, closing modal');
@@ -590,7 +626,7 @@ export default function PostApproval() {
               boxSizing: 'border-box'
             }}
           >
-            <div 
+            <div
               onClick={(e) => e.stopPropagation()}
               style={{
                 background: 'linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)',
@@ -617,13 +653,13 @@ export default function PostApproval() {
                   width: '48px',
                   height: '48px',
                   borderRadius: '12px',
-                  background: createType === 'post' 
+                  background: createType === 'post'
                     ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                     : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: createType === 'post' 
+                  boxShadow: createType === 'post'
                     ? '0 4px 15px rgba(102, 126, 234, 0.4)'
                     : '0 4px 15px rgba(16, 185, 129, 0.4)'
                 }}>
@@ -645,7 +681,7 @@ export default function PostApproval() {
                 color: '#6b7280',
                 margin: '0 0 28px 0'
               }}>{createType === 'post' ? 'Share your thoughts with the community' : 'Post a new job opportunity'}</p>
-              
+
               {createType === 'post' ? (
                 // POST CREATION FORM
                 <>
@@ -659,7 +695,7 @@ export default function PostApproval() {
                     }}>Post Content</label>
                     <textarea
                       value={newPost.content}
-                      onChange={(e) => setNewPost({...newPost, content: e.target.value})}
+                      onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
                       placeholder="What's on your mind?"
                       rows={5}
                       style={{
@@ -691,7 +727,7 @@ export default function PostApproval() {
                     <input
                       type="text"
                       value={newPost.feeling}
-                      onChange={(e) => setNewPost({...newPost, feeling: e.target.value})}
+                      onChange={(e) => setNewPost({ ...newPost, feeling: e.target.value })}
                       placeholder="e.g., happy, excited, grateful..."
                       style={{
                         width: '100%',
@@ -730,7 +766,7 @@ export default function PostApproval() {
                       <input
                         type="file"
                         accept="video/*"
-                        onChange={(e) => setNewPost({...newPost, video: e.target.files[0]})}
+                        onChange={(e) => setNewPost({ ...newPost, video: e.target.files[0] })}
                         style={{
                           position: 'absolute',
                           width: '100%',
@@ -743,8 +779,8 @@ export default function PostApproval() {
                       />
                       <ImageIcon size={32} color="#9ca3af" style={{ marginBottom: '8px' }} />
                       <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
-                        {newPost.video 
-                          ? `${newPost.video.name}` 
+                        {newPost.video
+                          ? `${newPost.video.name}`
                           : 'Click or drag video here'}
                       </p>
                     </div>
@@ -772,7 +808,7 @@ export default function PostApproval() {
                         type="file"
                         multiple
                         accept="image/*"
-                        onChange={(e) => setNewPost({...newPost, images: Array.from(e.target.files)})}
+                        onChange={(e) => setNewPost({ ...newPost, images: Array.from(e.target.files) })}
                         style={{
                           position: 'absolute',
                           width: '100%',
@@ -785,8 +821,8 @@ export default function PostApproval() {
                       />
                       <ImageIcon size={32} color="#9ca3af" style={{ marginBottom: '8px' }} />
                       <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
-                        {newPost.images.length > 0 
-                          ? `${newPost.images.length} image(s) selected` 
+                        {newPost.images.length > 0
+                          ? `${newPost.images.length} image(s) selected`
                           : 'Click or drag images here'}
                       </p>
                     </div>
@@ -807,7 +843,7 @@ export default function PostApproval() {
                       <input
                         type="text"
                         value={newJob.title}
-                        onChange={(e) => setNewJob({...newJob, title: e.target.value})}
+                        onChange={(e) => setNewJob({ ...newJob, title: e.target.value })}
                         placeholder="e.g., Construction Worker"
                         style={{
                           width: '100%',
@@ -834,7 +870,7 @@ export default function PostApproval() {
                       <input
                         type="text"
                         value={newJob.company}
-                        onChange={(e) => setNewJob({...newJob, company: e.target.value})}
+                        onChange={(e) => setNewJob({ ...newJob, company: e.target.value })}
                         placeholder="Company name"
                         style={{
                           width: '100%',
@@ -864,8 +900,67 @@ export default function PostApproval() {
                       <input
                         type="text"
                         value={newJob.location}
-                        onChange={(e) => setNewJob({...newJob, location: e.target.value})}
+                        onChange={(e) => setNewJob({ ...newJob, location: e.target.value })}
                         placeholder="City, State"
+                        style={{
+                          width: '100%',
+                          padding: '14px',
+                          border: '2px solid #e5e7eb',
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          boxSizing: 'border-box',
+                          outline: 'none',
+                          background: 'white'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#10b981'}
+                        onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '8px'
+                      }}>Workers Needed</label>
+                      <input
+                        type="number"
+                        value={newJob.quantity}
+                        onChange={(e) => setNewJob({ ...newJob, quantity: e.target.value })}
+                        placeholder="Number of workers"
+                        min="1"
+                        style={{
+                          width: '100%',
+                          padding: '14px',
+                          border: '2px solid #e5e7eb',
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          boxSizing: 'border-box',
+                          outline: 'none',
+                          background: 'white'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#10b981'}
+                        onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                    <div>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '8px'
+                      }}>Latitude (Optional)</label>
+                      <input
+                        type="text"
+                        value={newJob.latitude}
+                        onChange={(e) => setNewJob({ ...newJob, latitude: e.target.value })}
+                        placeholder="e.g., 21.3323"
                         style={{
                           width: '100%',
                           padding: '14px',
@@ -887,13 +982,12 @@ export default function PostApproval() {
                         fontWeight: '600',
                         color: '#374151',
                         marginBottom: '8px'
-                      }}>Workers Needed</label>
+                      }}>Longitude (Optional)</label>
                       <input
-                        type="number"
-                        value={newJob.quantity}
-                        onChange={(e) => setNewJob({...newJob, quantity: e.target.value})}
-                        placeholder="Number of workers"
-                        min="1"
+                        type="text"
+                        value={newJob.longitude}
+                        onChange={(e) => setNewJob({ ...newJob, longitude: e.target.value })}
+                        placeholder="e.g., 72.8777"
                         style={{
                           width: '100%',
                           padding: '14px',
@@ -922,7 +1016,7 @@ export default function PostApproval() {
                       <input
                         type="number"
                         value={newJob.salary}
-                        onChange={(e) => setNewJob({...newJob, salary: e.target.value})}
+                        onChange={(e) => setNewJob({ ...newJob, salary: e.target.value })}
                         placeholder="Amount"
                         min="0"
                         style={{
@@ -949,7 +1043,7 @@ export default function PostApproval() {
                       }}>Salary Type</label>
                       <select
                         value={newJob.salaryType}
-                        onChange={(e) => setNewJob({...newJob, salaryType: e.target.value})}
+                        onChange={(e) => setNewJob({ ...newJob, salaryType: e.target.value })}
                         style={{
                           width: '100%',
                           padding: '14px',
@@ -982,7 +1076,7 @@ export default function PostApproval() {
                       <input
                         type="number"
                         value={newJob.experience}
-                        onChange={(e) => setNewJob({...newJob, experience: e.target.value})}
+                        onChange={(e) => setNewJob({ ...newJob, experience: e.target.value })}
                         placeholder="Years of experience"
                         min="0"
                         max="60"
@@ -1011,7 +1105,7 @@ export default function PostApproval() {
                       <input
                         type="text"
                         value={newJob.duration}
-                        onChange={(e) => setNewJob({...newJob, duration: e.target.value})}
+                        onChange={(e) => setNewJob({ ...newJob, duration: e.target.value })}
                         placeholder="e.g., 3 months, Permanent"
                         style={{
                           width: '100%',
@@ -1039,7 +1133,7 @@ export default function PostApproval() {
                     }}>Job Description *</label>
                     <textarea
                       value={newJob.description}
-                      onChange={(e) => setNewJob({...newJob, description: e.target.value})}
+                      onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
                       placeholder="Describe the job requirements, responsibilities, and qualifications..."
                       rows={5}
                       style={{
@@ -1060,6 +1154,192 @@ export default function PostApproval() {
                     />
                   </div>
 
+                  {/* Amenities Section */}
+                  <div style={{ marginBottom: "24px" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        color: "#374151",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      Amenities & Benefits (Optional)
+
+                      {selectedAmenities.length > 0 && (
+                        <span
+                          style={{
+                            marginLeft: "8px",
+                            fontSize: "12px",
+                            color: "#6b7280",
+                            fontWeight: "400",
+                          }}
+                        >
+                          ({selectedAmenities.length} selected)
+                        </span>
+                      )}
+                    </label>
+
+                    {loadingAmenities ? (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "20px",
+                          color: "#6b7280",
+                        }}
+                      >
+                        Loading amenities...
+                      </div>
+                    ) : groupedAmenities.length === 0 ? (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "20px",
+                          color: "#9ca3af",
+                          border: "1px dashed #d1d5db",
+                          borderRadius: "10px",
+                        }}
+                      >
+                        No amenities available
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          maxHeight: "280px",
+                          overflowY: "auto",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "12px",
+                          padding: "16px",
+                          background: "#fafafa",
+                        }}
+                      >
+                        {groupedAmenities.map((group) => (
+                          <div key={group.category} style={{ marginBottom: "22px" }}>
+                            {/* Category Header */}
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                marginBottom: "12px",
+                              }}
+                            >
+                              <h4
+                                style={{
+                                  margin: 0,
+                                  fontSize: "16px",
+                                  fontWeight: "700",
+                                  color: "#1f2937",
+                                }}
+                              >
+                                {group.icon} {group.category}
+                              </h4>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const ids = group.amenities.map((a) => a._id);
+
+                                  const allSelected = ids.every((id) =>
+                                    selectedAmenities.includes(id)
+                                  );
+
+                                  if (allSelected) {
+                                    setSelectedAmenities((prev) =>
+                                      prev.filter((id) => !ids.includes(id))
+                                    );
+                                  } else {
+                                    setSelectedAmenities((prev) => [
+                                      ...new Set([...prev, ...ids]),
+                                    ]);
+                                  }
+                                }}
+                                style={{
+                                  border: "none",
+                                  background: "none",
+                                  color: "#2563eb",
+                                  cursor: "pointer",
+                                  fontSize: "13px",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                {group.amenities.every((a) =>
+                                  selectedAmenities.includes(a._id)
+                                )
+                                  ? "Unselect All"
+                                  : "Select All"}
+                              </button>
+                            </div>
+
+                            {/* Amenities */}
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))",
+                                gap: "10px",
+                              }}
+                            >
+                              {group.amenities.map((amenity) => {
+                                const isSelected = selectedAmenities.includes(amenity._id);
+
+                                return (
+                                  <label
+                                    key={amenity._id}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "10px",
+                                      padding: "10px 12px",
+                                      border: `1px solid ${isSelected ? "#10b981" : "#e5e7eb"
+                                        }`,
+                                      borderRadius: "8px",
+                                      cursor: "pointer",
+                                      background: isSelected ? "#ecfdf5" : "#fff",
+                                      transition: "all .2s",
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => {
+                                        if (isSelected) {
+                                          setSelectedAmenities((prev) =>
+                                            prev.filter((id) => id !== amenity._id)
+                                          );
+                                        } else {
+                                          setSelectedAmenities((prev) => [
+                                            ...prev,
+                                            amenity._id,
+                                          ]);
+                                        }
+                                      }}
+                                      style={{
+                                        width: "18px",
+                                        height: "18px",
+                                        cursor: "pointer",
+                                      }}
+                                    />
+
+                                    <span
+                                      style={{
+                                        fontSize: "14px",
+                                        color: "#374151",
+                                        fontWeight: "500",
+                                      }}
+                                    >
+                                      {amenity.name}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div style={{ marginBottom: '28px' }}>
                     <label style={{
                       display: 'flex',
@@ -1073,7 +1353,7 @@ export default function PostApproval() {
                       <input
                         type="checkbox"
                         checked={newJob.isUrgent}
-                        onChange={(e) => setNewJob({...newJob, isUrgent: e.target.checked})}
+                        onChange={(e) => setNewJob({ ...newJob, isUrgent: e.target.checked })}
                         style={{ margin: 0 }}
                       />
                       🔥 Mark as Urgent Hiring
@@ -1123,11 +1403,11 @@ export default function PostApproval() {
                 <button
                   onClick={handleCreatePost}
                   disabled={isProcessing || (
-                    createType === 'post' 
+                    createType === 'post'
                       ? !newPost.content.trim()
-                      : !newJob.title.trim() || !newJob.company.trim() || !newJob.location.trim() || 
-                        !newJob.description.trim() || !newJob.experience ||
-                        isNaN(parseInt(newJob.experience)) || parseInt(newJob.experience) < 0
+                      : !newJob.title.trim() || !newJob.company.trim() || !newJob.location.trim() ||
+                      !newJob.description.trim() || !newJob.experience ||
+                      isNaN(parseInt(newJob.experience)) || parseInt(newJob.experience) < 0
                   )}
                   style={{
                     padding: '10px 24px',
@@ -1136,22 +1416,22 @@ export default function PostApproval() {
                     fontSize: '15px',
                     fontWeight: '600',
                     cursor: (isProcessing || (
-                      createType === 'post' 
+                      createType === 'post'
                         ? !newPost.content.trim()
-                        : !newJob.title.trim() || !newJob.company.trim() || !newJob.location.trim() || 
-                          !newJob.description.trim() || !newJob.experience ||
-                          isNaN(parseInt(newJob.experience)) || parseInt(newJob.experience) < 0
+                        : !newJob.title.trim() || !newJob.company.trim() || !newJob.location.trim() ||
+                        !newJob.description.trim() || !newJob.experience ||
+                        isNaN(parseInt(newJob.experience)) || parseInt(newJob.experience) < 0
                     )) ? 'not-allowed' : 'pointer',
                     background: createType === 'post'
                       ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                       : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     color: 'white',
                     opacity: (isProcessing || (
-                      createType === 'post' 
+                      createType === 'post'
                         ? !newPost.content.trim()
-                        : !newJob.title.trim() || !newJob.company.trim() || !newJob.location.trim() || 
-                          !newJob.description.trim() || !newJob.experience ||
-                          isNaN(parseInt(newJob.experience)) || parseInt(newJob.experience) < 0
+                        : !newJob.title.trim() || !newJob.company.trim() || !newJob.location.trim() ||
+                        !newJob.description.trim() || !newJob.experience ||
+                        isNaN(parseInt(newJob.experience)) || parseInt(newJob.experience) < 0
                     )) ? 0.6 : 1,
                     transition: 'all 0.2s'
                   }}
@@ -1164,7 +1444,7 @@ export default function PostApproval() {
         )}
 
         {showRejectModal && (
-          <div 
+          <div
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 setShowRejectModal(false);
@@ -1188,7 +1468,7 @@ export default function PostApproval() {
               boxSizing: 'border-box'
             }}
           >
-            <div 
+            <div
               onClick={(e) => e.stopPropagation()}
               style={{
                 background: 'white',

@@ -224,3 +224,238 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+
+/* Responsive Fixes */
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+.verification-overview-page {
+  width: 100%;
+}
+
+.verification-overview-main {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Header */
+
+.verification-overview-header {
+  flex-wrap: wrap;
+}
+
+.verification-overview-title {
+  min-width: 0;
+}
+
+.verification-overview-title h1 {
+  word-break: break-word;
+}
+
+.verification-overview-title p {
+  word-break: break-word;
+}
+
+/* Cards */
+
+.verification-chart-card {
+  min-width: 0;
+}
+
+.chart-card-head {
+  min-width: 0;
+}
+
+.chart-card-head div:last-child {
+  min-width: 0;
+}
+
+.chart-card-head h2 {
+  word-break: break-word;
+}
+
+.chart-card-head p {
+  word-break: break-word;
+}
+
+/* Charts */
+
+.chart-visual {
+  width: 100%;
+}
+
+.worker-bars {
+  width: 100%;
+  gap: 12px;
+}
+
+.worker-bars span {
+  flex: 1;
+  max-width: 40px;
+  min-width: 16px;
+}
+
+/* Buttons */
+
+.chart-link-btn-worker,
+.chart-link-btn-vendor {
+  width: 100%;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.chart-link-btn-worker:hover,
+.chart-link-btn-vendor:hover {
+  border-color: #2f63db;
+  background: #f2f6ff;
+}
+
+/* Large Tablets */
+
+@media (max-width: 1024px) {
+
+  .verification-overview-main {
+    margin-left: 0;
+    padding: 20px 16px;
+  }
+
+  .verification-overview-title h1 {
+    font-size: 30px;
+  }
+
+  .verification-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tablets */
+
+@media (max-width: 768px) {
+
+  .verification-overview-main {
+    padding: 16px 12px;
+  }
+
+  .verification-overview-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .verification-overview-title h1 {
+    font-size: 26px;
+  }
+
+  .verification-overview-title p {
+    font-size: 14px;
+  }
+
+  .verification-chart-card {
+    padding: 14px;
+  }
+
+  .chart-card-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chart-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .chart-card-head h2 {
+    font-size: 18px;
+  }
+
+  .chart-visual {
+    min-height: 180px;
+  }
+
+  .worker-bars {
+    padding: 16px;
+  }
+
+  .chart-link-btn-worker,
+  .chart-link-btn-vendor {
+    margin-top: 12px;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 480px) {
+
+  .verification-overview-main {
+    padding: 12px 10px;
+  }
+
+  .verification-overview-title h1 {
+    font-size: 22px;
+  }
+
+  .verification-overview-title p {
+    font-size: 13px;
+  }
+
+  .verification-chart-card {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .chart-card-head h2 {
+    font-size: 16px;
+  }
+
+  .chart-card-head p {
+    font-size: 12px;
+  }
+
+  .chart-visual {
+    min-height: 150px;
+  }
+
+  .worker-bars {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .worker-bars span {
+    min-width: 12px;
+  }
+
+  .chart-link-btn-worker,
+  .chart-link-btn-vendor {
+    font-size: 13px;
+    height: auto;
+    min-height: 42px;
+    padding: 10px 14px;
+  }
+}
+
+/* Extra Small Phones */
+
+@media (max-width: 360px) {
+
+  .verification-overview-title h1 {
+    font-size: 20px;
+  }
+
+  .chart-card-head h2 {
+    font-size: 15px;
+  }
+
+  .chart-visual {
+    min-height: 130px;
+  }
+
+  .worker-bars span {
+    min-width: 10px;
+  }
+}

@@ -18,6 +18,8 @@ import SystemMonitoring from './pages/SystemMonitoring';
 import AdminSettings from './pages/AdminSettings';
 import PlatformSettings from './pages/PlatformSettings';
 import PostApproval from './pages/PostApproval';
+import RevenuePage from './pages/RevenuePage'
+import SupportPage from './pages/SupportPage'
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('adminToken') || localStorage.getItem('adminUser');
@@ -67,6 +69,14 @@ function App() {
           element={
             <ProtectedRoute>
               <UserDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/revenue"
+          element={
+            <ProtectedRoute>
+              <RevenuePage/>
             </ProtectedRoute>
           }
         />
@@ -186,7 +196,7 @@ function App() {
           path="/admin/support"
           element={
             <ProtectedRoute>
-              <PlaceholderPage />
+              <SupportPage />
             </ProtectedRoute>
           }
         />

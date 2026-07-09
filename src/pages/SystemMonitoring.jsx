@@ -390,8 +390,13 @@ export default function SystemMonitoring() {
                 </tr>
               </thead>
               <tbody>
+<<<<<<< HEAD
                 {logs.length > 0 ? logs.map((log) => (
                   <tr key={log.id}>
+=======
+                {logs.length > 0 ? logs.map((log, idx) => (
+                  <tr key={`${log.id}_${idx}`}>
+>>>>>>> db216af (Support Page has been added)
                     <td>{new Date(log.timestamp).toLocaleString()}</td>
                     <td>{log.service}</td>
                     <td>

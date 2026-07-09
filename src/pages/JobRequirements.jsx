@@ -186,7 +186,7 @@ export default function JobRequirements() {
   };
 
   const generateCSV = (data) => {
-    const headers = ['Name', 'Phone', 'Email', 'Role', 'Experience', 'Salary Type', 'Salary', 'Work State', 'Work City', 'Skills', 'Status', 'Applied'];
+    const headers = ['Name', 'Phone', 'Email', 'Role', 'Experience', 'Salary Type', 'Salary', 'Work State', 'Work City', 'Skills', 'Location'];
     const rows = data.map(app => [
       app.name || '',
       app.phone || '',
@@ -197,10 +197,8 @@ export default function JobRequirements() {
       app.salary || '',
       app.workState || '',
       app.city || '',
-      app.primarySkill || '',
-      (app.additionalSkills || []).join('; '),
-      app.status || '',
-      app.applied || ''
+      (app.skills || []).join('; '),
+      app.location
     ]);
 
     const csvContent = [
@@ -526,6 +524,46 @@ export default function JobRequirements() {
                       <p className="label-upper">Urgent</p>
                       <p className="req-value">{job.isUrgent ? "Yes" : "No"}</p>
                     </div>
+                    {job.amenities?.length > 0 && (
+                      <div className="req-section amenities-section">
+                        <p className="label-upper">Amenities & Benefits</p>
+
+                        {Object.entries(
+                          job.amenities.reduce((acc, amenity) => {
+                            if (!acc[amenity.category]) {
+                              acc[amenity.category] = [];
+                            }
+
+                            acc[amenity.category].push(amenity);
+
+                            return acc;
+                          }, {})
+                        ).map(([category, amenities]) => (
+                          <div key={category} style={{ marginBottom: "14px" }}>
+                            <div
+                              style={{
+                                fontWeight: 600,
+                                marginBottom: "8px",
+                                color: "#374151",
+                              }}
+                            >
+                              {amenities[0].icon} {category}
+                            </div>
+
+                            <div className="amenities-list">
+                              {amenities.map((amenity) => (
+                                <span
+                                  key={amenity._id}
+                                  className="amenity-chip"
+                                >
+                                  ✓ {amenity.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -670,7 +708,7 @@ export default function JobRequirements() {
                         <th>Experience</th>
                         <th>Location</th>
                         <th>Skills</th>
-                        <th>Daily Rate</th>
+                        <th>Salary</th>
                         <th>Applied</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -714,7 +752,8 @@ export default function JobRequirements() {
                             </div>
                           </td>
                           <td className="modal-rate">
-                            {applicant.dailyRate ? `₹${applicant.dailyRate}` : 'Not specified'}
+                            {applicant.salary ? `₹${applicant.salary}` : 'Not specified'}
+                            {applicant.salaryType && <span style={{ fontSize: '12px', color: '#666' }}> / {applicant.salaryType}</span>}
                           </td>
                           <td className="modal-applied-time">{applicant.applied}</td>
                           <td><StatusBadge status={applicant.status} /></td>
@@ -809,8 +848,11 @@ export default function JobRequirements() {
                           <span className="detail-value">{selectedApplicant.experience || 'Not specified'}</span>
                         </div>
                         <div className="detail-item">
-                          <span className="detail-label">Daily Rate:</span>
-                          <span className="detail-value">{selectedApplicant.dailyRate ? `₹${selectedApplicant.dailyRate}` : 'Not specified'}</span>
+                          <span className="detail-label">Salary:</span>
+                          <span className="detail-value">
+                            {selectedApplicant.salary ? `₹${selectedApplicant.salary}` : 'Not specified'}
+                            {selectedApplicant.salaryType && ` / ${selectedApplicant.salaryType}`}
+                          </span>
                         </div>
                         <div className="detail-item">
                           <span className="detail-label">Applied On:</span>

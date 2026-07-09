@@ -13,10 +13,6 @@ export default function AdminLogin() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotStep, setForgotStep] = useState(1);
   const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotPhone, setForgotPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [forgotMessage, setForgotMessage] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const navigate = useNavigate();
@@ -65,68 +61,31 @@ export default function AdminLogin() {
     setForgotLoading(true);
 
     try {
-      const { data } = await api.post('/auth/forgot-password', {
+      const response = await api.post('/auth/admin-forgot-password', {
         email: forgotEmail,
-        phone: forgotPhone,
       });
-      setForgotMessage(data.message || 'OTP sent to your email');
-      setForgotStep(2);
-    } catch (err) {
-      setForgotMessage(err.response?.data?.message || 'Failed to send OTP');
-    } finally {
-      setForgotLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    setForgotMessage('');
-
-    if (newPassword !== confirmPassword) {
-      setForgotMessage('Passwords do not match');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setForgotMessage('Password must be at least 6 characters');
-      return;
-    }
-
-    setForgotLoading(true);
-
-    try {
-      const { data } = await api.post('/auth/reset-password', {
-        email: forgotEmail,
-        phone: forgotPhone,
-        otp: otp,
-        newPassword: newPassword,
-      });
-      setForgotMessage(data.message || 'Password reset successfully');
+      
+      setForgotMessage(response.data.message || 'Temporary password sent to your email');
+      
+      // Close modal after 2 seconds on success
       setTimeout(() => {
         setShowForgotPassword(false);
-        setForgotStep(1);
         setForgotEmail('');
-        setForgotPhone('');
-        setOtp('');
-        setNewPassword('');
-        setConfirmPassword('');
         setForgotMessage('');
       }, 2000);
     } catch (err) {
-      setForgotMessage(err.response?.data?.message || 'Failed to reset password');
+      setForgotMessage(err.response?.data?.message || 'Failed to send temporary password');
     } finally {
       setForgotLoading(false);
     }
   };
+
+
 
   const closeForgotModal = () => {
     setShowForgotPassword(false);
     setForgotStep(1);
     setForgotEmail('');
-    setForgotPhone('');
-    setOtp('');
-    setNewPassword('');
-    setConfirmPassword('');
     setForgotMessage('');
   };
 
@@ -272,6 +231,17 @@ export default function AdminLogin() {
           <div className="status-indicator"></div>
           ALL SYSTEMS OPERATIONAL
         </motion.div>
+
+        <motion.div
+          className="login-smartnex-footer"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+        >
+          <span className="login-powered-label">Powered by</span>
+          <img src="/smartnexLogo.png" alt="Smartnex Technologies" className="login-smartnex-logo" />
+          <span className="login-smartnex-name">Smartnex Technologies Pvt Ltd</span>
+        </motion.div>
       </motion.div>
 
       {showForgotPassword && (
@@ -314,7 +284,7 @@ export default function AdminLogin() {
             {forgotStep === 1 ? (
               <>
                 <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '600' }}>Forgot Password</h3>
-                <p style={{ margin: '0 0 24px 0', color: '#6b7280', fontSize: '14px' }}>Enter your email and phone number to receive an OTP</p>
+                <p style={{ margin: '0 0 24px 0', color: '#6b7280', fontSize: '14px' }}>Enter your email to receive your password</p>
 
                 {forgotMessage && (
                   <div style={{
@@ -347,23 +317,6 @@ export default function AdminLogin() {
                       }}
                     />
                   </div>
-                  <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>Phone Number</label>
-                    <input
-                      type="tel"
-                      value={forgotPhone}
-                      onChange={(e) => setForgotPhone(e.target.value)}
-                      placeholder="Enter phone number"
-                      required
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
                   <button
                     type="submit"
                     disabled={forgotLoading}
@@ -380,101 +333,11 @@ export default function AdminLogin() {
                       opacity: forgotLoading ? 0.6 : 1
                     }}
                   >
-                    {forgotLoading ? 'Sending...' : 'Send OTP'}
+                    {forgotLoading ? 'Sending...' : 'Send Password'}
                   </button>
                 </form>
               </>
-            ) : (
-              <>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '600' }}>Reset Password</h3>
-                <p style={{ margin: '0 0 24px 0', color: '#6b7280', fontSize: '14px' }}>Enter OTP and your new password</p>
-
-                {forgotMessage && (
-                  <div style={{
-                    padding: '12px',
-                    background: forgotMessage.includes('Failed') || forgotMessage.includes('not match') || forgotMessage.includes('at least') ? '#fee2e2' : '#d1fae5',
-                    color: forgotMessage.includes('Failed') || forgotMessage.includes('not match') || forgotMessage.includes('at least') ? '#991b1b' : '#065f46',
-                    borderRadius: '8px',
-                    marginBottom: '16px',
-                    fontSize: '14px'
-                  }}>
-                    {forgotMessage}
-                  </div>
-                )}
-
-                <form onSubmit={handleResetPassword}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>OTP</label>
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      placeholder="Enter 6-digit OTP"
-                      required
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>New Password</label>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password"
-                      required
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>Confirm Password</label>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm new password"
-                      required
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={forgotLoading}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      background: '#2563eb',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: forgotLoading ? 'not-allowed' : 'pointer',
-                      opacity: forgotLoading ? 0.6 : 1
-                    }}
-                  >
-                    {forgotLoading ? 'Resetting...' : 'Reset Password'}
-                  </button>
-                </form>
-              </>
-            )}
+            ) : null}
           </motion.div>
         </div>
       )}

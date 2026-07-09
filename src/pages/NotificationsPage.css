@@ -1458,3 +1458,305 @@
     justify-content: center;
   }
 }
+
+
+/* ==================================================
+   FINAL RESPONSIVE FIXES - NOTIFICATIONS PAGE
+================================================== */
+
+/* Prevent horizontal overflow */
+html,
+body,
+.notifications-page-shell,
+.notifications-content {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+.notifications-content {
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* Sidebar Fix */
+@media (min-width: 1081px) {
+    .notifications-content {
+        margin-left: 260px;
+        width: calc(100% - 260px);
+    }
+}
+
+@media (max-width: 1080px) {
+    .notifications-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+}
+
+/* Topbar */
+@media (max-width: 992px) {
+
+    .notifications-topbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+        padding: 16px;
+        margin: 0 -12px;
+    }
+
+    .notifications-topbar-right {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .notifications-search {
+        width: 100%;
+    }
+
+    .mini-icon-btn {
+        flex-shrink: 0;
+    }
+}
+
+/* Title section */
+@media (max-width: 992px) {
+
+    .notifications-title-row {
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .title-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .ghost-action-btn,
+    .primary-action-btn {
+        flex: 1;
+        min-width: 180px;
+        justify-content: center;
+    }
+}
+
+/* Stats */
+@media (max-width: 768px) {
+
+    .notification-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .small-stat-card strong {
+        font-size: 28px;
+    }
+}
+
+/* Tabs */
+@media (max-width: 768px) {
+
+    .notification-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        gap: 8px;
+        scrollbar-width: thin;
+    }
+
+    .tab-btn {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+}
+
+/* Table */
+.notifications-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 992px) {
+
+    .notifications-table-wrap table {
+        min-width: 900px;
+    }
+}
+
+/* Footer */
+@media (max-width: 768px) {
+
+    .notification-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    .notification-footer p {
+        text-align: center;
+    }
+
+    .pagination {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}
+
+/* Create Modal */
+@media (max-width: 768px) {
+
+    .notification-modal-backdrop {
+        padding: 12px;
+    }
+
+    .notification-modal {
+        max-height: 95vh;
+        border-radius: 12px;
+    }
+
+    .notification-modal-header,
+    .notification-modal-body,
+    .notification-modal-footer {
+        padding: 16px;
+    }
+
+    .notification-form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .notification-modal-footer {
+        flex-direction: column;
+    }
+
+    .notification-btn-create,
+    .notification-btn-cancel {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* View Modal */
+@media (max-width: 768px) {
+
+    .notification-view-modal {
+        width: 100%;
+        max-height: 95vh;
+        border-radius: 12px;
+    }
+
+    .view-modal-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .notification-view-body {
+        padding: 16px;
+    }
+
+    .view-details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .notification-modal-footer {
+        flex-direction: column;
+    }
+
+    .notification-btn-mark-read,
+    .notification-btn-cancel {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Delete Modal */
+@media (max-width: 768px) {
+
+    .notification-delete-modal {
+        width: 100%;
+        border-radius: 12px;
+    }
+
+    .delete-modal-body {
+        padding: 0 16px 16px;
+    }
+
+    .preview-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .preview-meta {
+        flex-wrap: wrap;
+    }
+
+    .notification-btn-delete,
+    .notification-btn-cancel {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Phones */
+@media (max-width: 480px) {
+
+    .notifications-content {
+        padding: 0 10px 16px;
+    }
+
+    .notifications-topbar h1 {
+        font-size: 24px;
+    }
+
+    .notifications-title-row h2 {
+        font-size: 28px;
+    }
+
+    .notifications-title-row p {
+        font-size: 14px;
+    }
+
+    .small-stat-card {
+        padding: 12px;
+    }
+
+    .small-stat-card strong {
+        font-size: 24px;
+    }
+
+    .small-stat-card p {
+        font-size: 13px;
+    }
+
+    .pagination button {
+        min-width: 34px;
+        height: 34px;
+    }
+
+    .notification-modal-header h3 {
+        font-size: 16px;
+    }
+
+    .view-section h4 {
+        font-size: 16px;
+    }
+}
+
+/* Very Small Devices */
+@media (max-width: 360px) {
+
+    .notifications-content {
+        padding: 0 8px 14px;
+    }
+
+    .notifications-topbar h1 {
+        font-size: 22px;
+    }
+
+    .notifications-title-row h2 {
+        font-size: 24px;
+    }
+
+    .ghost-action-btn,
+    .primary-action-btn {
+        min-width: 100%;
+    }
+}

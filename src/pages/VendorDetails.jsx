@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar';
 import { useToast } from '../components/ToastProvider';
 import api from '../api/axios';
 import './VendorDetails.css';
-const BACKEND_URL=import.meta.env.VITE_API_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function VendorDetails() {
   const { id } = useParams();
@@ -129,10 +129,12 @@ export default function VendorDetails() {
       toast.showToast('File not available', { type: 'error' });
       return;
     }
-    const url = fileUrl.startsWith('http') ? fileUrl : `${BACKEND_URL}/${fileUrl}`;
+
     const a = document.createElement('a');
-    a.href = url;
+    a.href = fileUrl;
+    a.target = '_blank';
     a.download = fileName || 'document';
+
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -143,8 +145,7 @@ export default function VendorDetails() {
       toast.showToast('File not available', { type: 'error' });
       return;
     }
-    const url = fileUrl.startsWith('http') ? fileUrl : `${BACKEND_URL}/${fileUrl}`;
-    window.open(url, '_blank');
+    window.open(fileUrl, '_blank');
   };
 
   const getStatus = () => {
@@ -167,12 +168,9 @@ export default function VendorDetails() {
     rejected: 'status-pill rejected',
   };
 
-  const vendorImage = vendor?.companyLogo || vendor?.profileImage;
-  const vendorImageUrl = vendorImage
-    ? (vendorImage.startsWith('http')
-      ? vendorImage
-      : `${BACKEND_URL}/${vendorImage.replace(/\\/g, '/')}`)
-    : null;
+  const vendorImageUrl = vendor?.companyLogo || vendor?.profileImage
+    ? vendor.companyLogo || vendor.profileImage
+    : vendor ? `https://ui-avatars.com/api/?name=${encodeURIComponent(vendor?.name || "Vendor")}&background=random&color=fff` : null;
 
   return (
     <div className="dashboard-page">
@@ -189,7 +187,24 @@ export default function VendorDetails() {
             <div className="vendor-top-left" style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', flex: 1 }}>
               <div className="vendor-logo" style={{ position: 'relative' }}>
                 {vendorImageUrl ? (
-                  <img src={vendorImageUrl} alt="Vendor Logo" style={{ width: '120px', height: '120px', borderRadius: '16px', objectFit: 'cover', border: '3px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                  <img
+                    src={vendorImageUrl}
+                    alt="Vendor Logo"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                        vendor?.name || "Vendor"
+                      )}&background=random&color=fff`;
+                    }}
+                    style={{
+                      width: '120px',
+                      height: '120px',
+                      borderRadius: '16px',
+                      objectFit: 'cover',
+                      border: '3px solid #e5e7eb',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    }}
+                  />
                 ) : (
                   <div className="vendor-placeholder-logo" style={{ width: '120px', height: '120px', borderRadius: '16px', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}>
                     <Building size={48} />
@@ -206,12 +221,18 @@ export default function VendorDetails() {
                     Designation: <strong style={{ color: '#1f2937', textTransform: 'uppercase' }}>{vendor?.role ? vendor.role : '—'}</strong>
                   </span>
                 </div>
-                {vendor?.adminRating && getStatus() === 'verified' && (
-                  <div className="vendor-rating" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', borderRadius: '8px', border: '1px solid #fbbf24' }}>
-                    <span className="rating-stars" style={{ fontSize: '16px' }}>{'⭐'.repeat(vendor.adminRating)}</span>
-                    <span className="rating-value" style={{ fontSize: '14px', fontWeight: '600', color: '#92400e' }}>{vendor.adminRating}/5</span>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+                  {vendor?.adminRating && getStatus() === 'verified' && (
+                    <div className="vendor-rating" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', borderRadius: '8px', border: '1px solid #fbbf24' }}>
+                      <span className="rating-stars" style={{ fontSize: '16px' }}>{'⭐'.repeat(vendor.adminRating)}</span>
+                      <span className="rating-value" style={{ fontSize: '14px', fontWeight: '600', color: '#92400e' }}>{vendor.adminRating}/5</span>
+                    </div>
+                  )}
+                  <div className="vendor-subscription" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: vendor?.subscription ? 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)' : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)', borderRadius: '8px', border: vendor?.subscription ? '1px solid #10b981' : '1px solid #ef4444' }}>
+                    <span style={{ fontSize: '14px' }}>{vendor?.subscription ? '✓' : '✕'}</span>
+                    <span className="subscription-value" style={{ fontSize: '14px', fontWeight: '600', color: vendor?.subscription ? '#065f46' : '#991b1b' }}>{vendor?.subscription ? 'SUBSCRIBED' : 'NOT SUBSCRIBED'}</span>
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
@@ -407,23 +428,36 @@ export default function VendorDetails() {
                     </div>
                   )}
 
-                  {vendor.gstNumber && (
+                  {vendor.gstCertificate && (
                     <div className="document-row">
                       <div className="document-meta">
                         <div className="doc-icon">
                           <FileText size={18} />
                         </div>
                         <div>
-                          <div className="doc-title">GST Number</div>
-                          <div className="doc-size">{vendor.gstNumber}</div>
+                          <div className="doc-title">GST Certificate</div>
+                          <div className="doc-size">Document</div>
                         </div>
                       </div>
-                      <button className="doc-action">Verified</button>
+                      <div className="doc-actions">
+                        <button
+                          className="doc-action"
+                          onClick={() => handleViewFile(vendor.gstCertificate)}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="doc-action"
+                          onClick={() => handleDownloadFile(vendor.panCardImage, 'pan-card')}
+                        >
+                          <Download size={16} />
+                          Download
+                        </button>
+                      </div>
                     </div>
                   )}
 
-
-                  {!vendor.panCardImage && !vendor.gstNumber && !vendor.companyLogo && (
+                  {!vendor.panCardImage&& !vendor.gstCertificate && (
                     <div className="no-documents">
                       <p>No documents uploaded yet</p>
                     </div>

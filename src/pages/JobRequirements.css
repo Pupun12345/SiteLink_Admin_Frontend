@@ -164,15 +164,18 @@ img { display: block; }
 
 /* ── Topbar ── */
 .topbar {
-  height: 60px;
+  height: auto;
+  min-height: 60px;
   background: rgba(255,255,255,0.88);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
+  padding: 10px 32px;
   position: sticky; top: 0; z-index: 10;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .breadcrumb {
@@ -194,6 +197,7 @@ img { display: block; }
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .search-wrapper {
@@ -405,6 +409,33 @@ img { display: block; }
   font-size: 13.5px;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.amenities-section {
+  grid-column: 1 / -1;
+}
+
+.amenities-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.amenity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #667eea22 0%, #764ba222 100%);
+  border: 1px solid rgba(102, 126, 234, 0.25);
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4a3f7a;
+}
+
+.amenity-icon {
+  font-size: 14px;
 }
 
 .equipment-section {
@@ -1310,3 +1341,536 @@ img { display: block; }
   }
 }
 
+/* ==================================================
+   FINAL MOBILE FIXES FOR JOB REQUIREMENTS PAGE
+   Add this at the END of JobRequirements.css
+================================================== */
+
+/* Prevent content clipping */
+html,
+body {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+.app-shell,
+.main,
+.content,
+.dashboard-grid,
+.left-col,
+.right-col {
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* Sidebar Fix */
+@media (min-width: 1101px) {
+    .main {
+        margin-left: var(--sidebar-width);
+        width: calc(100% - var(--sidebar-width));
+    }
+}
+
+@media (max-width: 1100px) {
+    .main {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+}
+
+/* Content */
+.content {
+    max-width: 100%;
+    padding: 24px;
+}
+
+/* Dashboard Layout */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.left-col,
+.right-col {
+    overflow: visible;
+}
+
+/* Desktop */
+@media (min-width: 1200px) {
+    .dashboard-grid {
+        grid-template-columns: minmax(0, 1fr) 380px;
+    }
+}
+
+/* ==================================================
+   CARD FIXES
+================================================== */
+
+.card {
+    width: 100%;
+    overflow: visible;
+}
+
+.card-body,
+.card-header,
+.card-footer {
+    min-width: 0;
+}
+
+/* ==================================================
+   JOB DETAILS FIX
+================================================== */
+
+.req-grid {
+    width: 100%;
+}
+
+.req-section {
+    min-width: 0;
+    overflow: visible;
+}
+
+.req-value,
+.location-name,
+.location-address,
+.description-text,
+.job-meta,
+.posted-meta,
+.title-row h1 {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+/* ==================================================
+   LOCATION FIX
+================================================== */
+
+.location-body {
+    width: 100%;
+}
+
+.location-info {
+    min-width: 0;
+}
+
+.directions-btn {
+    flex-wrap: wrap;
+}
+
+/* ==================================================
+   DESCRIPTION FIX
+================================================== */
+
+.description-text {
+    max-width: 100%;
+    overflow: visible;
+    white-space: pre-wrap;
+    line-height: 1.7;
+}
+
+/* ==================================================
+   APPLICANT TABLE FIX
+================================================== */
+
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.applicant-table {
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .applicant-table {
+        min-width: 700px;
+    }
+}
+
+/* ==================================================
+   TABLETS
+================================================== */
+
+@media (max-width: 768px) {
+
+    .content {
+        padding: 16px;
+    }
+
+    .page-title {
+        margin-bottom: 20px;
+    }
+
+    .title-row {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .title-row h1 {
+        font-size: 24px;
+    }
+
+    .posted-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .card-header,
+    .card-body,
+    .card-footer {
+        padding: 16px;
+    }
+
+    /* STACK JOB DETAILS */
+    .req-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .req-section {
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--bg);
+    }
+
+    .location-body {
+        flex-direction: column;
+    }
+
+    .map-thumb {
+        width: 100%;
+        height: 180px;
+    }
+
+    .location-info {
+        width: 100%;
+    }
+
+    .directions-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ==================================================
+   MOBILE PHONES
+================================================== */
+
+@media (max-width: 480px) {
+
+    .content {
+        padding: 12px;
+    }
+
+    .topbar {
+        padding: 12px;
+    }
+
+    .topbar-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .search-wrapper {
+        width: 100%;
+    }
+
+    .search-input {
+        width: 100%;
+        font-size: 12px;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .title-row h1 {
+        font-size: 20px;
+        line-height: 1.3;
+    }
+
+    .job-meta,
+    .posted-meta {
+        font-size: 12px;
+    }
+
+    .card {
+        border-radius: 10px;
+    }
+
+    .card-header {
+        padding: 14px;
+        font-size: 14px;
+    }
+
+    .card-body {
+        padding: 14px;
+    }
+
+    .card-footer {
+        padding: 14px;
+    }
+
+    /* IMPORTANT FIX */
+    .req-section {
+        padding: 12px;
+    }
+
+    .label-upper {
+        font-size: 10px;
+    }
+
+    .req-value {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .description-text {
+        font-size: 13px;
+    }
+
+    .location-name {
+        font-size: 13px;
+    }
+
+    .directions-btn {
+        font-size: 12px;
+    }
+
+    .job-badge {
+        font-size: 9px;
+        padding: 2px 8px;
+    }
+
+    .view-all-btn {
+        width: 100%;
+    }
+}
+
+/* ==================================================
+   EXTRA SMALL DEVICES
+================================================== */
+
+@media (max-width: 360px) {
+
+    .content {
+        padding: 10px;
+    }
+
+    .title-row h1 {
+        font-size: 18px;
+    }
+
+    .card-header,
+    .card-body,
+    .card-footer {
+        padding: 12px;
+    }
+
+    .req-section {
+        padding: 10px;
+    }
+
+    .req-value,
+    .description-text,
+    .location-name {
+        font-size: 12px;
+    }
+
+    .directions-btn {
+        font-size: 11px;
+    }
+}
+
+
+.card,
+.card-body,
+.card-header,
+.card-footer,
+.req-section,
+.location-body,
+.location-info {
+    height: auto !important;
+    min-height: unset !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+
+.card {
+    display: flex;
+    flex-direction: column;
+}
+
+
+.card-body {
+    flex: 1;
+    display: block;
+}
+
+/* Job details grid */
+.req-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.req-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Prevent text clipping */
+.req-value,
+.description-text,
+.location-name,
+.location-address,
+.title-row h1,
+.job-meta,
+.posted-meta {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+/* Location section */
+.location-body {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.location-info {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Description */
+.description-text {
+    line-height: 1.7;
+}
+
+/* TABLETS */
+@media (max-width: 768px) {
+
+    .req-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .req-section {
+        padding: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+    }
+
+    .location-body {
+        flex-direction: column;
+    }
+
+    .map-thumb {
+        width: 100%;
+        height: auto;
+    }
+
+    .location-info {
+        width: 100%;
+    }
+
+    .card-header,
+    .card-body,
+    .card-footer {
+        padding: 16px;
+    }
+}
+
+/* MOBILE */
+@media (max-width: 480px) {
+
+    .card {
+        border-radius: 10px;
+    }
+
+    .card-header,
+    .card-body,
+    .card-footer {
+        padding: 14px;
+    }
+
+    .req-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .req-section {
+        padding: 10px;
+    }
+
+    .req-value {
+        font-size: 13px;
+    }
+
+    .description-text {
+        font-size: 13px;
+    }
+
+    .location-name,
+    .location-address {
+        font-size: 13px;
+    }
+}
+
+/* Topbar responsive */
+@media (max-width: 768px) {
+  .topbar {
+    padding: 10px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .search-wrapper {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+
+  .btn {
+    flex-shrink: 0;
+    font-size: 12px;
+    padding: 7px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar {
+    padding: 10px 12px;
+  }
+
+  .topbar-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-wrapper,
+  .btn {
+    width: 100%;
+  }
+}

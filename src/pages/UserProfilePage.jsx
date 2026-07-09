@@ -201,7 +201,7 @@ export default function UserProfilePage() {
             <div className="avatar-wrap">
               <img
                 className="avatar-img"
-                src={user.profileImage ? `${BACKEND_URL}/${user.profileImage}` : "https://randomuser.me/api/portraits/lego/1.jpg"}
+                src={user.profileImage ? user.profileImage : "https://randomuser.me/api/portraits/lego/1.jpg"}
                 alt={user.name}
                 onError={(e) => e.target.src = "https://randomuser.me/api/portraits/lego/1.jpg"}
               />

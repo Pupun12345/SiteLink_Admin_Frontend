@@ -455,3 +455,228 @@
     gap: 12px;
   }
 }
+
+/* ================= RESPONSIVE IMPROVEMENTS ================= */
+
+/* Large Tablets */
+@media (max-width: 1024px) {
+
+  .detail-main {
+    margin-left: 0;
+    max-width: 100%;
+    padding: 16px;
+  }
+
+  .profile-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .quick-stats {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tablets */
+@media (max-width: 768px) {
+
+  .detail-main {
+    padding: 12px;
+  }
+
+  .detail-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .header-actions {
+    width: 100%;
+    display: flex;
+    gap: 10px;
+  }
+
+  .header-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .profile-card {
+    padding: 18px;
+    gap: 18px;
+  }
+
+  .profile-info {
+    flex-direction: column;
+    text-align: center;
+    width: 100%;
+  }
+
+  .profile-text {
+    width: 100%;
+  }
+
+  .profile-text h1 {
+    font-size: 22px;
+    word-break: break-word;
+  }
+
+  .meta {
+    justify-content: center;
+  }
+
+  .quick-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .quick-stats > div {
+    min-width: 100px;
+    text-align: center;
+  }
+
+  .field-group {
+    grid-template-columns: 1fr;
+  }
+
+  .info-section {
+    padding: 16px;
+  }
+
+  .field span,
+  .field input,
+  .field select {
+    font-size: 13px;
+  }
+
+  .skill-tags {
+    gap: 6px;
+  }
+
+  .skill-tags span {
+    font-size: 11px;
+    padding: 6px 12px;
+  }
+
+  .doc-list a {
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+
+  .detail-main {
+    padding: 10px;
+  }
+
+  .back-btn,
+  .btn-edit,
+  .btn-save,
+  .btn-cancel {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 14px;
+  }
+
+  .header-actions {
+    flex-direction: column;
+  }
+
+  .profile-card {
+    padding: 16px;
+    border-radius: 10px;
+  }
+
+  .profile-avatar {
+    width: 60px;
+    height: 60px;
+  }
+
+  .profile-text h1 {
+    font-size: 20px;
+  }
+
+  .badge,
+  .type,
+  .rating {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+
+  .quick-stats {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .quick-stats > div {
+    width: 100%;
+    text-align: center;
+  }
+
+  .quick-stats span {
+    font-size: 14px;
+  }
+
+  .info-section {
+    padding: 14px;
+  }
+
+  .info-section h3 {
+    font-size: 13px;
+  }
+
+  .field label {
+    font-size: 10px;
+  }
+
+  .field span,
+  .field input,
+  .field select {
+    font-size: 12px;
+    padding: 8px 10px;
+
+    /* Prevent overflow */
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .skill-tags span {
+    width: 100%;
+    text-align: center;
+  }
+
+  .doc-list a {
+    flex-wrap: wrap;
+    word-break: break-word;
+  }
+}
+
+/* Prevent long text overflow */
+.profile-text h1,
+.field span,
+.doc-list a,
+.type,
+.badge {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Prevent flex children from overflowing */
+.profile-info,
+.profile-text,
+.field,
+.quick-stats > div {
+  min-width: 0;
+}

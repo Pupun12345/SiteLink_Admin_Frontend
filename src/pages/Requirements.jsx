@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import "./Requirements.css";
 import Sidebar from "../components/Sidebar";
 import api from "../api/axios";
-const BACKEND_URL=import.meta.env.VITE_API_URL;
 
 export default function RequirementsDashboard() {
   const navigate = useNavigate();
@@ -12,6 +11,8 @@ export default function RequirementsDashboard() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [profile, setProfile] = useState({ name: '', email: '', imageUrl: '' });
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [availableLocations, setAvailableLocations] = useState([]);
   const [filters, setFilters] = useState({
     role: "All",
     location: "Global",
@@ -26,17 +27,19 @@ export default function RequirementsDashboard() {
     try {
       const response = await api.get('/profile/me');
       console.log('Profile response:', response.data);
-      
+
       if (response.data.success && response.data.data) {
         const user = response.data.data.user;
         console.log('User data:', user);
-        
-        const imageUrl = user.profileImage 
-          ? `${BACKEND_URL}/${user.profileImage.replace(/\\/g, '/')}` 
-          : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin')}&background=2b3f57&color=fff`;
-        
+
+        const imageUrl = user.profileImage
+          ? user.profileImage
+          : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+            user.name || 'Admin'
+          )}&background=2b3f57&color=fff`;
+
         console.log('Image URL:', imageUrl);
-        
+
         setProfile({
           name: user.name || '',
           email: user.email || '',
@@ -54,20 +57,34 @@ export default function RequirementsDashboard() {
 
   useEffect(() => {
     fetchAdminProfile();
+    fetchAvailableFilters();
   }, []);
 
   useEffect(() => {
     fetchJobs();
   }, [currentPage, filters]);
 
+  const fetchAvailableFilters = async () => {
+    try {
+      const response = await api.get('/jobs');
+      const allJobs = response.data.data || [];
+
+      // Extract unique roles
+      const roles = [...new Set(allJobs.map(job => job.title).filter(Boolean))];
+      setAvailableRoles(roles.sort());
+
+      // Extract unique locations
+      const locations = [...new Set(allJobs.map(job => job.location).filter(Boolean))];
+      setAvailableLocations(locations.sort());
+    } catch (error) {
+      console.error('Failed to fetch filter options:', error);
+    }
+  };
+
   const fetchJobs = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-
-      if (filters.location !== "Global") {
-        params.append("location", filters.location);
-      }
 
       if (filters.salaryType !== "All") {
         params.append("salaryType", filters.salaryType);
@@ -80,16 +97,24 @@ export default function RequirementsDashboard() {
       const response = await api.get(`/jobs?${params.toString()}`);
       let jobsData = response.data.data || [];
 
-      // Apply client-side filters
+      // Apply client-side filters for location (exact match)
+      if (filters.location !== "Global") {
+        jobsData = jobsData.filter(job =>
+          job.location?.toLowerCase() === filters.location.toLowerCase()
+        );
+      }
+
+      // Apply client-side filters for status
       if (filters.status !== "Any") {
-        jobsData = jobsData.filter(job => 
+        jobsData = jobsData.filter(job =>
           job.status?.toLowerCase() === filters.status.toLowerCase()
         );
       }
 
+      // Apply client-side filters for role (exact match)
       if (filters.role !== "All") {
         jobsData = jobsData.filter(job =>
-          job.title.toLowerCase().includes(filters.role.toLowerCase())
+          job.title?.toLowerCase() === filters.role.toLowerCase()
         );
       }
 
@@ -150,7 +175,7 @@ export default function RequirementsDashboard() {
         return;
       }
 
-      const headers = ["Job ID", "Company", "Role", "Salary", "Salary Type", "Duration", "Quantity", "Location", "Urgent", "Applications", "Status", "Date"];
+      const headers = ["Job ID", "Company", "Role", "Salary", "Salary Type", "Duration", "Quantity", "Location", "Amenities", "Urgent", "Applications", "Status", "Date"];
       const csvData = allJobs.map(job => [
         job.jobId || `REQ-${job._id.slice(-4).toUpperCase()}`,
         job.company || 'N/A',
@@ -160,6 +185,7 @@ export default function RequirementsDashboard() {
         job.duration || 'N/A',
         job.quantity || "1",
         job.location || 'N/A',
+        (job.amenities || []).map(a => a.name || '').join('; ') || 'None',
         job.isUrgent ? 'Yes' : 'No',
         job.applicationsCount || "0",
         job.status || 'Open',
@@ -246,11 +272,11 @@ export default function RequirementsDashboard() {
             onChange={(e) => handleFilterChange('role', e.target.value)}
           >
             <option value="All">Worker Role: All</option>
-            <option value="Manager">Site Manager</option>
-            <option value="Engineer">Safety Engineer</option>
-            <option value="Technician">Civil Technician</option>
-            <option value="Operator">Crane Operator</option>
-            <option value="Inspector">Structural Inspector</option>
+            {availableRoles.map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
           </select>
 
           <select
@@ -258,11 +284,11 @@ export default function RequirementsDashboard() {
             onChange={(e) => handleFilterChange('location', e.target.value)}
           >
             <option value="Global">Location: Global</option>
-            <option value="Austin">Austin, TX</option>
-            <option value="Denver">Denver, CO</option>
-            <option value="Houston">Houston, TX</option>
-            <option value="Phoenix">Phoenix, AZ</option>
-            <option value="Seattle">Seattle, WA</option>
+            {availableLocations.map((location) => (
+              <option key={location} value={location}>
+                {location}
+              </option>
+            ))}
           </select>
 
           <select
@@ -305,66 +331,128 @@ export default function RequirementsDashboard() {
             </div>
           ) : (
             <>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Req ID</th>
-                    <th>Vendor</th>
-                    <th>Worker Role</th>
-                    <th>Qty</th>
-                    <th>Location</th>
-                    <th>Apps</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
+              {/* Desktop Table View */}
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Req ID</th>
+                      <th>Vendor</th>
+                      <th>Worker Role</th>
+                      <th>Qty</th>
+                      <th>Location</th>
+                      <th>Apps</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
 
-                <tbody>
-                  {jobs.length > 0 ? (
-                    jobs.map((job) => (
-                      <tr key={job._id}>
-                        <td className="req">
-                          {job.jobId || `REQ-${job._id.slice(-4).toUpperCase()}`}
+                  <tbody>
+                    {jobs.length > 0 ? (
+                      jobs.map((job) => (
+                        <tr key={job._id}>
+                          <td className="req">
+                            {job.jobId || `REQ-${job._id.slice(-4).toUpperCase()}`}
+                          </td>
+                          <td>{job.company}</td>
+                          <td>
+                            <strong
+                              style={{ cursor: 'pointer', color: '#007bff' }}
+                              onClick={() => handleJobClick(job._id)}
+                            >
+                              {job.title}
+                            </strong>
+                            <div className="role-type">
+                              {job.salary ? `₹${job.salary}` : 'N/A'} / {job.salaryType ? job.salaryType.charAt(0).toUpperCase() + job.salaryType.slice(1) : 'N/A'}
+                              {job.isUrgent && <span style={{ color: 'red', marginLeft: '8px' }}>🔥 Urgent</span>}
+                            </div>
+                            {job.amenities && job.amenities.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                                {job.amenities.slice(0, 3).map((amenity) => (
+                                  <span key={amenity._id} style={{
+                                    fontSize: '10px',
+                                    padding: '2px 6px',
+                                    background: '#f0f4ff',
+                                    borderRadius: '10px',
+                                    color: '#4a3f7a',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '2px'
+                                  }}>
+                                    {amenity.icon && <span>{amenity.icon}</span>}
+                                    {amenity.name}
+                                  </span>
+                                ))}
+                                {job.amenities.length > 3 && (
+                                  <span style={{ fontSize: '10px', color: '#94a3b8' }}>
+                                    +{job.amenities.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td>{job.quantity || "1"}</td>
+                          <td>{job.location}</td>
+                          <td>{job.applicationsCount || "0"}</td>
+                          <td>
+                            <span className={`status ${getStatusClass(job.status)}`}>
+                              {job.status}
+                            </span>
+                          </td>
+                          <td>
+                            {new Date(job.createdAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                          No job requirements found
                         </td>
-                        <td>{job.company}</td>
-                        <td>
-                          <strong
-                            style={{ cursor: 'pointer', color: '#007bff' }}
-                            onClick={() => handleJobClick(job._id)}
-                          >
-                            {job.title}
-                          </strong>
-                          <div className="role-type">
-                            {job.salary ? `₹${job.salary}` : 'N/A'} / {job.salaryType ? job.salaryType.charAt(0).toUpperCase() + job.salaryType.slice(1) : 'N/A'}
-                            {job.isUrgent && <span style={{ color: 'red', marginLeft: '8px' }}>🔥 Urgent</span>}
-                          </div>
-                        </td>
-                        <td>{job.quantity || "1"}</td>
-                        <td>{job.location}</td>
-                        <td>{job.applicationsCount || "0"}</td>
-                        <td>
-                          <span className={`status ${getStatusClass(job.status)}`}>
-                            {job.status}
-                          </span>
-                        </td>
-                        <td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="mobile-cards">
+                {jobs.length > 0 ? (
+                  jobs.map((job) => (
+                    <div key={job._id} className="job-card" onClick={() => handleJobClick(job._id)}>
+                      <div className="card-header">
+                        <span className="req">{job.jobId || `REQ-${job._id.slice(-4).toUpperCase()}`}</span>
+                        <span className={`status ${getStatusClass(job.status)}`}>{job.status}</span>
+                      </div>
+                      <div className="card-title">
+                        <strong>{job.title}</strong>
+                        {job.isUrgent && <span style={{ color: 'red', marginLeft: '8px' }}>🔥 Urgent</span>}
+                      </div>
+                      <div className="card-details">
+                        <div><strong>Vendor:</strong> {job.company}</div>
+                        <div><strong>Salary:</strong> {job.salary ? `₹${job.salary}` : 'N/A'} / {job.salaryType ? job.salaryType.charAt(0).toUpperCase() + job.salaryType.slice(1) : 'N/A'}</div>
+                        <div><strong>Location:</strong> {job.location}</div>
+                        <div><strong>Qty:</strong> {job.quantity || "1"} | <strong>Apps:</strong> {job.applicationsCount || "0"}</div>
+                        <div className="card-date">
                           {new Date(job.createdAt).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric'
                           })}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                        No job requirements found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                    No job requirements found
+                  </div>
+                )}
+              </div>
 
               {/* Pagination */}
               <div className="pagination">

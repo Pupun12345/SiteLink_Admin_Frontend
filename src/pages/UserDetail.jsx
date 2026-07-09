@@ -5,7 +5,6 @@ import { useToast } from '../components/ToastProvider';
 import api from '../api/axios';
 import './UserDetail.css';
 import Sidebar from '../components/Sidebar';
-const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function UserDetail() {
   const { id } = useParams();
@@ -124,9 +123,9 @@ export default function UserDetail() {
             <div className="profile-info">
               <div className="profile-avatar">
                 {user.profileImage ? (
-                  <img src={`${BACKEND_URL}/${user.profileImage}`} alt={user.name} />
+                  <img src={user.profileImage} alt={user.name} />
                 ) : user.companyLogo ? (
-                  <img src={`${BACKEND_URL}/${user.companyLogo}`} alt={user.companyName} />
+                  <img src={user.companyLogo} alt={user.companyName} />
                 ) : (
                   <User size={48} strokeWidth={1.5} />
                 )}

@@ -4,7 +4,7 @@ import Sidebar from "../components/Sidebar";
 import "./UserManagement.css";
 import api from "../api/axios";
 import { hasPermission, usePermissions } from "../hooks/usePermissions";
-const BACKEND_URL=import.meta.env.VITE_API_URL;
+const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 const statusColors = {
   Active: "active",
@@ -171,7 +171,6 @@ export default function UserManagement() {
   const handleExport = () => {
     setExporting(true);
     try {
-      // Prepare data for export
       const exportData = filteredUsers.map(user => ({
         'User Name': user.name || 'N/A',
         'Email': user.email || 'N/A',
@@ -197,11 +196,10 @@ export default function UserManagement() {
         } : {}),
       }));
 
-      // Convert to CSV
       const headers = Object.keys(exportData[0] || {});
       const csvContent = [
         headers.join(','),
-        ...exportData.map(row => 
+        ...exportData.map(row =>
           headers.map(header => {
             const value = row[header] || '';
             // Escape commas and quotes in CSV
@@ -214,15 +212,15 @@ export default function UserManagement() {
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
-      
+
       link.setAttribute('href', url);
       link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
       link.style.visibility = 'hidden';
-      
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Export failed:', err);
@@ -348,19 +346,21 @@ export default function UserManagement() {
               />
             </div>
             <div className="table-filters">
+              <div>UserType:</div>
               <select value={userTypeFilter} onChange={(e) => {
                 setUserTypeFilter(e.target.value);
                 setCurrentPage(1);
               }}>
-                <option>User Type: All</option>
+                <option>All</option>
                 <option>Worker</option>
                 <option>Vendor</option>
               </select>
+              <div>Status:</div>
               <select value={statusFilter} onChange={(e) => {
                 setStatusFilter(e.target.value);
                 setCurrentPage(1);
               }}>
-                <option>Status: All</option>
+                <option>All</option>
                 <option>Verified</option>
                 <option>Pending</option>
                 <option>Rejected</option>
@@ -397,10 +397,13 @@ export default function UserManagement() {
                         <td>
                           <div className="user-cell">
                             <img
-                              src={u.profileImage ? `${BACKEND_URL}/${u.profileImage}` : "https://randomuser.me/api/portraits/lego/1.jpg"}
+                              src={u.profileImage || "https://randomuser.me/api/portraits/lego/1.jpg"}
                               alt={u.name}
                               className="user-avatar"
-                              onError={(e) => e.target.src = "https://randomuser.me/api/portraits/lego/1.jpg"}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://randomuser.me/api/portraits/lego/1.jpg";
+                              }}
                             />
                             <div>
                               <div
@@ -522,7 +525,7 @@ export default function UserManagement() {
           )}
 
           {deleteModal.show && (
-            <div 
+            <div
               style={{
                 position: 'fixed',
                 top: 0,
@@ -541,7 +544,7 @@ export default function UserManagement() {
                 }
               }}
             >
-              <div 
+              <div
                 style={{
                   backgroundColor: 'white',
                   padding: '30px',
@@ -559,7 +562,7 @@ export default function UserManagement() {
                 <p style={{ marginBottom: '25px', color: '#555', fontSize: '15px', lineHeight: '1.6' }}>
                   Are you sure you want to delete this user? This action cannot be undone.
                 </p>
-                <div 
+                <div
                   style={{
                     display: 'flex',
                     gap: '12px',
