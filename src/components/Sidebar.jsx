@@ -16,7 +16,6 @@ import {
   HelpCircle,
   BaggageClaim,
   LogOut,
-  SignpostBig,
   Menu,
   X
 } from 'lucide-react';
@@ -52,11 +51,6 @@ const mainItems = [
     label: 'Verifications',
     path: '/admin/verifications',
     icon: Shield,
-  },
-  {
-    label: 'Post Approval',
-    path: '/admin/post-approval',
-    icon: SignpostBig,
   },
   {
     label: 'Reports',
@@ -120,7 +114,7 @@ export default function Sidebar({ onLogout }) {
 
   const filteredMainItems = mainItems.filter(item => {
     if (!adminUser) return true;
-    if (item.path === '/admin/verifications' || item.path === '/admin/post-approval' || item.path === "/admin/vendors" || item.path === "/admin/workers") {
+    if (item.path === '/admin/verifications' || item.path === "/admin/vendors" || item.path === "/admin/workers") {
       return hasPermission(permissions, 'canVerifyUsers');
     }
 
@@ -143,7 +137,7 @@ export default function Sidebar({ onLogout }) {
     return true;
   });
 
-  const allItems = [...filteredMainItems, ...filteredFinanceItems, ...systemItems];
+  const allItems = [...filteredMainItems, ...filteredFinanceItems, ...filteredSystemItems];
 
   const activePath = useMemo(() => {
     return allItems.find((item) => location.pathname.startsWith(item.path))?.path;

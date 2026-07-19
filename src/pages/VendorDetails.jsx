@@ -448,7 +448,7 @@ export default function VendorDetails() {
                         </button>
                         <button
                           className="doc-action"
-                          onClick={() => handleDownloadFile(vendor.panCardImage, 'pan-card')}
+                          onClick={() => handleDownloadFile(vendor.gstCertificate, 'gst-certificate')}
                         >
                           <Download size={16} />
                           Download
