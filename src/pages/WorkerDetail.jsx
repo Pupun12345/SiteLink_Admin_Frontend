@@ -135,7 +135,8 @@ export default function WorkerDetail() {
         adminRating: user.adminRating || null,
         adminRatingComment: user.adminRatingComment || '',
         ratedAt: user.ratedAt ? new Date(user.ratedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null,
-        subscription: user.subscription || false
+        subscription: user.subscription || false,
+        isBlocked: user.isBlocked || false
       };
 
       console.log('Worker Data:', {
@@ -424,6 +425,9 @@ export default function WorkerDetail() {
                 </div>
                 <div className={`status-badge ${worker.status.toLowerCase()}`} style={{ marginTop: '4px' }}>
                   {worker.subscription === true ? "SUBSCRIBED" : "NOT SUBSCRIBED"}
+                </div>
+                <div className={`status-badge ${worker.isBlocked ? 'rejected' : 'verified'}`} style={{ marginTop: '4px' }}>
+                  {worker.isBlocked ? "BLOCKED" : "NOT BLOCKED"}
                 </div>
               </div>
 

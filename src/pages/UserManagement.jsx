@@ -4,6 +4,7 @@ import Sidebar from "../components/Sidebar";
 import "./UserManagement.css";
 import api from "../api/axios";
 import { hasPermission, usePermissions } from "../hooks/usePermissions";
+import toast, { Toaster } from "react-hot-toast";
 const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 const statusColors = {
@@ -168,6 +169,27 @@ export default function UserManagement() {
     }
   };
 
+  const handleToggleBlock = async (e, userId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const user = users.find(u => u._id === userId);
+    if (!user) return;
+    const action = user.isBlocked ? 'Unblocking' : 'Blocking';
+    const successMsg = user.isBlocked ? 'User unblocked successfully' : 'User blocked successfully';
+    setActionLoading(userId);
+    const loadingToast = toast.loading(`${action} user...`);
+    try {
+      await api.put(`/admin/users/${userId}/block`);
+      toast.success(successMsg, { id: loadingToast });
+      fetchUsers();
+    } catch (err) {
+      console.error("Failed to toggle block:", err);
+      toast.error("Failed to update user block status", { id: loadingToast });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleExport = () => {
     setExporting(true);
     try {
@@ -303,6 +325,7 @@ export default function UserManagement() {
       </div>
     ) : (
       <div className="user-mgmt-page">
+        <Toaster position="top-right" reverseOrder={false} />
         <Sidebar />
         <div className="user-mgmt-main">
           {/* Header */}
@@ -397,8 +420,7 @@ export default function UserManagement() {
                         <td>
                           <div className="user-cell">
                             <img
-                              src={u.profileImage || "https://randomuser.me/api/portraits/lego/1.jpg"}
-                              alt={u.name}
+                              src={u.userType.toLowerCase() === "vendor" ? u.companyLogo : u.profileImage}
                               className="user-avatar"
                               onError={(e) => {
                                 e.target.onerror = null;
@@ -465,6 +487,14 @@ export default function UserManagement() {
                             style={{ cursor: 'pointer', opacity: actionLoading === u._id ? 0.5 : 1, color: '#dc2626' }}
                           >
                             🗑️
+                          </span>
+                          <span
+                            className="action-icon"
+                            title={u.isBlocked ? 'Unblock' : 'Block'}
+                            onClick={(e) => handleToggleBlock(e, u._id)}
+                            style={{ cursor: 'pointer', opacity: actionLoading === u._id ? 0.5 : 1 }}
+                          >
+                            {u.isBlocked ? '🔓' : '🔒'}
                           </span>
                         </td>
                       </tr>
