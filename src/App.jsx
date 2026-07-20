@@ -8,7 +8,6 @@ import VendorDetails from './pages/VendorDetails';
 import WorkerDetail from './pages/WorkerDetail';
 import UserDetail from './pages/UserDetail';
 import VerificationOverview from './pages/VerificationOverview';
-import PlaceholderPage from './pages/PlaceholderPage';
 import RequirementsDashboard from './pages/Requirements';
 import JobRequirements from './pages/JobRequirements';
 import UserProfilePage from './pages/UserProfilePage';
@@ -17,7 +16,6 @@ import NotificationsPage from './pages/NotificationsPage';
 import SystemMonitoring from './pages/SystemMonitoring';
 import AdminSettings from './pages/AdminSettings';
 import PlatformSettings from './pages/PlatformSettings';
-import PostApproval from './pages/PostApproval';
 import RevenuePage from './pages/RevenuePage'
 import SupportPage from './pages/SupportPage'
 
@@ -121,14 +119,6 @@ function App() {
           }
         />
         <Route
-          path="/admin/post-approval"
-          element={
-            <ProtectedRoute>
-              <PostApproval />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/admin/jobs"
           element={
             <ProtectedRoute>
@@ -149,14 +139,6 @@ function App() {
           element={
             <ProtectedRoute>
               <NotificationsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/revenue"
-          element={
-            <ProtectedRoute>
-              <PlaceholderPage />
             </ProtectedRoute>
           }
         />

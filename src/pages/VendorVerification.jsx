@@ -160,7 +160,8 @@ export default function VendorVerification() {
     files.forEach(file => {
       const fileUrl = file.url;
       if (!fileUrl) {
-        toast.showToast("File Not Found", { type: 'error' });
+        toast.error('File not found');
+        return;
       }
       window.open(fileUrl, '_blank');
     });
@@ -254,7 +255,8 @@ export default function VendorVerification() {
         errorMsg = errors;
         toast.error(
           <div style={{ whiteSpace: 'pre-line' }}>
-            <strong>Validation Errors:</strong>\n{errors}
+            <strong>Validation Errors:</strong>
+            {'\n' + errors}
           </div>,
           { id: loadingToast, duration: 6000 }
         );
