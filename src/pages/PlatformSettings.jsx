@@ -42,6 +42,10 @@ export default function PlatformSettings() {
   });
 
   const [language, setLanguage] = useState('English (United States)');
+  const [supportContact, setSupportContact] = useState({
+    phone: '', whatsapp: '', email: '', hoursWeekday: '', hoursSunday: '', emergencyNote: '', avgResponseTime: '',
+  });
+  const [supportContactSaving, setSupportContactSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [skills, setSkills] = useState([]);
@@ -114,11 +118,32 @@ export default function PlatformSettings() {
           localStorage.setItem('language', settings.language);
         }
         if (settings.skills) setSkills(settings.skills);
+        if (settings.supportContact) setSupportContact(prev => ({ ...prev, ...settings.supportContact }));
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
     }
   }
+
+  const updateSupportContactField = (field, value) => {
+    setSupportContact(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveSupportContact = async () => {
+    setSupportContactSaving(true);
+    try {
+      const response = await api.put('/platform-settings/support-contact', supportContact);
+      if (response.data.success) {
+        showMessage('success', 'Support contact updated successfully.');
+        setSupportContact(prev => ({ ...prev, ...response.data.supportContact }));
+      }
+    } catch (error) {
+      console.error('Error saving support contact:', error);
+      showMessage('error', error.response?.data?.message || 'Failed to update support contact');
+    } finally {
+      setSupportContactSaving(false);
+    }
+  };
 
   async function fetchLegalPolicies() {
     try {
@@ -770,12 +795,12 @@ export default function PlatformSettings() {
                     </label>
 
                     <label className="legal-full">
-                      <span>Content</span>
+                      <span>Content (Markdown supported — # Heading, **bold**, - list, --- divider)</span>
                       <textarea
                         rows={8}
                         value={policyState.form.content}
                         onChange={(e) => updateLegalForm(policyType, 'content', e.target.value)}
-                        placeholder="Paste the full legal document content"
+                        placeholder="Paste the full document content. Markdown formatting (# Heading, **bold**, - list) is rendered in the app."
                       />
                     </label>
 
@@ -840,6 +865,59 @@ export default function PlatformSettings() {
                 </div>
               );
             })}
+          </div>
+        </section>
+
+        <section className="platform-card">
+          <div className="legal-header-row">
+            <div>
+              <h2><FileText size={18} /> Support Contact</h2>
+              <p>Phone, WhatsApp, email and hours shown on the app's "Contact Support" screen.</p>
+            </div>
+          </div>
+
+          <div className="legal-policy-form">
+            <label>
+              <span>Phone (with country code)</span>
+              <input type="text" value={supportContact.phone} onChange={(e) => updateSupportContactField('phone', e.target.value)} placeholder="+918000000000" />
+            </label>
+            <label>
+              <span>WhatsApp Number</span>
+              <input type="text" value={supportContact.whatsapp} onChange={(e) => updateSupportContactField('whatsapp', e.target.value)} placeholder="+918000000000" />
+            </label>
+            <label>
+              <span>Support Email</span>
+              <input type="text" value={supportContact.email} onChange={(e) => updateSupportContactField('email', e.target.value)} placeholder="support@sitelink.com" />
+            </label>
+            <label>
+              <span>Average Response Time</span>
+              <input type="text" value={supportContact.avgResponseTime} onChange={(e) => updateSupportContactField('avgResponseTime', e.target.value)} placeholder="under 2 hours" />
+            </label>
+            <label>
+              <span>Hours — Monday to Saturday</span>
+              <input type="text" value={supportContact.hoursWeekday} onChange={(e) => updateSupportContactField('hoursWeekday', e.target.value)} placeholder="9:00 AM – 7:00 PM" />
+            </label>
+            <label>
+              <span>Hours — Sunday</span>
+              <input type="text" value={supportContact.hoursSunday} onChange={(e) => updateSupportContactField('hoursSunday', e.target.value)} placeholder="10:00 AM – 4:00 PM" />
+            </label>
+            <label className="legal-full">
+              <span>Emergency Note</span>
+              <input type="text" value={supportContact.emergencyNote} onChange={(e) => updateSupportContactField('emergencyNote', e.target.value)} placeholder="24/7 on WhatsApp" />
+            </label>
+          </div>
+
+          <div className="legal-actions">
+            <button
+              type="button"
+              className="platform-save-btn legal-save-btn"
+              onClick={handleSaveSupportContact}
+              disabled={supportContactSaving}
+              style={{ opacity: supportContactSaving ? 0.7 : 1, cursor: supportContactSaving ? 'not-allowed' : 'pointer' }}
+            >
+              <Save size={14} />
+              {supportContactSaving ? 'Saving...' : 'Save Support Contact'}
+            </button>
           </div>
         </section>
       </main>
