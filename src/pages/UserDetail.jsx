@@ -122,12 +122,12 @@ export default function UserDetail() {
           <div className="profile-card">
             <div className="profile-info">
               <div className="profile-avatar">
-                {user.profileImage ? (
-                  <img src={user.profileImage} alt={user.name} />
-                ) : user.companyLogo ? (
-                  <img src={user.companyLogo} alt={user.companyName} />
+                {isVendor? (
+                  <img src={user.companyLogo} />
+                ) : user.profileImage ? (
+                  <img src={user.profileImage} />
                 ) : (
-                  <User size={48} strokeWidth={1.5} />
+                  <img src="https://randomuser.me/api/portraits/lego/1.jpg" />
                 )}
               </div>
               <div className="profile-text">

@@ -898,6 +898,7 @@ export default function WorkerVerification() {
                     <th>CITY</th>
                     <th>RATING</th>
                     <th>SUBSCRIPTION</th>
+                    <th>BLOCKED</th>
                     <th>DOCUMENTS</th>
                     <th>STATUS</th>
                   </tr>
@@ -980,6 +981,11 @@ export default function WorkerVerification() {
                         ) : (
                           <span className="subscription-badge inactive">✕ Not Subscribed</span>
                         )}
+                      </td>
+                      <td>
+                        <span className={`subscription-badge ${worker.isBlocked ? 'inactive' : 'active'}`}>
+                          {worker.isBlocked ? '🔒 Blocked' : '🔓 Active'}
+                        </span>
                       </td>
                       <td>
                         <button className="view-files-btn">

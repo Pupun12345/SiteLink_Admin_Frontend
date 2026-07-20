@@ -232,6 +232,10 @@ export default function VendorDetails() {
                     <span style={{ fontSize: '14px' }}>{vendor?.subscription ? '✓' : '✕'}</span>
                     <span className="subscription-value" style={{ fontSize: '14px', fontWeight: '600', color: vendor?.subscription ? '#065f46' : '#991b1b' }}>{vendor?.subscription ? 'SUBSCRIBED' : 'NOT SUBSCRIBED'}</span>
                   </div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: vendor?.isBlocked ? 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' : 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)', borderRadius: '8px', border: vendor?.isBlocked ? '1px solid #ef4444' : '1px solid #10b981' }}>
+                    <span style={{ fontSize: '14px' }}>{vendor?.isBlocked ? '🔒' : '🔓'}</span>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: vendor?.isBlocked ? '#991b1b' : '#065f46' }}>{vendor?.isBlocked ? 'BLOCKED' : 'NOT BLOCKED'}</span>
+                  </div>
                 </div>
               </div>
             </div>

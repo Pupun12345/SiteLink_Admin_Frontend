@@ -964,6 +964,7 @@ export default function VendorVerification() {
                     <th style={{ minWidth: '130px' }}>PAN NUMBER</th>
                     <th style={{ minWidth: '130px' }}>RATING</th>
                     <th style={{ minWidth: '140px' }}>SUBSCRIPTION</th>
+                    <th style={{ minWidth: '120px' }}>BLOCKED</th>
                     <th style={{ minWidth: '140px' }}>DOCUMENTS</th>
                     <th style={{ minWidth: '120px' }}>STATUS</th>
                   </tr>
@@ -1041,6 +1042,11 @@ export default function VendorVerification() {
                         ) : (
                           <span className="subscription-badge inactive">✕ Not Subscribed</span>
                         )}
+                      </td>
+                      <td>
+                        <span className={`subscription-badge ${vendor.isBlocked ? 'inactive' : 'active'}`}>
+                          {vendor.isBlocked ? '🔒 Blocked' : '🔓 Active'}
+                        </span>
                       </td>
                       <td>
                         <button
