@@ -15,6 +15,7 @@ import {
   Settings,
   HelpCircle,
   BaggageClaim,
+  FileText,
   LogOut,
   Menu,
   X
@@ -51,6 +52,11 @@ const mainItems = [
     label: 'Verifications',
     path: '/admin/verifications',
     icon: Shield,
+  },
+  {
+    label: 'Create Post',
+    path: '/admin/create-post',
+    icon: FileText,
   },
   {
     label: 'Reports',

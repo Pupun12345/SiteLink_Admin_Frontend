@@ -4,6 +4,16 @@ import "./JobRequirements.css";
 import Sidebar from "../components/Sidebar";
 import api from "../api/axios";
 
+const CATEGORY_META = {
+  'Financial Benefits':   { emoji: '💰', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+  'Accommodation & Food': { emoji: '🏠', color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+  'Travel':               { emoji: '🚌', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+  'Safety & Medical':     { emoji: '🏥', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  'Leave':                { emoji: '🌴', color: '#0891b2', bg: '#ecfeff', border: '#a5f3fc' },
+  'Work & Career':        { emoji: '📈', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+  'Employee Rewards':     { emoji: '🏆', color: '#b45309', bg: '#fffbeb', border: '#fcd34d' },
+};
+
 function StatusBadge({ status }) {
   const normalized = status ? status.toLowerCase() : "open";
   return <span className={`status-badge ${normalized}`}>{status || "Open"}</span>;
@@ -40,6 +50,31 @@ export default function JobRequirements() {
   const [loadingApplicant, setLoadingApplicant] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedApplicantIds, setSelectedApplicantIds] = useState([]);
+
+  // Edit / Delete state
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [allAmenities, setAllAmenities] = useState([]);
+  const [openCats, setOpenCats] = useState({});
+  const [editForm, setEditForm] = useState({
+    title: '', company: '', location: '', quantity: '1',
+    salary: '', salaryType: 'daily', duration: '',
+    description: '', experience: '', isUrgent: false, amenities: [],
+  });
+  const [editError, setEditError] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Fetch amenities once
+  useEffect(() => {
+    api.get('/amenities').then(res => {
+      const data = res.data.data || [];
+      setAllAmenities(data);
+      const cats = [...new Set(data.map(a => a.category))];
+      const init = {};
+      cats.forEach(c => { init[c] = true; });
+      setOpenCats(init);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -308,24 +343,76 @@ export default function JobRequirements() {
   };
 
   const handleDeleteJob = async () => {
-    if (!window.confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
-      return;
-    }
-
     setActionLoading(true);
     try {
       const response = await api.delete(`/jobs/${id}`);
       if (response.data.success) {
-        alert('Job deleted successfully!');
+        setDeleteOpen(false);
         navigate('/admin/requirements');
       }
     } catch (error) {
       console.error('Failed to delete job:', error);
-      alert(error.response?.data?.message || 'Failed to delete job. Please try again.');
     } finally {
       setActionLoading(false);
     }
   };
+
+  const openEdit = () => {
+    setEditForm({
+      title: job.title || '',
+      company: job.company || '',
+      location: job.location || '',
+      quantity: job.quantity || '1',
+      salary: job.salary || '',
+      salaryType: job.salaryType || 'daily',
+      duration: job.duration || '',
+      description: job.description || '',
+      experience: job.experience || '',
+      isUrgent: job.isUrgent || false,
+      amenities: (job.amenities || []).map(a => a._id || a),
+    });
+    setEditError('');
+    setEditOpen(true);
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setEditForm(p => ({ ...p, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const toggleEditAmenity = (aid) => {
+    setEditForm(p => ({
+      ...p,
+      amenities: p.amenities.includes(aid)
+        ? p.amenities.filter(x => x !== aid)
+        : [...p.amenities, aid],
+    }));
+  };
+
+  const handleEditSave = async (e) => {
+    e.preventDefault();
+    setEditError('');
+    setEditSaving(true);
+    try {
+      const res = await api.put(`/jobs/${id}`, editForm);
+      if (res.data.success) {
+        // Re-fetch to get populated amenities
+        const fresh = await api.get(`/jobs/${id}`);
+        if (fresh.data.success) setJob(fresh.data.data);
+        setEditOpen(false);
+      }
+    } catch (err) {
+      setEditError(err.response?.data?.message || 'Failed to save changes.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const amenityGroups = allAmenities.reduce((acc, a) => {
+    if (!acc[a.category]) acc[a.category] = [];
+    acc[a.category].push(a);
+    return acc;
+  }, {});
 
   const displayJobId = job?.jobId || `REQ-${job?._id?.slice(-4).toUpperCase()}`;
 
@@ -361,30 +448,20 @@ export default function JobRequirements() {
               />
             </div>
             {job.status === 'Open' && (
-              <button
-                className="btn btn-secondary"
-                onClick={() => handleJobStatusUpdate('Closed')}
-                disabled={actionLoading}
-              >
+              <button className="btn btn-secondary" onClick={() => handleJobStatusUpdate('Closed')} disabled={actionLoading}>
                 {actionLoading ? 'Processing...' : 'Close Job'}
               </button>
             )}
             {job.status !== 'Cancelled' && (
-              <button
-                className="btn btn-danger"
-                onClick={() => handleJobStatusUpdate('Cancelled')}
-                disabled={actionLoading}
-              >
+              <button className="btn btn-danger" onClick={() => handleJobStatusUpdate('Cancelled')} disabled={actionLoading}>
                 {actionLoading ? 'Processing...' : 'Cancel Job'}
               </button>
             )}
-            <button
-              className="btn btn-danger"
-              onClick={handleDeleteJob}
-              disabled={actionLoading}
-              style={{ marginLeft: '8px' }}
-            >
-              {actionLoading ? 'Deleting...' : 'Delete Job'}
+            <button className="btn btn-edit" onClick={openEdit} disabled={actionLoading}>
+              ✏️ Edit Job
+            </button>
+            <button className="btn btn-danger" onClick={() => setDeleteOpen(true)} disabled={actionLoading}>
+              🗑️ Delete Job
             </button>
           </div>
         </header>
@@ -789,6 +866,168 @@ export default function JobRequirements() {
             </div>
           </div>
         ) : null}
+
+        {/* ── Delete Confirm Modal ── */}
+        {deleteOpen && (
+          <div className="jr-modal-overlay" onClick={() => setDeleteOpen(false)}>
+            <div className="jr-modal jr-modal-sm" onClick={e => e.stopPropagation()}>
+              <div className="jr-modal-head">
+                <h2>Delete Job Post</h2>
+                <button className="modal-close" onClick={() => setDeleteOpen(false)}>
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div className="jr-modal-body">
+                <div className="jr-delete-icon">🗑️</div>
+                <p className="jr-delete-title">Are you sure you want to delete <strong>{job.title}</strong>?</p>
+                <p className="jr-delete-sub">This action cannot be undone. All applicant data for this job will also be removed.</p>
+              </div>
+              <div className="jr-modal-foot">
+                <button className="jr-btn-cancel" onClick={() => setDeleteOpen(false)}>Cancel</button>
+                <button className="jr-btn-delete" onClick={handleDeleteJob} disabled={actionLoading}>
+                  {actionLoading ? 'Deleting...' : 'Yes, Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Edit Job Modal ── */}
+        {editOpen && (
+          <div className="jr-modal-overlay" onClick={() => setEditOpen(false)}>
+            <div className="jr-modal jr-modal-lg" onClick={e => e.stopPropagation()}>
+              <div className="jr-modal-head">
+                <h2>Edit Job Post</h2>
+                <button className="modal-close" onClick={() => setEditOpen(false)}>
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div className="jr-modal-body jr-edit-body">
+                {editError && <div className="jr-edit-error">{editError}</div>}
+                <form id="edit-job-form" onSubmit={handleEditSave} className="jr-edit-form">
+                  <div className="jr-edit-section-label">Basic Info</div>
+                  <div className="jr-edit-grid-3">
+                    <div className="jr-edit-field">
+                      <label>Job Title *</label>
+                      <input name="title" value={editForm.title} onChange={handleEditChange} required />
+                    </div>
+                    <div className="jr-edit-field">
+                      <label>Company *</label>
+                      <input name="company" value={editForm.company} onChange={handleEditChange} required />
+                    </div>
+                    <div className="jr-edit-field">
+                      <label>Location *</label>
+                      <input name="location" value={editForm.location} onChange={handleEditChange} required />
+                    </div>
+                  </div>
+                  <div className="jr-edit-section-label">Compensation</div>
+                  <div className="jr-edit-grid-4">
+                    <div className="jr-edit-field">
+                      <label>Salary (₹)</label>
+                      <input name="salary" type="number" value={editForm.salary} onChange={handleEditChange} />
+                    </div>
+                    <div className="jr-edit-field">
+                      <label>Salary Type</label>
+                      <select name="salaryType" value={editForm.salaryType} onChange={handleEditChange}>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                      </select>
+                    </div>
+                    <div className="jr-edit-field">
+                      <label>Duration</label>
+                      <input name="duration" value={editForm.duration} onChange={handleEditChange} placeholder="e.g. 3 months" />
+                    </div>
+                    <div className="jr-edit-field">
+                      <label>Quantity</label>
+                      <input name="quantity" type="number" min="1" value={editForm.quantity} onChange={handleEditChange} />
+                    </div>
+                  </div>
+                  <div className="jr-edit-section-label">Details</div>
+                  <div className="jr-edit-grid-2">
+                    <div className="jr-edit-field">
+                      <label>Experience Required *</label>
+                      <input name="experience" value={editForm.experience} onChange={handleEditChange} required />
+                    </div>
+                    <div className="jr-edit-field">
+                      <label>Status</label>
+                      <select name="status" value={editForm.status || job.status} onChange={handleEditChange}>
+                        <option value="Open">Open</option>
+                        <option value="Filled">Filled</option>
+                        <option value="Closed">Closed</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="jr-edit-field">
+                    <label>Description *</label>
+                    <textarea name="description" value={editForm.description} onChange={handleEditChange} rows={4} required />
+                  </div>
+                  <div className="jr-edit-field">
+                    <label className="jr-urgent-label">
+                      <input type="checkbox" name="isUrgent" checked={editForm.isUrgent} onChange={handleEditChange} />
+                      <span>Mark as Urgent 🔥</span>
+                    </label>
+                  </div>
+                  {Object.keys(amenityGroups).length > 0 && (
+                    <div className="jr-edit-field">
+                      <div className="jr-amenity-header">
+                        <label>Amenities / Benefits</label>
+                        {editForm.amenities.length > 0 && (
+                          <span className="jr-amenity-count">{editForm.amenities.length} selected</span>
+                        )}
+                      </div>
+                      <div className="jr-amenity-groups">
+                        {Object.entries(amenityGroups).map(([cat, items]) => {
+                          const meta = CATEGORY_META[cat] || { emoji: '📦', color: '#374151', bg: '#f9fafb', border: '#e5e7eb' };
+                          const isOpen = openCats[cat];
+                          const selCount = items.filter(a => editForm.amenities.includes(a._id)).length;
+                          return (
+                            <div key={cat} className="jr-amenity-group"
+                              style={{ '--cat-border': meta.border, '--cat-bg': meta.bg }}>
+                              <button type="button" className="jr-cat-header"
+                                onClick={() => setOpenCats(p => ({ ...p, [cat]: !p[cat] }))}>
+                                <span className="jr-cat-left">
+                                  <span>{meta.emoji}</span>
+                                  <span className="jr-cat-name" style={{ color: meta.color }}>{cat}</span>
+                                  {selCount > 0 && (
+                                    <span className="jr-cat-count" style={{ background: meta.color }}>{selCount}</span>
+                                  )}
+                                </span>
+                                <span style={{ color: meta.color, fontSize: 13 }}>{isOpen ? '▲' : '▼'}</span>
+                              </button>
+                              {isOpen && (
+                                <div className="jr-cat-chips">
+                                  {items.map(a => {
+                                    const sel = editForm.amenities.includes(a._id);
+                                    return (
+                                      <button type="button" key={a._id}
+                                        className={`jr-amenity-chip ${sel ? 'selected' : ''}`}
+                                        style={sel ? { background: meta.bg, borderColor: meta.color, color: meta.color } : {}}
+                                        onClick={() => toggleEditAmenity(a._id)}>
+                                        {a.icon && <span>{a.icon}</span>} {a.name}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </form>
+              </div>
+              <div className="jr-modal-foot">
+                <button className="jr-btn-cancel" onClick={() => setEditOpen(false)}>Cancel</button>
+                <button className="jr-btn-save" type="submit" form="edit-job-form" disabled={editSaving}>
+                  {editSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Applicant Profile Modal */}
         {selectedApplicant && (

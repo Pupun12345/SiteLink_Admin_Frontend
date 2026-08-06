@@ -18,6 +18,7 @@ import AdminSettings from './pages/AdminSettings';
 import PlatformSettings from './pages/PlatformSettings';
 import RevenuePage from './pages/RevenuePage'
 import SupportPage from './pages/SupportPage'
+import CreatePost from './pages/CreatePost'
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('adminToken') || localStorage.getItem('adminUser');
@@ -171,6 +172,14 @@ function App() {
           element={
             <ProtectedRoute>
               <PlatformSettings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/create-post"
+          element={
+            <ProtectedRoute>
+              <CreatePost />
             </ProtectedRoute>
           }
         />
