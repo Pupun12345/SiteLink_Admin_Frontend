@@ -1,0 +1,269 @@
+.cjp-page {
+  display: flex;
+  min-height: 100vh;
+  background: #f6f6f8;
+}
+
+.cjp-main {
+  flex: 1;
+  margin-left: 260px;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+.cjp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.cjp-title-row {
+  margin: 10px 0 24px;
+}
+
+.cjp-title-row h1 {
+  font-size: 28px;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.cjp-title-row p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.cjp-card {
+  background: white;
+  border-radius: 10px;
+  padding: 28px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.cjp-posted-by {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f0f4ff;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  border: 1px solid #dbeafe;
+}
+
+.cjp-brand-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.cjp-brand-name {
+  display: block;
+  font-weight: 700;
+  font-size: 15px;
+  color: #1e3a5f;
+}
+
+.cjp-brand-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.cjp-alert {
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.cjp-alert-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.cjp-alert-success {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.cjp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cjp-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.cjp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cjp-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.cjp-field input,
+.cjp-field select,
+.cjp-field textarea {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #111827;
+  background: white;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.cjp-field input:focus,
+.cjp-field select:focus,
+.cjp-field textarea:focus {
+  outline: none;
+  border-color: #2463eb;
+  box-shadow: 0 0 0 3px rgba(36, 99, 235, 0.1);
+}
+
+.cjp-field textarea {
+  resize: vertical;
+}
+
+.cjp-amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cjp-amenity-chip {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #d1d5db;
+  background: white;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cjp-amenity-chip:hover {
+  border-color: #2463eb;
+  color: #2463eb;
+}
+
+.cjp-amenity-chip.selected {
+  background: #dbeafe;
+  border-color: #2463eb;
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.cjp-urgent-row {
+  flex-direction: row;
+  align-items: center;
+}
+
+.cjp-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.cjp-checkbox-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.cjp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.cjp-btn-cancel {
+  padding: 10px 20px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cjp-btn-cancel:hover {
+  background: #f9fafb;
+}
+
+.cjp-btn-submit {
+  padding: 10px 24px;
+  background: #2463eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cjp-btn-submit:hover {
+  background: #1d4ed8;
+}
+
+.cjp-btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1024px) {
+  .cjp-main {
+    margin-left: 0;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .cjp-main {
+    padding: 16px;
+  }
+
+  .cjp-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .cjp-title-row h1 {
+    font-size: 22px;
+  }
+
+  .cjp-actions {
+    flex-direction: column;
+  }
+
+  .cjp-btn-cancel,
+  .cjp-btn-submit {
+    width: 100%;
+    text-align: center;
+  }
+}
