@@ -49,6 +49,8 @@ export default function PlatformSettings() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [skills, setSkills] = useState([]);
+  const [skillsLoading, setSkillsLoading] = useState(true);
+  const [deletingSkill, setDeletingSkill] = useState('');
   const [newSkill, setNewSkill] = useState('');
   const [legalPolicies, setLegalPolicies] = useState({
     PRIVACY_POLICY: {
@@ -117,7 +119,7 @@ export default function PlatformSettings() {
           setLanguage(settings.language);
           localStorage.setItem('language', settings.language);
         }
-        if (settings.skills) setSkills(settings.skills);
+        if (settings.skills) { setSkills(settings.skills); setSkillsLoading(false); }
         if (settings.supportContact) setSupportContact(prev => ({ ...prev, ...settings.supportContact }));
       }
     } catch (error) {
@@ -237,6 +239,8 @@ export default function PlatformSettings() {
         await fetchSettings();
       } catch (e) {
         console.error('fetchSettings error:', e);
+      } finally {
+        setSkillsLoading(false);
       }
       try {
         await fetchLegalPolicies();
@@ -432,6 +436,23 @@ export default function PlatformSettings() {
     }
   };
 
+  const handleDeleteSkill = async (skillName) => {
+    if (!skillName) return;
+    setDeletingSkill(skillName);
+    try {
+      const response = await api.delete(`/platform-settings/delete-skills/${skillName}`);
+      if (response.data.success) {
+        setSkills(response.data.skills);
+        showMessage('success', 'Skill deleted successfully!');
+      }
+    } catch (error) {
+      console.error('Error deleting skill:', error);
+      showMessage('error', error.response?.data?.message || 'Failed to delete skill');
+    } finally {
+      setDeletingSkill('');
+    }
+  };
+
   if (loading) {
     return (
       <div className="dashboard-page platform-settings-page">
@@ -569,11 +590,22 @@ export default function PlatformSettings() {
                 <button type="button" onClick={handleAddSkill} className="skill-add-btn">Add</button>
               </div>
               <div className="skills-list">
-                {skills.length > 0 ? (
+                {skillsLoading ? (
+                  <p className="no-skills-text">Loading skills...</p>
+                ) : skills.length > 0 ? (
                   skills.map((skill) => (
                     <div key={skill.id} className="skill-item">
                       <span className="skill-id">{skill.id}</span>
                       <span className="skill-name">{skill.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSkill(skill.name)}
+                        className="skill-delete-btn"
+                        disabled={deletingSkill === skill.name}
+                        style={{ opacity: deletingSkill === skill.name ? 0.5 : 1 }}
+                      >
+                        {deletingSkill === skill.name ? '...' : <Trash2 size={13} />}
+                      </button>
                     </div>
                   ))
                 ) : (
