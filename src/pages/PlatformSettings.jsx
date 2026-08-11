@@ -1,4 +1,4 @@
-import { Bell, Save, AlertCircle, CheckCircle, FileText, Plus, Trash2, X, Edit2 } from 'lucide-react';
+import { Bell, Save, AlertCircle, CheckCircle, FileText, Plus, Trash2, X, Edit2, Wrench } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import Sidebar from '../components/Sidebar';
@@ -46,6 +46,12 @@ export default function PlatformSettings() {
     phone: '', whatsapp: '', email: '', hoursWeekday: '', hoursSunday: '', emergencyNote: '', avgResponseTime: '',
   });
   const [supportContactSaving, setSupportContactSaving] = useState(false);
+  // App maintenance notice — app dashboard par dismissible dialog dikhata hai.
+  // `until` datetime-local input ke liye 'YYYY-MM-DDTHH:mm' format me rakha hai.
+  const [maintenance, setMaintenance] = useState({
+    enabled: false, title: 'Under Maintenance', message: '', until: '',
+  });
+  const [maintenanceSaving, setMaintenanceSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [skills, setSkills] = useState([]);
@@ -121,6 +127,15 @@ export default function PlatformSettings() {
         }
         if (settings.skills) { setSkills(settings.skills); setSkillsLoading(false); }
         if (settings.supportContact) setSupportContact(prev => ({ ...prev, ...settings.supportContact }));
+        if (settings.maintenance) {
+          const m = settings.maintenance;
+          setMaintenance({
+            enabled: !!m.enabled,
+            title: m.title || 'Under Maintenance',
+            message: m.message || '',
+            until: toLocalInputValue(m.until),
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -129,6 +144,58 @@ export default function PlatformSettings() {
 
   const updateSupportContactField = (field, value) => {
     setSupportContact(prev => ({ ...prev, [field]: value }));
+  };
+
+  // ── Maintenance notice ────────────────────────────────────────────
+  // Backend ISO/UTC bhejta hai; <input type="datetime-local"> ko local
+  // time chahiye bina timezone suffix ke.
+  function toLocalInputValue(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+      + `T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  const updateMaintenanceField = (field, value) => {
+    setMaintenance(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveMaintenance = async () => {
+    // Backend bhi yahi check karta hai — yahan pehle rok dete hain taaki
+    // admin ko turant pata chale, round-trip ka wait na karna pade.
+    if (maintenance.enabled && !maintenance.message.trim()) {
+      showMessage('error', 'Message is required when maintenance mode is ON.');
+      return;
+    }
+    setMaintenanceSaving(true);
+    try {
+      const response = await api.put('/platform-settings/maintenance', {
+        enabled: maintenance.enabled,
+        title: maintenance.title,
+        message: maintenance.message,
+        // Local input ko ISO me — khaali ho to null (app "till" line chhupa deta hai)
+        until: maintenance.until ? new Date(maintenance.until).toISOString() : null,
+      });
+      if (response.data.success) {
+        showMessage('success', response.data.message || 'Maintenance notice updated.');
+        const m = response.data.maintenance;
+        if (m) {
+          setMaintenance({
+            enabled: !!m.enabled,
+            title: m.title || 'Under Maintenance',
+            message: m.message || '',
+            until: toLocalInputValue(m.until),
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error saving maintenance notice:', error);
+      showMessage('error', error.response?.data?.message || 'Failed to update maintenance notice');
+    } finally {
+      setMaintenanceSaving(false);
+    }
   };
 
   const handleSaveSupportContact = async () => {
@@ -949,6 +1016,72 @@ export default function PlatformSettings() {
             >
               <Save size={14} />
               {supportContactSaving ? 'Saving...' : 'Save Support Contact'}
+            </button>
+          </div>
+        </section>
+
+        {/* ── App Maintenance Notice ─────────────────────────────── */}
+        <section className="platform-card">
+          <div className="legal-header-row">
+            <div>
+              <h2><Wrench size={18} /> App Maintenance Notice</h2>
+              <p>
+                Shows a dismissible dialog on the app dashboard. The app keeps
+                working — this only informs users. Each user sees a given
+                notice once; editing the message shows it again.
+              </p>
+            </div>
+            <label className="maintenance-toggle">
+              <input
+                type="checkbox"
+                checked={maintenance.enabled}
+                onChange={(e) => updateMaintenanceField('enabled', e.target.checked)}
+              />
+              <span className={maintenance.enabled ? 'on' : 'off'}>
+                {maintenance.enabled ? 'ON' : 'OFF'}
+              </span>
+            </label>
+          </div>
+
+          <div className="legal-policy-form">
+            <label>
+              <span>Title</span>
+              <input
+                type="text"
+                value={maintenance.title}
+                onChange={(e) => updateMaintenanceField('title', e.target.value)}
+                placeholder="Under Maintenance"
+              />
+            </label>
+            <label>
+              <span>Expected till (optional)</span>
+              <input
+                type="datetime-local"
+                value={maintenance.until}
+                onChange={(e) => updateMaintenanceField('until', e.target.value)}
+              />
+            </label>
+            <label className="legal-full">
+              <span>Message {maintenance.enabled && <em>(required)</em>}</span>
+              <textarea
+                rows={3}
+                value={maintenance.message}
+                onChange={(e) => updateMaintenanceField('message', e.target.value)}
+                placeholder="We're upgrading our servers. Some features may be slow for a while."
+              />
+            </label>
+          </div>
+
+          <div className="legal-actions">
+            <button
+              type="button"
+              className="platform-save-btn legal-save-btn"
+              onClick={handleSaveMaintenance}
+              disabled={maintenanceSaving}
+              style={{ opacity: maintenanceSaving ? 0.7 : 1, cursor: maintenanceSaving ? 'not-allowed' : 'pointer' }}
+            >
+              <Save size={14} />
+              {maintenanceSaving ? 'Saving...' : 'Save Maintenance Notice'}
             </button>
           </div>
         </section>
