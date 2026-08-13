@@ -170,10 +170,10 @@ export default function JobRequirements() {
     );
   }
 
-  const handleViewAllApplicants = () => {
-    console.log('Button clicked - opening modal');
-    setShowAllApplicants(true);
-  };
+  // Note: yahan ek `handleViewAllApplicants` pada tha jise koi call nahi
+  // karta tha, aur wo sirf `showAllApplicants` set karta tha — modal ko
+  // `modalOpen && showAllApplicants` dono chahiye, to wire hone par bhi
+  // kuch nahi khulta. `handleOpenModal` (neeche) dono set karta hai.
 
   const handleCloseModal = () => {
     setModalOpen(false);
@@ -585,6 +585,21 @@ export default function JobRequirements() {
                       <p className="label-upper">Quantity</p>
                       <p className="req-value">{job.quantity || "1"}</p>
                     </div>
+                    {/* Per-role breakdown. Vendor ek job me kai roles maang
+                        sakta hai ("2 Welder + 1 Mason"); pehle ye sirf title
+                        aur description ke text me hota tha, isliye approve
+                        karte waqt admin ko saaf nahi dikhta tha. Purani jobs
+                        me roles khaali hai — tab section hide ho jaata hai. */}
+                    {Array.isArray(job.roles) && job.roles.length > 0 && (
+                      <div className="req-section">
+                        <p className="label-upper">Roles Required</p>
+                        <p className="req-value">
+                          {job.roles
+                            .map((r) => `${r.quantity} × ${r.skill}`)
+                            .join(', ')}
+                        </p>
+                      </div>
+                    )}
                     <div className="req-section">
                       <p className="label-upper">Salary Type</p>
                       <p className="req-value">{job.salaryType ? job.salaryType.charAt(0).toUpperCase() + job.salaryType.slice(1) : "N/A"}</p>
