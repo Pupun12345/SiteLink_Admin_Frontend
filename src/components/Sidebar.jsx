@@ -59,6 +59,11 @@ const mainItems = [
     icon: FileText,
   },
   {
+    label: 'Admin Posts',
+    path: '/admin/admin-posts',
+    icon: FileText,
+  },
+  {
     label: 'Reports',
     path: '/admin/reports',
     icon: BarChart2,

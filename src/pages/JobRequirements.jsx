@@ -474,7 +474,7 @@ export default function JobRequirements() {
                 <span className={`job-badge ${getStatusClass(job.status)}`}>{job.status || "Open"}</span>
               </div>
               <p className="job-meta">
-                <strong>{job.company || "Unknown Company"}</strong>
+                <strong>{job.postedBy?.companyName || job.company || 'Unknown Company'}</strong>
                 {job.postedBy?.name ? ` • Posted by ${job.postedBy.name}` : ''}
               </p>
               <p className="posted-meta">

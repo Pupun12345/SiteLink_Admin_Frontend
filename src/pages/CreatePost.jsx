@@ -50,6 +50,8 @@ export default function CreatePost() {
   const videoInputRef = useRef();
 
   const [postType, setPostType] = useState(null);
+  const [postDuration, setPostDuration] = useState('permanent');
+  const [customHours, setCustomHours] = useState(24);
   const [profile, setProfile] = useState({ name: '', imageUrl: '' });
   const [amenities, setAmenities] = useState([]);
   const [openCategories, setOpenCategories] = useState({});
@@ -168,6 +170,8 @@ export default function CreatePost() {
         const fd = new FormData();
         fd.append('content', content.trim());
         if (feeling) fd.append('feeling', feeling);
+        const dur = postDuration === 'custom' ? String(customHours) : postDuration;
+        fd.append('postDuration', dur);
         images.forEach(img => fd.append('images', img));
         if (video) fd.append('video', video);
         await api.post('/community/posts', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -297,6 +301,25 @@ export default function CreatePost() {
                 {/* ── GENERAL POST ── */}
                 {postType === 'post' && (
                   <>
+                    <div className="cp-field">
+                      <label>Post Duration</label>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                        {[{ val: 'permanent', label: '♾️ Permanent' }, { val: '24', label: '24 hrs' }, { val: '48', label: '48 hrs' }, { val: '72', label: '72 hrs' }, { val: 'custom', label: '⏱ Custom' }].map(opt => (
+                          <button type="button" key={opt.val}
+                            onClick={() => setPostDuration(opt.val)}
+                            style={{ padding: '6px 14px', borderRadius: '20px', border: '1.5px solid', fontSize: '13px', fontWeight: '600', cursor: 'pointer', background: postDuration === opt.val ? '#2b3f57' : '#f3f4f6', color: postDuration === opt.val ? '#fff' : '#374151', borderColor: postDuration === opt.val ? '#2b3f57' : '#d1d5db' }}>
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                      {postDuration === 'custom' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input type="number" min="1" max="8760" value={customHours} onChange={e => setCustomHours(Number(e.target.value))} style={{ width: '100px', padding: '6px 10px', borderRadius: '8px', border: '1.5px solid #d1d5db' }} />
+                          <span style={{ fontSize: '13px', color: '#6b7280' }}>hours</span>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="cp-field">
                       <label>What's on your mind? *</label>
                       <textarea value={content} onChange={e => setContent(e.target.value)}
