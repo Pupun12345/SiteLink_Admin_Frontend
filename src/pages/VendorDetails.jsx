@@ -276,20 +276,27 @@ export default function VendorDetails() {
                       <XCircle size={16} />
                       Reject Vendor
                     </button>
-                    <button
-                      className="rate-btn"
-                      onClick={() => {
-                        setShowRating(true);
-                        if (vendor?.adminRating) {
-                          setRating(vendor.adminRating);
-                          setRatingComment(vendor.adminRatingComment || '');
-                        }
-                      }}
-                      disabled={isProcessing}
-                      style={{ padding: '12px 20px', fontSize: '14px', fontWeight: '600', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    >
-                      ⭐ {vendor?.adminRating ? 'Update Rating' : 'Rate Vendor'}
-                    </button>
+                    {vendor?.subscription ? (
+                      <button
+                        className="rate-btn"
+                        onClick={() => {
+                          setShowRating(true);
+                          if (vendor?.adminRating) {
+                            setRating(vendor.adminRating);
+                            setRatingComment(vendor.adminRatingComment || '');
+                          }
+                        }}
+                        disabled={isProcessing}
+                        style={{ padding: '12px 20px', fontSize: '14px', fontWeight: '600', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                      >
+                        ⭐ {vendor?.adminRating ? 'Update Rating' : 'Rate Vendor'}
+                      </button>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#FFF8E1', border: '1px solid #FFD54F', borderRadius: '8px', color: '#8A6D3B', fontSize: '13px', fontWeight: '500' }}>
+                        <span style={{ fontSize: '16px' }}>⚠️</span>
+                        <span>This vendor does not have an active subscription, so a rating cannot be submitted.</span>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
