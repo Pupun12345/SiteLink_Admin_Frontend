@@ -181,9 +181,9 @@ export default function UserDetail() {
                 <div className="field">
                   <label>Work City</label>
                   {editMode ? (
-                    <input type="text" value={editedData.workCity || ''} onChange={(e) => handleInputChange('workCity', e.target.value)} />
+                    <input type="text" value={editedData.workCity || editedData.city || ''} onChange={(e) => handleInputChange('workCity', e.target.value)} />
                   ) : (
-                    <span>{user.workCity || 'N/A'}</span>
+                    <span>{user.workCity || user.city || 'N/A'}</span>
                   )}
                 </div>
                 <div className="field">
@@ -260,13 +260,12 @@ export default function UserDetail() {
                   <div className="field">
                     <label>Willing to Relocate</label>
                     {editMode ? (
-                      <select value={editedData.willingtoRelocate || ''} onChange={(e) => handleInputChange('willingtoRelocate', e.target.value)}>
-                        <option value="">Select</option>
+                      <select value={String(editedData.willingtoRelocate)} onChange={(e) => handleInputChange('willingtoRelocate', e.target.value)}>
                         <option value="true">Yes</option>
                         <option value="false">No</option>
                       </select>
                     ) : (
-                      <span>{JSON.stringify(user.willingtoRelocate).toUpperCase() ? "Yes" : "No"}</span>
+                      <span>{user.willingtoRelocate ? 'Yes' : 'No'}</span>
                     )}
                   </div>
                 </div>

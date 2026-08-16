@@ -49,6 +49,8 @@ export default function WorkerDetail() {
   const [selectedSkills, setSelectedSkills] = useState([]);
   const [customSkillName, setCustomSkillName] = useState('');
 
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
+
   useEffect(() => {
     fetchWorkerDetails();
     fetchAvailableSkills();
@@ -117,17 +119,10 @@ export default function WorkerDetail() {
           console.log('Document:', doc?.name, 'Valid:', isValid, 'ViewLink:', doc?.viewLink);
           return isValid;
         }),
-        workPhotos: [
-          ...(user.workSamplesPhoto || []).map(photo => {
+        workPhotos: (user.workSamplesPhoto || []).map(photo => {
             const url = getFileUrl(photo);
-            console.log('Work Sample Photo:', { original: photo, url });
             return { url, path: photo };
-          }),
-          ...(user.workPhotos || []).filter(photo => photo && typeof photo === 'string').map(photo => ({
-            url: getFileUrl(photo),
-            path: photo
-          }))
-        ].filter(photo => photo.url),
+          }).filter(photo => photo.url),
         contactInfo: {
           email: user.email || 'N/A',
           phone: user.phone || 'N/A',
@@ -249,9 +244,14 @@ export default function WorkerDetail() {
       await fetchWorkerDetails();
       toast.showToast('Worker approved successfully', { type: 'success' });
       setShowApprovalConfirm(false);
-      setTimeout(() => {
-        setShowRating(true);
-      }, 500);
+      // Only show rating popup if worker has an active subscription
+      const updatedWorker = await api.get(`/admin/users/${id}`);
+      const isSubscribed = updatedWorker.data?.data?.subscription;
+      if (isSubscribed) {
+        setTimeout(() => {
+          setShowRating(true);
+        }, 500);
+      }
     } catch (err) {
       toast.showToast(err.response?.data?.message || 'Approval failed', { type: 'error' });
     } finally {
@@ -363,7 +363,7 @@ export default function WorkerDetail() {
   };
 
   const handleViewAllPortfolio = () => {
-    toast.showToast('Portfolio view coming soon', { type: 'info' });
+    setShowAllPhotos(true);
   };
 
   if (loading) {
@@ -842,17 +842,11 @@ export default function WorkerDetail() {
                               alt={`Work ${index + 1}`}
                               className="portfolio-image"
                               onError={(e) => {
-                                console.error('Failed to load image:', photoUrl);
                                 e.target.style.display = 'none';
                                 const placeholder = e.target.nextSibling;
-                                if (placeholder) {
-                                  placeholder.style.display = 'flex';
-                                  placeholder.innerHTML = '<div style="text-align: center;"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" height="24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg><p style="font-size: 11px; margin: 8px 0 0 0; color: #9ca3af;">File not found</p></div>';
-                                }
+                                if (placeholder) placeholder.style.display = 'flex';
                               }}
-                              onClick={() => {
-                                window.open(photoUrl, '_blank');
-                              }}
+                              onClick={() => window.open(photoUrl, '_blank')}
                               style={{ cursor: 'pointer' }}
                             />
                             <div className="photo-placeholder" style={{ display: 'none', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9ca3af' }}>
@@ -874,6 +868,40 @@ export default function WorkerDetail() {
             </div>
           </div>
         </div>
+
+        {
+          showAllPhotos && worker.workPhotos && (
+            <div
+              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
+              onClick={() => setShowAllPhotos(false)}
+            >
+              <div
+                style={{ background: 'white', borderRadius: '12px', padding: '24px', maxWidth: '900px', width: '90%', maxHeight: '85vh', overflowY: 'auto' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700' }}>Work Photos Portfolio ({worker.workPhotos.length})</h3>
+                  <button onClick={() => setShowAllPhotos(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#6b7280' }}>×</button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+                  {worker.workPhotos.map((photo, index) => {
+                    const photoUrl = typeof photo === 'string' ? getFileUrl(photo) : (photo.url || getFileUrl(photo.path));
+                    return (
+                      <img
+                        key={index}
+                        src={photoUrl}
+                        alt={`Work ${index + 1}`}
+                        style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer' }}
+                        onClick={() => window.open(photoUrl, '_blank')}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )
+        }
 
         {
           showApprovalConfirm && (
