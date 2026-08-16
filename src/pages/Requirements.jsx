@@ -337,7 +337,7 @@ export default function RequirementsDashboard() {
                   <thead>
                     <tr>
                       <th>Req ID</th>
-                      <th>Vendor</th>
+                      <th>Company Name</th>
                       <th>Worker Role</th>
                       <th>Qty</th>
                       <th>Location</th>
@@ -354,7 +354,7 @@ export default function RequirementsDashboard() {
                           <td className="req">
                             {job.jobId || `REQ-${job._id.slice(-4).toUpperCase()}`}
                           </td>
-                          <td>{job.company}</td>
+                          <td>{job.postedBy?.companyName || job.company}</td>
                           <td>
                             <strong
                               style={{ cursor: 'pointer', color: '#007bff' }}

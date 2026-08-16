@@ -62,7 +62,7 @@ export default function RevenuePage() {
         profileImage: sub.user?.profileImage || null,
         companyName: sub.user?.companyName || null,
         companyLogo: sub.user?.companyLogo || null,
-        planType: sub.planType || 'N/A',
+        planType: sub.planType || sub.planName || sub.plan || 'N/A',
         status: sub.status,
         amount: sub.amount,
         startDate: sub.startDate,
