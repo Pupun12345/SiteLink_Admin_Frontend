@@ -20,6 +20,8 @@ import RevenuePage from './pages/RevenuePage'
 import SupportPage from './pages/SupportPage'
 import CreatePost from './pages/CreatePost'
 import AdminPosts from './pages/AdminPosts'
+import PlayStorePrivacy from "../pages_for_playstore/privacyPage.html";
+import PlayStoreDelete from "../pages_for_playstore/deleteAccount.html";
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('adminToken') || localStorage.getItem('adminUser');
@@ -76,7 +78,7 @@ function App() {
           path="/admin/revenue"
           element={
             <ProtectedRoute>
-              <RevenuePage/>
+              <RevenuePage />
             </ProtectedRoute>
           }
         />
@@ -199,6 +201,14 @@ function App() {
               <SupportPage />
             </ProtectedRoute>
           }
+        />
+        <Route
+          path="/privacy-page/playstore"
+          element={<PlayStorePrivacy />}
+        />
+        <Route
+          path="/delete-account/playstore"
+          element={<PlayStoreDelete />}
         />
       </Routes>
     </BrowserRouter>
