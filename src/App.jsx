@@ -20,8 +20,12 @@ import RevenuePage from './pages/RevenuePage'
 import SupportPage from './pages/SupportPage'
 import CreatePost from './pages/CreatePost'
 import AdminPosts from './pages/AdminPosts'
-import PlayStorePrivacy from "../pages_for_playstore/privacyPage.html";
-import PlayStoreDelete from "../pages_for_playstore/deleteAccount.html";
+
+
+function ExternalRedirect({ to }) {
+  window.location.replace(to);
+  return null;
+}
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('adminToken') || localStorage.getItem('adminUser');
@@ -204,11 +208,11 @@ function App() {
         />
         <Route
           path="/privacy-page/playstore"
-          element={<PlayStorePrivacy />}
+          element={<ExternalRedirect to="/pages_for_playstore/privacyPage.html" />}
         />
         <Route
           path="/delete-account/playstore"
-          element={<PlayStoreDelete />}
+          element={<ExternalRedirect to="/pages_for_playstore/deletePage.html" />}
         />
       </Routes>
     </BrowserRouter>
