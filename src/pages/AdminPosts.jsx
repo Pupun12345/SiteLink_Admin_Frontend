@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Briefcase, Plus, Trash2, Eye } from 'lucide-react';
+import { FileText, Briefcase, Plus, Trash2, Eye, MessageCircle, ChevronDown, ChevronUp, Send, X } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
 import './AdminPosts.css';
@@ -11,13 +11,193 @@ const TABS = [
   { key: 'job',  label: 'Job Posts' },
 ];
 
+function CommentsPanel({ postId, onClose }) {
+  const [comments, setComments]     = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [replyText, setReplyText]   = useState('');
+  const [replyingTo, setReplyingTo] = useState(null); // commentId or null (null = top-level)
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const fetchComments = useCallback(() => {
+    setLoading(true);
+    api.get(`/community/posts/${postId}/comments?limit=100`)
+      .then(res => setComments(res.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [postId]);
+
+  useEffect(() => { fetchComments(); }, [fetchComments]);
+
+  const handleReply = async (parentCommentId = null) => {
+    const text = replyText.trim();
+    if (!text) return;
+    setSubmitting(true);
+    try {
+      const body = { comment: text };
+      if (parentCommentId) body.parentComment = parentCommentId;
+      await api.post(`/community/posts/${postId}/comments`, body);
+      setReplyText('');
+      setReplyingTo(null);
+      fetchComments();
+    } catch {
+      alert('Failed to post reply.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (commentId) => {
+    if (!window.confirm('Delete this comment?')) return;
+    setDeletingId(commentId);
+    try {
+      await api.delete(`/community/posts/${postId}/comments/${commentId}`);
+      setComments(c => c.filter(x => x._id !== commentId));
+    } catch {
+      alert('Failed to delete comment.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const fmt = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+  return (
+    <div className="ap-comments-panel">
+      <div className="ap-comments-header">
+        <span className="ap-comments-title">
+          <MessageCircle size={16} /> Comments ({comments.length})
+        </span>
+        <button className="ap-comments-close" onClick={onClose}><X size={16} /></button>
+      </div>
+
+      <div className="ap-comments-body">
+        {loading ? (
+          <div className="ap-comments-loading"><div className="ap-spinner" /></div>
+        ) : comments.length === 0 ? (
+          <p className="ap-comments-empty">No comments yet.</p>
+        ) : (
+          <ul className="ap-comments-list">
+            {comments.map(c => (
+              <li key={c._id} className="ap-comment-item">
+                <div className="ap-comment-avatar">
+                  {c.userImage
+                    ? <img src={c.userImage} alt="" />
+                    : <span>{(c.userName || 'U')[0].toUpperCase()}</span>
+                  }
+                </div>
+                <div className="ap-comment-content">
+                  <div className="ap-comment-meta">
+                    <span className="ap-comment-name">{c.userName || 'Unknown'}</span>
+                    <span className="ap-comment-date">{fmt(c.createdAt)}</span>
+                  </div>
+                  <p className="ap-comment-text">{c.comment}</p>
+                  <div className="ap-comment-actions">
+                    <button
+                      className="ap-comment-reply-btn"
+                      onClick={() => setReplyingTo(replyingTo === c._id ? null : c._id)}
+                    >
+                      Reply
+                    </button>
+                    <button
+                      className="ap-comment-delete-btn"
+                      onClick={() => handleDelete(c._id)}
+                      disabled={deletingId === c._id}
+                    >
+                      {deletingId === c._id ? 'Deleting…' : 'Delete'}
+                    </button>
+                  </div>
+                  {replyingTo === c._id && (
+                    <div className="ap-reply-box">
+                      <textarea
+                        className="ap-reply-input"
+                        placeholder={`Reply to ${c.userName || 'this comment'}…`}
+                        value={replyText}
+                        onChange={e => setReplyText(e.target.value)}
+                        rows={2}
+                      />
+                      <div className="ap-reply-actions">
+                        <button className="ap-reply-cancel" onClick={() => { setReplyingTo(null); setReplyText(''); }}>Cancel</button>
+                        <button className="ap-reply-submit" onClick={() => handleReply(c._id)} disabled={submitting || !replyText.trim()}>
+                          <Send size={13} /> {submitting ? 'Posting…' : 'Reply'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Nested replies */}
+                  {c.replies?.length > 0 && (
+                    <ul className="ap-replies-list">
+                      {c.replies.map(r => (
+                        <li key={r._id} className="ap-reply-item">
+                          <div className="ap-comment-avatar ap-reply-avatar">
+                            {r.userImage
+                              ? <img src={r.userImage} alt="" />
+                              : <span>{(r.userName || 'U')[0].toUpperCase()}</span>
+                            }
+                          </div>
+                          <div className="ap-comment-content">
+                            <div className="ap-comment-meta">
+                              <span className="ap-comment-name">{r.userName || 'Unknown'}</span>
+                              <span className="ap-comment-date">{fmt(r.createdAt)}</span>
+                            </div>
+                            <p className="ap-comment-text">{r.comment}</p>
+                            <div className="ap-comment-actions">
+                              <button
+                                className="ap-comment-delete-btn"
+                                onClick={() => handleDelete(r._id)}
+                                disabled={deletingId === r._id}
+                              >
+                                {deletingId === r._id ? 'Deleting…' : 'Delete'}
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Top-level admin comment */}
+      <div className="ap-comments-footer">
+        {replyingTo === null && (
+          <>
+            <textarea
+              className="ap-reply-input"
+              placeholder="Write an admin comment…"
+              value={replyText}
+              onChange={e => setReplyText(e.target.value)}
+              rows={2}
+            />
+            <div className="ap-reply-actions">
+              <button
+                className="ap-reply-submit"
+                onClick={() => handleReply(null)}
+                disabled={submitting || !replyText.trim()}
+              >
+                <Send size={13} /> {submitting ? 'Posting…' : 'Post Comment'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPosts() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState('all');
-  const [posts, setPosts] = useState([]);
-  const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [tab, setTab]               = useState('all');
+  const [posts, setPosts]           = useState([]);
+  const [jobs, setJobs]             = useState([]);
+  const [loading, setLoading]       = useState(true);
   const [deletingId, setDeletingId] = useState(null);
+  const [openComments, setOpenComments] = useState(null); // postId
 
   useEffect(() => {
     setLoading(true);
@@ -51,17 +231,15 @@ export default function AdminPosts() {
   const generalPosts = posts.map(p => ({ ...p, _type: 'post' }));
   const jobPosts     = jobs.map(j => ({ ...j, _type: 'job' }));
   const allItems     = [...generalPosts, ...jobPosts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const displayed    = tab === 'all' ? allItems : tab === 'post' ? generalPosts : jobPosts;
 
-  const displayed = tab === 'all' ? allItems : tab === 'post' ? generalPosts : jobPosts;
-
-  const fmt = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  const fmt = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
   return (
     <div className="ap-page">
       <Sidebar />
       <main className="ap-main">
 
-        {/* ── Hero banner (same style as CreatePost) ── */}
         <div className="ap-hero">
           <div className="ap-hero-left">
             <div className="ap-hero-eyebrow">SiteLink Admin</div>
@@ -73,7 +251,6 @@ export default function AdminPosts() {
           </div>
         </div>
 
-        {/* ── Stats row ── */}
         <div className="ap-stats">
           <div className="ap-stat-card ap-stat-total">
             <span className="ap-stat-num">{allItems.length}</span>
@@ -95,7 +272,6 @@ export default function AdminPosts() {
           </button>
         </div>
 
-        {/* ── Tabs ── */}
         <div className="ap-tabs">
           {TABS.map(t => (
             <button
@@ -113,7 +289,6 @@ export default function AdminPosts() {
           ))}
         </div>
 
-        {/* ── Content ── */}
         {loading ? (
           <div className="ap-empty">
             <div className="ap-spinner" />
@@ -130,89 +305,104 @@ export default function AdminPosts() {
         ) : (
           <div className="ap-list">
             {displayed.map(item => (
-              <div key={item._id} className={`ap-card ${item._type}`}>
+              <div key={item._id} className="ap-card-wrapper">
+                <div className={`ap-card ${item._type}`}>
 
-                {/* Left accent icon */}
-                <div className={`ap-card-accent ${item._type}`}>
-                  {item._type === 'job' ? <Briefcase size={20} /> : <FileText size={20} />}
-                </div>
-
-                {/* Body */}
-                <div className="ap-card-body">
-                  <div className="ap-card-top">
-                    <span className={`ap-type-badge ${item._type}`}>
-                      {item._type === 'job' ? '💼 Job Post' : '📢 General Post'}
-                    </span>
-                    {item.isPermanent && (
-                      <span className="ap-badge permanent">♾ Permanent</span>
-                    )}
-                    {item.expiresAt && !item.isPermanent && (
-                      <span className="ap-badge timed">⏱ Expires {fmt(item.expiresAt)}</span>
-                    )}
-                    <span className="ap-date">{fmt(item.createdAt)}</span>
+                  <div className={`ap-card-accent ${item._type}`}>
+                    {item._type === 'job' ? <Briefcase size={20} /> : <FileText size={20} />}
                   </div>
 
-                  {item._type === 'job' ? (
-                    <>
-                      <h3 className="ap-card-title">{item.title}</h3>
-                      <div className="ap-chips-row">
-                        <span className="ap-chip">🏢 {item.company}</span>
-                        <span className="ap-chip">📍 {item.location}</span>
-                        <span className="ap-chip">💰 ₹{item.salary} / {item.salaryType}</span>
-                        {item.isUrgent && <span className="ap-chip urgent">🔥 Urgent</span>}
-                        <span className={`ap-chip status-${(item.status || 'open').toLowerCase()}`}>
-                          {item.status || 'Open'}
-                        </span>
-                      </div>
-                      {item.description && (
-                        <p className="ap-card-text">
-                          {item.description.slice(0, 140)}{item.description.length > 140 ? '…' : ''}
-                        </p>
+                  <div className="ap-card-body">
+                    <div className="ap-card-top">
+                      <span className={`ap-type-badge ${item._type}`}>
+                        {item._type === 'job' ? '💼 Job Post' : '📢 General Post'}
+                      </span>
+                      {item.isPermanent && <span className="ap-badge permanent">♾ Permanent</span>}
+                      {item.expiresAt && !item.isPermanent && (
+                        <span className="ap-badge timed">⏱ Expires {fmt(item.expiresAt)}</span>
                       )}
-                    </>
-                  ) : (
-                    <>
-                      {item.feeling && <span className="ap-feeling">{item.feeling}</span>}
-                      <p className="ap-card-text">
-                        {item.content?.slice(0, 200)}{item.content?.length > 200 ? '…' : ''}
-                      </p>
-                      {item.images?.length > 0 && (
-                        <div className="ap-thumbs">
-                          {item.images.slice(0, 4).map((img, i) => (
-                            <img key={i} src={img} alt="" className="ap-thumb" />
-                          ))}
-                          {item.images.length > 4 && (
-                            <span className="ap-thumb-more">+{item.images.length - 4}</span>
-                          )}
+                      <span className="ap-date">{fmt(item.createdAt)}</span>
+                    </div>
+
+                    {item._type === 'job' ? (
+                      <>
+                        <h3 className="ap-card-title">{item.title}</h3>
+                        <div className="ap-chips-row">
+                          <span className="ap-chip">🏢 {item.company}</span>
+                          <span className="ap-chip">📍 {item.location}</span>
+                          <span className="ap-chip">💰 ₹{item.salary} / {item.salaryType}</span>
+                          {item.isUrgent && <span className="ap-chip urgent">🔥 Urgent</span>}
+                          <span className={`ap-chip status-${(item.status || 'open').toLowerCase()}`}>
+                            {item.status || 'Open'}
+                          </span>
                         </div>
-                      )}
-                    </>
-                  )}
-                </div>
+                        {item.description && (
+                          <p className="ap-card-text">
+                            {item.description.slice(0, 140)}{item.description.length > 140 ? '…' : ''}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {item.feeling && <span className="ap-feeling">{item.feeling}</span>}
+                        <p className="ap-card-text">
+                          {item.content?.slice(0, 200)}{item.content?.length > 200 ? '…' : ''}
+                        </p>
+                        {item.images?.length > 0 && (
+                          <div className="ap-thumbs">
+                            {item.images.slice(0, 4).map((img, i) => (
+                              <img key={i} src={img} alt="" className="ap-thumb" />
+                            ))}
+                            {item.images.length > 4 && (
+                              <span className="ap-thumb-more">+{item.images.length - 4}</span>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
 
-                {/* Actions */}
-                <div className="ap-card-actions">
-                  {item._type === 'job' && (
+                    {/* Comments toggle — only for general posts */}
+                    {item._type === 'post' && (
+                      <button
+                        className="ap-comments-toggle"
+                        onClick={() => setOpenComments(openComments === item._id ? null : item._id)}
+                      >
+                        <MessageCircle size={14} />
+                        {item.commentsCount ?? 0} Comment{item.commentsCount !== 1 ? 's' : ''}
+                        {openComments === item._id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="ap-card-actions">
+                    {item._type === 'job' && (
+                      <button
+                        className="ap-btn-view"
+                        onClick={() => navigate(`/admin/requirements/${item._id}`)}
+                        title="View job"
+                      >
+                        <Eye size={15} /> View
+                      </button>
+                    )}
                     <button
-                      className="ap-btn-view"
-                      onClick={() => navigate(`/admin/requirements/${item._id}`)}
-                      title="View job"
+                      className="ap-btn-delete"
+                      onClick={() => handleDelete(item._id, item._type)}
+                      disabled={deletingId === item._id}
+                      title="Delete"
                     >
-                      <Eye size={15} />
-                      View
+                      <Trash2 size={15} />
+                      {deletingId === item._id ? 'Deleting…' : 'Delete'}
                     </button>
-                  )}
-                  <button
-                    className="ap-btn-delete"
-                    onClick={() => handleDelete(item._id, item._type)}
-                    disabled={deletingId === item._id}
-                    title="Delete"
-                  >
-                    <Trash2 size={15} />
-                    {deletingId === item._id ? 'Deleting…' : 'Delete'}
-                  </button>
+                  </div>
                 </div>
 
+                {/* Inline comments panel */}
+                {openComments === item._id && item._type === 'post' && (
+                  <CommentsPanel
+                    postId={item._id}
+                    onClose={() => setOpenComments(null)}
+                  />
+                )}
               </div>
             ))}
           </div>
