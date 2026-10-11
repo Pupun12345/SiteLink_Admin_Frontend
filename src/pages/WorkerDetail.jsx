@@ -99,6 +99,7 @@ export default function WorkerDetail() {
         dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A',
         age: user.dateOfBirth ? Math.floor((new Date() - new Date(user.dateOfBirth)) / (365.25 * 24 * 60 * 60 * 1000)) : (user.age || 'N/A'),
         gender: user.gender || 'N/A',
+        nomineeName: user.nomineeName || null,
         experienceDescription: user.experienceDescription || 'No description provided',
         willingtoRelocate: user.willingtoRelocate || false,
         location: user.location || 'N/A',
@@ -468,6 +469,15 @@ export default function WorkerDetail() {
                     <div className="stat-label" style={{ fontSize: '11px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.5px' }}>RELOCATE</div>
                     <div className="stat-value" style={{ fontSize: '15px', fontWeight: '600', color: worker.willingtoRelocate ? '#10b981' : '#ef4444' }}>
                       {worker.willingtoRelocate ? '✓ Yes' : '✗ No'}
+                    </div>
+                  </div>
+                  {/* Family Protection claim isi naam par banta hai. Purane
+                      workers ke paas nahi hai — unke liye laal "Not provided"
+                      taaki admin pehchan sake kisse bharwana hai. */}
+                  <div className="stat-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div className="stat-label" style={{ fontSize: '11px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.5px' }}>NOMINEE</div>
+                    <div className="stat-value" style={{ fontSize: '15px', fontWeight: '600', color: worker.nomineeName ? '#1f2937' : '#ef4444' }}>
+                      {worker.nomineeName || 'Not provided'}
                     </div>
                   </div>
                 </div>

@@ -32,6 +32,7 @@ export default function WorkerVerification() {
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    nomineeName: '',
     phone: '',
     primarySkillId: '',
     secondarySkillId: [],
@@ -241,6 +242,7 @@ export default function WorkerVerification() {
       const profileData = new FormData();
       profileData.append('phone', formData.phone);
       profileData.append('name', formData.name);
+      profileData.append('nomineeName', formData.nomineeName.trim());
       profileData.append('primarySkillId', formData.primarySkillId);
       if (formData.secondarySkillId.length > 0) {
         formData.secondarySkillId.forEach(id => profileData.append('secondarySkillId', id));
@@ -270,7 +272,7 @@ export default function WorkerVerification() {
       });
 
       toast.success('Worker added successfully!', { id: loadingToast });
-      setFormData({ name: '', phone: '', primarySkillId: '', secondarySkillId: [], otherSkill: '', dateOfBirth: '', gender: '', totalExperience: '', experienceDescription: '', workStateID: '', workCityID: '', willingtoRelocate: false, salaryType: 'daily', salary: '', location: '' });
+      setFormData({ name: '', nomineeName: '', phone: '', primarySkillId: '', secondarySkillId: [], otherSkill: '', dateOfBirth: '', gender: '', totalExperience: '', experienceDescription: '', workStateID: '', workCityID: '', willingtoRelocate: false, salaryType: 'daily', salary: '', location: '' });
       setProfileImage(null);
       setWorkSamplesPhoto([]);
       setExperienceCertificate(null);
@@ -298,7 +300,7 @@ export default function WorkerVerification() {
 
   const handleCancelAdd = () => {
     setShowAddForm(false);
-    setFormData({ name: '', phone: '', primarySkillId: '', secondarySkillId: [], otherSkill: '', dateOfBirth: '', gender: '', totalExperience: '', experienceDescription: '', workStateID: '', workCityID: '', willingtoRelocate: false, salaryType: 'daily', salary: '', location: '' });
+    setFormData({ name: '', nomineeName: '', phone: '', primarySkillId: '', secondarySkillId: [], otherSkill: '', dateOfBirth: '', gender: '', totalExperience: '', experienceDescription: '', workStateID: '', workCityID: '', willingtoRelocate: false, salaryType: 'daily', salary: '', location: '' });
     setProfileImage(null);
     setWorkSamplesPhoto([]);
     setExperienceCertificate(null);
@@ -494,6 +496,25 @@ export default function WorkerVerification() {
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="Enter worker name"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    {/* Family Protection claim isi naam par — app me bhi zaroori hai. */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Nominee Name *</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={100}
+                        value={formData.nomineeName}
+                        onChange={(e) => setFormData({ ...formData, nomineeName: e.target.value })}
+                        placeholder="Family member who receives the claim"
                         style={{
                           width: '100%',
                           padding: '10px 14px',
