@@ -50,7 +50,9 @@ export default function WorkerVerification() {
   });
   const [profileImage, setProfileImage] = useState(null);
   const [workSamplesPhoto, setWorkSamplesPhoto] = useState([]);
-  const [experienceCertificate, setExperienceCertificate] = useState(null);
+  // Worker ke ek se zyada certificate ho sakte hain (backend max 5 leta hai).
+  const MAX_CERTS = 5;
+  const [experienceCertificates, setExperienceCertificates] = useState([]);
   const [governmentID, setGovernmentID] = useState(null);
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
@@ -151,9 +153,10 @@ export default function WorkerVerification() {
       return;
     }
 
-    const headers = ['Worker Name', 'Role', 'Experience', 'City', 'Phone', 'Email', 'Primary Skill', 'Additional Skills', 'Wiiling to Relocate', 'Salary Type', 'Salary', 'Rating', 'Applied Date', 'Subscription', 'Status'];
+    const headers = ['Worker Name', 'Nominee', 'Role', 'Experience', 'City', 'Phone', 'Email', 'Primary Skill', 'Additional Skills', 'Wiiling to Relocate', 'Salary Type', 'Salary', 'Rating', 'Applied Date', 'Subscription', 'Status'];
     const rows = filteredWorkers.map(worker => [
       worker.name || '',
+      worker.nomineeName || 'N/A',
       worker.role || 'N/A',
       worker.experience || 'N/A',
       worker.city || 'N/A',
@@ -168,7 +171,7 @@ export default function WorkerVerification() {
       worker.join || 'N/A',
       worker.subscription ? "Subscribed" : "Not Subscribed",
       worker.status || 'Pending',
-      worker.experienceCertificate ? true : false
+      worker.experienceCertificate?.length > 0
     ]);
 
     const csvContent = [
@@ -262,7 +265,7 @@ export default function WorkerVerification() {
       if (workSamplesPhoto.length > 0) {
         workSamplesPhoto.forEach(file => profileData.append('workSamplesPhoto', file));
       }
-      if (experienceCertificate) profileData.append('experienceCertificate', experienceCertificate);
+      experienceCertificates.forEach(file => profileData.append('experienceCertificate', file));
       if (governmentID) profileData.append('governmentID', governmentID);
 
       await api.post('/profile/worker/create', profileData, {
@@ -275,7 +278,7 @@ export default function WorkerVerification() {
       setFormData({ name: '', nomineeName: '', phone: '', primarySkillId: '', secondarySkillId: [], otherSkill: '', dateOfBirth: '', gender: '', totalExperience: '', experienceDescription: '', workStateID: '', workCityID: '', willingtoRelocate: false, salaryType: 'daily', salary: '', location: '' });
       setProfileImage(null);
       setWorkSamplesPhoto([]);
-      setExperienceCertificate(null);
+      setExperienceCertificates([]);
       setGovernmentID(null);
       setCities([]);
       setShowAddForm(false);
@@ -770,11 +773,23 @@ export default function WorkerVerification() {
                       {governmentID && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {governmentID.name}</p>}
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Experience Certificate</label>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                        Experience Certificates ({experienceCertificates.length}/{MAX_CERTS})
+                      </label>
+                      {/* Har baar chune gaye certificate list me JUDTE hain — ek ek
+                          karke ya ek saath kai chun sakte hain. */}
                       <input
                         type="file"
                         accept="image/*,.pdf"
-                        onChange={(e) => setExperienceCertificate(e.target.files[0])}
+                        multiple
+                        disabled={experienceCertificates.length >= MAX_CERTS}
+                        onChange={(e) => {
+                          const picked = Array.from(e.target.files || []);
+                          const room = MAX_CERTS - experienceCertificates.length;
+                          if (picked.length > room) toast.error(`You can add up to ${MAX_CERTS} certificates`);
+                          setExperienceCertificates([...experienceCertificates, ...picked.slice(0, room)]);
+                          e.target.value = '';
+                        }}
                         style={{
                           width: '100%',
                           padding: '10px 14px',
@@ -783,7 +798,18 @@ export default function WorkerVerification() {
                           fontSize: '14px'
                         }}
                       />
-                      {experienceCertificate && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {experienceCertificate.name}</p>}
+                      {experienceCertificates.map((file, i) => (
+                        <div key={`${file.name}-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: '#10b981', marginTop: '6px' }}>
+                          <span>{i + 1}. {file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setExperienceCertificates(experienceCertificates.filter((_, j) => j !== i))}
+                            style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px' }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
@@ -952,6 +978,7 @@ export default function WorkerVerification() {
                           <div>
                             <div className="worker-name" style={{ fontSize: "1.2rem" }}>{worker.name}</div>
                             <div className="worker-id">ID: #WK-{worker._id.slice(-4)}</div>
+                            <div className="worker-id">Nominee: {worker.nomineeName || 'Not provided'}</div>
                           </div>
                         </div>
                       </td>

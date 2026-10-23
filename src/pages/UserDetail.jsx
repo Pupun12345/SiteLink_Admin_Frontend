@@ -229,6 +229,10 @@ export default function UserDetail() {
                     )}
                   </div>
                   <div className="field">
+                    <label>Nominee Name</label>
+                    <span>{user.nomineeName || 'Not provided'}</span>
+                  </div>
+                  <div className="field">
                     <label>Experience</label>
                     {editMode ? (
                       <input type="text" value={editedData.experience || ''} onChange={(e) => handleInputChange('experience', e.target.value)} />

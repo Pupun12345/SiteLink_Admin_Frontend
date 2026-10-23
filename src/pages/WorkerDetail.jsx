@@ -38,6 +38,7 @@ export default function WorkerDetail() {
   const [showApprovalConfirm, setShowApprovalConfirm] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectedDocs, setRejectedDocs] = useState({});
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState(0.0);
   const [ratingComment, setRatingComment] = useState('');
@@ -85,8 +86,16 @@ export default function WorkerDetail() {
         workSamplesPhoto: user.workSamplesPhoto
       });
 
+      // Ek se zyada certificate ho sakte hain — purane records me single
+      // string thi, dono ko array bana lo.
+      const certs = (Array.isArray(user.experienceCertificate)
+        ? user.experienceCertificate
+        : [user.experienceCertificate]
+      ).filter(Boolean);
+
       const mapped = {
         ...user,
+        experienceCertificate: certs,
         id: user.id || user._id,
         status: user.verificationStatus || 'pending',
         role: user.primarySkill || user.role || 'Worker',
@@ -110,14 +119,16 @@ export default function WorkerDetail() {
           ...(user.workState && user.city ? [{ name: `${user.city}, ${user.workState}`, isPrimary: true }] : []),
           ...(user.location && user.location !== 'N/A' ? [{ name: user.location, isPrimary: false }] : [])
         ],
-        documents: [
-          buildDocument('Government ID', 'IDENTITY PROOF', user.governmentID),
-          buildDocument('Experience Certificate', 'EXPERIENCE PROOF', user.experienceCertificate),
-        ].filter(doc => {
-          const isValid = doc !== null && doc.viewLink;
-          console.log('Document:', doc?.name, 'Valid:', isValid, 'ViewLink:', doc?.viewLink);
-          return isValid;
-        }),
+        // Backend har document ka review status bhejta hai:
+        // 'approved' | 'rejected' | 'pending' (naya upload, review baaki).
+        documents: (user.documents || [])
+          .filter(d => d && d.url)
+          .map(d => ({
+            ...buildDocument(d.name, d.type, d.url),
+            path: d.url,
+            reviewStatus: d.reviewStatus || 'pending',
+            rejectionReason: d.rejectionReason || null,
+          })),
         workPhotos: [
           ...(user.workSamplesPhoto || []).map(photo => {
             const url = getFileUrl(photo);
@@ -263,21 +274,50 @@ export default function WorkerDetail() {
   const handleReject = () => {
     setShowRejectModal(true);
     setRejectReason('');
+    setRejectedDocs({});
   };
 
+  // Kaun se documents galat hain: { [path]: reason }. Worker ko sirf
+  // yahi dobara upload karne padte hain; baaki documents approved maane
+  // jaate hain.
+  const toggleRejectedDoc = (path) => {
+    setRejectedDocs(prev => {
+      const next = { ...prev };
+      if (path in next) delete next[path];
+      else next[path] = '';
+      return next;
+    });
+  };
+
+  const selectedDocPaths = Object.keys(rejectedDocs);
+  const missingDocReason = selectedDocPaths.some(p => !rejectedDocs[p].trim());
+  const canConfirmReject = !isProcessing && !missingDocReason &&
+    (selectedDocPaths.length > 0 || rejectReason.trim().length > 0);
+
   const confirmReject = async () => {
-    if (!rejectReason.trim()) {
-      toast.showToast('Please provide a reason for rejection', { type: 'error' });
+    if (!canConfirmReject) {
+      toast.showToast(
+        missingDocReason
+          ? 'Please give a reason for each selected document'
+          : 'Select a document or give a reason for rejection',
+        { type: 'error' });
       return;
     }
-    if (isProcessing) return;
     setIsProcessing(true);
     try {
-      await api.put(`/admin/workers/${id}/reject`, { reason: rejectReason });
+      await api.put(`/admin/workers/${id}/reject`, {
+        reason: rejectReason.trim(),
+        documents: selectedDocPaths.map(path => ({ path, reason: rejectedDocs[path].trim() })),
+      });
       await fetchWorkerDetails();
-      toast.showToast('Worker rejected successfully', { type: 'success' });
+      toast.showToast(
+        selectedDocPaths.length
+          ? `${selectedDocPaths.length} document(s) rejected — worker will re-upload only these`
+          : 'Worker rejected successfully',
+        { type: 'success' });
       setShowRejectModal(false);
       setRejectReason('');
+      setRejectedDocs({});
       navigate('/admin/workers');
     } catch (err) {
       toast.showToast(err.response?.data?.message || 'Rejection failed', { type: 'error' });
@@ -694,8 +734,16 @@ export default function WorkerDetail() {
                             <FileText size={20} />
                           </div>
                           <div className="document-info">
-                            <div className="document-name">{doc.name}</div>
+                            <div className="document-name" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              {doc.name}
+                              <DocReviewBadge status={doc.reviewStatus} />
+                            </div>
                             <div className="document-type">{doc.type}</div>
+                            {doc.reviewStatus === 'rejected' && doc.rejectionReason && (
+                              <div style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px' }}>
+                                Rejected: {doc.rejectionReason}
+                              </div>
+                            )}
                             <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>
                               {doc.viewLink ? doc.viewLink.split('/').pop() : 'No file'}
                             </div>
@@ -732,35 +780,41 @@ export default function WorkerDetail() {
               {/* Experience Certificate */}
               <div className="card certifications-card">
                 <div className="card-header">
-                  <div className="card-title">EXPERIENCE CERTIFICATE</div>
+                  <div className="card-title">
+                    EXPERIENCE CERTIFICATE{worker.experienceCertificate.length > 1 ? `S (${worker.experienceCertificate.length})` : ''}
+                  </div>
                 </div>
                 <div className="certifications-content">
-                  {worker.experienceCertificate ? (
-                    <div className="certification-item">
-                      <div className="cert-icon">
-                        <Award size={20} />
-                      </div>
-                      <div className="cert-info">
-                        <div className="cert-name">Experience Certificate</div>
-                        <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
-                          {worker.experienceCertificate.split('/').pop()}
+                  {worker.experienceCertificate.length > 0 ? (
+                    worker.experienceCertificate.map((cert, i) => (
+                      <div className="certification-item" key={cert}>
+                        <div className="cert-icon">
+                          <Award size={20} />
                         </div>
+                        <div className="cert-info">
+                          <div className="cert-name">
+                            Experience Certificate{worker.experienceCertificate.length > 1 ? ` ${i + 1}` : ''}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
+                            {cert.split('/').pop()}
+                          </div>
+                        </div>
+                        <button
+                          className="view-document-btn"
+                          onClick={() => window.open(getFileUrl(cert), '_blank')}
+                          title="View Certificate"
+                        >
+                          View <ExternalLink size={14} />
+                        </button>
+                        <button
+                          className="download-cert-btn"
+                          onClick={() => window.open(getFileUrl(cert), '_blank')}
+                          title="Download Certificate"
+                        >
+                          <Download size={16} />
+                        </button>
                       </div>
-                      <button
-                        className="view-document-btn"
-                        onClick={() => window.open(worker.experienceCertificate, '_blank')}
-                        title="View Certificate"
-                      >
-                        View <ExternalLink size={14} />
-                      </button>
-                      <button
-                        className="download-cert-btn"
-                        onClick={() => window.open(worker.experienceCertificate, '_blank')}
-                        title="Download Certificate"
-                      >
-                        <Download size={16} />
-                      </button>
-                    </div>
+                    ))
                   ) : (
                     <div className="no-data-state">
                       <Award size={48} className="no-data-icon" />
@@ -917,16 +971,57 @@ export default function WorkerDetail() {
         {
           showRejectModal && (
             <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-              <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '500px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Reject Worker</h3>
-                <p style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#6b7280' }}>
-                  Please provide a reason for rejecting <strong>{worker.name}</strong>:
+              <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '560px', width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Reject Worker</h3>
+                <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#6b7280' }}>
+                  Select the documents that are wrong for <strong>{worker.name}</strong>. The worker will re-upload
+                  <strong> only these</strong>; unselected documents are marked approved.
                 </p>
+
+                {worker.documents.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                    {worker.documents.map((doc) => {
+                      const selected = doc.path in rejectedDocs;
+                      return (
+                        <div key={doc.path} style={{ border: `1px solid ${selected ? '#fca5a5' : '#e5e7eb'}`, background: selected ? '#fef2f2' : 'white', borderRadius: '8px', padding: '10px 12px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={selected} onChange={() => toggleRejectedDoc(doc.path)} />
+                            <span style={{ flex: 1, fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>{doc.name}</span>
+                            <DocReviewBadge status={doc.reviewStatus} />
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); handleViewDocument(doc); }}
+                              style={{ border: 'none', background: 'none', color: '#2563eb', cursor: 'pointer', fontSize: '13px' }}
+                            >
+                              View
+                            </button>
+                          </label>
+                          {selected && (
+                            <input
+                              type="text"
+                              autoFocus
+                              value={rejectedDocs[doc.path]}
+                              onChange={(e) => setRejectedDocs(prev => ({ ...prev, [doc.path]: e.target.value }))}
+                              placeholder="Why is this document rejected? e.g. Photo is blurry"
+                              style={{ width: '100%', marginTop: '8px', padding: '8px 10px', border: '1px solid #fca5a5', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box' }}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '16px' }}>No documents uploaded.</p>
+                )}
+
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                  {selectedDocPaths.length ? 'Additional note (optional)' : 'Reason for rejection'}
+                </label>
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Enter rejection reason..."
-                  rows={4}
+                  placeholder={selectedDocPaths.length ? 'Any extra note for the worker...' : 'Enter rejection reason...'}
+                  rows={3}
                   style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '15px', fontFamily: 'inherit', resize: 'vertical', marginBottom: '24px', boxSizing: 'border-box' }}
                 />
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -934,6 +1029,7 @@ export default function WorkerDetail() {
                     onClick={() => {
                       setShowRejectModal(false);
                       setRejectReason('');
+                      setRejectedDocs({});
                     }}
                     style={{ padding: '10px 24px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
                   >
@@ -941,10 +1037,14 @@ export default function WorkerDetail() {
                   </button>
                   <button
                     onClick={confirmReject}
-                    disabled={isProcessing || !rejectReason.trim()}
-                    style={{ padding: '10px 24px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: (isProcessing || !rejectReason.trim()) ? 'not-allowed' : 'pointer', opacity: (isProcessing || !rejectReason.trim()) ? 0.6 : 1 }}
+                    disabled={!canConfirmReject}
+                    style={{ padding: '10px 24px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: canConfirmReject ? 'pointer' : 'not-allowed', opacity: canConfirmReject ? 1 : 0.6 }}
                   >
-                    {isProcessing ? 'Rejecting...' : 'Confirm Rejection'}
+                    {isProcessing
+                      ? 'Rejecting...'
+                      : selectedDocPaths.length
+                        ? `Reject ${selectedDocPaths.length} document(s)`
+                        : 'Confirm Rejection'}
                   </button>
                 </div>
               </div>
@@ -1249,5 +1349,21 @@ export default function WorkerDetail() {
 
       </main >
     </div >
+  );
+}
+
+// Document ka admin review — Approved / Rejected / Needs review.
+// "pending" = worker ne naya upload kiya, abhi kisi ne dekha nahi.
+function DocReviewBadge({ status }) {
+  const map = {
+    approved: { label: 'Approved', color: '#16a34a', bg: '#dcfce7' },
+    rejected: { label: 'Rejected', color: '#dc2626', bg: '#fee2e2' },
+    pending: { label: 'Needs review', color: '#b45309', bg: '#fef3c7' },
+  };
+  const s = map[status] || map.pending;
+  return (
+    <span style={{ fontSize: '11px', fontWeight: 600, color: s.color, background: s.bg, padding: '2px 8px', borderRadius: '999px' }}>
+      {s.label}
+    </span>
   );
 }
