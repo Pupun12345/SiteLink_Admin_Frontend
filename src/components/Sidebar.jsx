@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { usePermissions, hasPermission } from '../hooks/usePermissions';
+import useAdminAlerts from '../hooks/useAdminAlerts';
 import {
   LayoutGrid,
   Bell,
@@ -104,6 +105,8 @@ const financeItems = [
 export default function Sidebar({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
+  // Naye admin alerts ki ginti (har 30s) + naya aate hi popup.
+  const alertCount = useAdminAlerts();
   const permissions = usePermissions();
   const adminUser = localStorage.getItem('adminUser');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -206,6 +209,9 @@ export default function Sidebar({ onLogout }) {
             >
               <Icon size={17} />
               <span>{item.label}</span>
+              {item.path === '/admin/notifications' && alertCount > 0 && (
+                <span className="sidebar-alert-badge">{alertCount > 99 ? '99+' : alertCount}</span>
+              )}
             </button>
           );
         })}
@@ -224,6 +230,9 @@ export default function Sidebar({ onLogout }) {
             >
               <Icon size={17} />
               <span>{item.label}</span>
+              {item.path === '/admin/notifications' && alertCount > 0 && (
+                <span className="sidebar-alert-badge">{alertCount > 99 ? '99+' : alertCount}</span>
+              )}
             </button>
           );
         })}
@@ -242,6 +251,9 @@ export default function Sidebar({ onLogout }) {
             >
               <Icon size={17} />
               <span>{item.label}</span>
+              {item.path === '/admin/notifications' && alertCount > 0 && (
+                <span className="sidebar-alert-badge">{alertCount > 99 ? '99+' : alertCount}</span>
+              )}
             </button>
           );
         })}
