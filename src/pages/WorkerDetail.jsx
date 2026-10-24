@@ -128,6 +128,9 @@ export default function WorkerDetail() {
           .map(d => ({
             ...buildDocument(d.name, d.type, d.url),
             path: d.url,
+            // Sirf Government ID ka review hota hai; certificates sirf vendor
+            // ko dikhane ke liye hain (reviewable: false, koi badge nahi).
+            reviewable: d.reviewable !== false && d.docType !== 'experienceCertificate',
             reviewStatus: d.reviewStatus || 'pending',
             rejectionReason: d.rejectionReason || null,
           })),
@@ -736,7 +739,7 @@ export default function WorkerDetail() {
                           <div className="document-info">
                             <div className="document-name" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                               {doc.name}
-                              <DocReviewBadge status={doc.reviewStatus} />
+                              {doc.reviewable && <DocReviewBadge status={doc.reviewStatus} />}
                             </div>
                             <div className="document-type">{doc.type}</div>
                             {doc.reviewStatus === 'rejected' && doc.rejectionReason && (
@@ -1002,13 +1005,13 @@ export default function WorkerDetail() {
               <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '560px', width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
                 <h3 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Reject Worker</h3>
                 <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#6b7280' }}>
-                  Select the documents that are wrong for <strong>{worker.name}</strong>. The worker will re-upload
-                  <strong> only these</strong>; unselected documents are marked approved.
+                  Tick <strong>Government ID</strong> if it is wrong for <strong>{worker.name}</strong> — the worker
+                  will be asked to re-upload it. Experience certificates are not reviewed (they are only shown to vendors).
                 </p>
 
-                {worker.documents.length > 0 ? (
+                {worker.documents.some(d => d.reviewable) ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-                    {worker.documents.map((doc) => {
+                    {worker.documents.filter(d => d.reviewable).map((doc) => {
                       const selected = doc.path in rejectedDocs;
                       return (
                         <div key={doc.path} style={{ border: `1px solid ${selected ? '#fca5a5' : '#e5e7eb'}`, background: selected ? '#fef2f2' : 'white', borderRadius: '8px', padding: '10px 12px' }}>
@@ -1039,7 +1042,7 @@ export default function WorkerDetail() {
                     })}
                   </div>
                 ) : (
-                  <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '16px' }}>No documents uploaded.</p>
+                  <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '16px' }}>No Government ID uploaded.</p>
                 )}
 
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
