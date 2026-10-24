@@ -19,6 +19,13 @@ import PlatformSettings from './pages/PlatformSettings';
 import RevenuePage from './pages/RevenuePage'
 import SupportPage from './pages/SupportPage'
 import CreatePost from './pages/CreatePost'
+import AdminPosts from './pages/AdminPosts'
+
+
+function ExternalRedirect({ to }) {
+  window.location.replace(to);
+  return null;
+}
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('adminToken') || localStorage.getItem('adminUser');
@@ -75,7 +82,7 @@ function App() {
           path="/admin/revenue"
           element={
             <ProtectedRoute>
-              <RevenuePage/>
+              <RevenuePage />
             </ProtectedRoute>
           }
         />
@@ -184,12 +191,28 @@ function App() {
           }
         />
         <Route
+          path="/admin/admin-posts"
+          element={
+            <ProtectedRoute>
+              <AdminPosts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/support"
           element={
             <ProtectedRoute>
               <SupportPage />
             </ProtectedRoute>
           }
+        />
+        <Route
+          path="/privacy-page/playstore"
+          element={<ExternalRedirect to="/pages_for_playstore/privacyPage.html" />}
+        />
+        <Route
+          path="/delete-account/playstore"
+          element={<ExternalRedirect to="/pages_for_playstore/deletePage.html" />}
         />
       </Routes>
     </BrowserRouter>

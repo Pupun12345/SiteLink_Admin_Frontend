@@ -5,6 +5,33 @@ import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
 import './CreatePost.css';
 
+// Compress an image File using Canvas — returns a new File
+const compressImage = (file, maxWidth = 1280, quality = 0.75) =>
+  new Promise((resolve) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() })),
+        'image/jpeg',
+        quality
+      );
+    };
+    img.src = url;
+  });
+
+const VIDEO_MAX_MB = 50;
+
 const FEELINGS = ['😊 Happy', '🎉 Excited', '💪 Motivated', '🙏 Grateful', '📢 Announcing', '⚠️ Important', '💡 Informative'];
 
 const CATEGORY_META = {
@@ -23,10 +50,13 @@ export default function CreatePost() {
   const videoInputRef = useRef();
 
   const [postType, setPostType] = useState(null);
+  const [postDuration, setPostDuration] = useState('permanent');
+  const [customHours, setCustomHours] = useState(24);
   const [profile, setProfile] = useState({ name: '', imageUrl: '' });
   const [amenities, setAmenities] = useState([]);
   const [openCategories, setOpenCategories] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -76,12 +106,19 @@ export default function CreatePost() {
   const toggleCategory = (cat) =>
     setOpenCategories(p => ({ ...p, [cat]: !p[cat] }));
 
-  const handleImages = (e) => {
+  const handleImages = async (e) => {
     const files = Array.from(e.target.files);
     if (images.length + files.length > 5) { setError('Maximum 5 images allowed.'); return; }
     setError('');
-    setImages(p => [...p, ...files]);
-    setImagePreviews(p => [...p, ...files.map(f => URL.createObjectURL(f))]);
+    setCompressing(true);
+    try {
+      const compressed = await Promise.all(files.map(f => compressImage(f)));
+      setImages(p => [...p, ...compressed]);
+      setImagePreviews(p => [...p, ...compressed.map(f => URL.createObjectURL(f))]);
+    } finally {
+      setCompressing(false);
+      e.target.value = '';
+    }
   };
 
   const removeImage = (i) => {
@@ -93,6 +130,13 @@ export default function CreatePost() {
   const handleVideo = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    const sizeMB = file.size / (1024 * 1024);
+    if (sizeMB > VIDEO_MAX_MB) {
+      setError(`Video must be under ${VIDEO_MAX_MB}MB. Your file is ${sizeMB.toFixed(1)}MB.`);
+      e.target.value = '';
+      return;
+    }
+    setError('');
     setVideo(file);
     setVideoPreview(URL.createObjectURL(file));
   };
@@ -126,18 +170,20 @@ export default function CreatePost() {
         const fd = new FormData();
         fd.append('content', content.trim());
         if (feeling) fd.append('feeling', feeling);
+        const dur = postDuration === 'custom' ? String(customHours) : postDuration;
+        fd.append('postDuration', dur);
         images.forEach(img => fd.append('images', img));
         if (video) fd.append('video', video);
         await api.post('/community/posts', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         setSuccess('Post published successfully!');
-        setTimeout(() => navigate('/admin/dashboard'), 1500);
+        setTimeout(() => navigate('/admin/create-post'), 1500);
       } else {
         await api.post('/jobs', job);
         setSuccess('Job post created successfully!');
         setTimeout(() => navigate('/admin/requirements'), 1500);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit. Please try again.');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Failed to submit. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -248,12 +294,32 @@ export default function CreatePost() {
 
               {error && <div className="cp-alert cp-alert-error">{error}</div>}
               {success && <div className="cp-alert cp-alert-success">{success}</div>}
+              {compressing && <div className="cp-alert" style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>⏳ Compressing images, please wait...</div>}
 
               <form onSubmit={handleSubmit} className="cp-form">
 
                 {/* ── GENERAL POST ── */}
                 {postType === 'post' && (
                   <>
+                    <div className="cp-field">
+                      <label>Post Duration</label>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                        {[{ val: 'permanent', label: '♾️ Permanent' }, { val: '24', label: '24 hrs' }, { val: '48', label: '48 hrs' }, { val: '72', label: '72 hrs' }, { val: 'custom', label: '⏱ Custom' }].map(opt => (
+                          <button type="button" key={opt.val}
+                            onClick={() => setPostDuration(opt.val)}
+                            style={{ padding: '6px 14px', borderRadius: '20px', border: '1.5px solid', fontSize: '13px', fontWeight: '600', cursor: 'pointer', background: postDuration === opt.val ? '#2b3f57' : '#f3f4f6', color: postDuration === opt.val ? '#fff' : '#374151', borderColor: postDuration === opt.val ? '#2b3f57' : '#d1d5db' }}>
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                      {postDuration === 'custom' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input type="number" min="1" max="8760" value={customHours} onChange={e => setCustomHours(Number(e.target.value))} style={{ width: '100px', padding: '6px 10px', borderRadius: '8px', border: '1.5px solid #d1d5db' }} />
+                          <span style={{ fontSize: '13px', color: '#6b7280' }}>hours</span>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="cp-field">
                       <label>What's on your mind? *</label>
                       <textarea value={content} onChange={e => setContent(e.target.value)}
@@ -300,6 +366,9 @@ export default function CreatePost() {
                         {videoPreview ? (
                           <div className="cp-video-wrap">
                             <video src={videoPreview} controls className="cp-video-preview" />
+                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                              {video && `${(video.size / (1024 * 1024)).toFixed(1)} MB`}
+                            </div>
                             <button type="button" className="cp-remove-video" onClick={removeVideo}>✕ Remove</button>
                           </div>
                         ) : (
@@ -434,8 +503,8 @@ export default function CreatePost() {
 
                 <div className="cp-actions">
                   <button type="button" className="cp-btn-cancel" onClick={resetType}>Cancel</button>
-                  <button type="submit" className="cp-btn-submit" disabled={submitting}>
-                    {submitting ? 'Submitting...' : postType === 'job' ? 'Post Job' : 'Publish Post'}
+                  <button type="submit" className="cp-btn-submit" disabled={submitting || compressing}>
+                    {submitting ? 'Submitting...' : compressing ? 'Compressing...' : postType === 'job' ? 'Post Job' : 'Publish Post'}
                   </button>
                 </div>
               </form>

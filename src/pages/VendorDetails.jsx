@@ -230,7 +230,16 @@ export default function VendorDetails() {
                   )}
                   <div className="vendor-subscription" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: vendor?.subscription ? 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)' : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)', borderRadius: '8px', border: vendor?.subscription ? '1px solid #10b981' : '1px solid #ef4444' }}>
                     <span style={{ fontSize: '14px' }}>{vendor?.subscription ? '✓' : '✕'}</span>
-                    <span className="subscription-value" style={{ fontSize: '14px', fontWeight: '600', color: vendor?.subscription ? '#065f46' : '#991b1b' }}>{vendor?.subscription ? 'SUBSCRIBED' : 'NOT SUBSCRIBED'}</span>
+                    <span className="subscription-value" style={{ fontSize: '14px', fontWeight: '600', color: vendor?.subscription ? '#065f46' : '#991b1b' }}>
+                      {vendor?.subscription
+                        ? (vendor.subscriptionDetails?.planName || 'SUBSCRIBED')
+                        : 'NOT SUBSCRIBED'}
+                    </span>
+                    {vendor?.subscription && vendor?.subscriptionDetails?.endDate && (
+                      <span style={{ fontSize: '12px', color: '#065f46', marginLeft: '4px' }}>
+                        · Expires {new Date(vendor.subscriptionDetails.endDate).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: vendor?.isBlocked ? 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' : 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)', borderRadius: '8px', border: vendor?.isBlocked ? '1px solid #ef4444' : '1px solid #10b981' }}>
                     <span style={{ fontSize: '14px' }}>{vendor?.isBlocked ? '🔒' : '🔓'}</span>
@@ -276,20 +285,27 @@ export default function VendorDetails() {
                       <XCircle size={16} />
                       Reject Vendor
                     </button>
-                    <button
-                      className="rate-btn"
-                      onClick={() => {
-                        setShowRating(true);
-                        if (vendor?.adminRating) {
-                          setRating(vendor.adminRating);
-                          setRatingComment(vendor.adminRatingComment || '');
-                        }
-                      }}
-                      disabled={isProcessing}
-                      style={{ padding: '12px 20px', fontSize: '14px', fontWeight: '600', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    >
-                      ⭐ {vendor?.adminRating ? 'Update Rating' : 'Rate Vendor'}
-                    </button>
+                    {vendor?.subscription ? (
+                      <button
+                        className="rate-btn"
+                        onClick={() => {
+                          setShowRating(true);
+                          if (vendor?.adminRating) {
+                            setRating(vendor.adminRating);
+                            setRatingComment(vendor.adminRatingComment || '');
+                          }
+                        }}
+                        disabled={isProcessing}
+                        style={{ padding: '12px 20px', fontSize: '14px', fontWeight: '600', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                      >
+                        ⭐ {vendor?.adminRating ? 'Update Rating' : 'Rate Vendor'}
+                      </button>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#FFF8E1', border: '1px solid #FFD54F', borderRadius: '8px', color: '#8A6D3B', fontSize: '13px', fontWeight: '500' }}>
+                        <span style={{ fontSize: '16px' }}>⚠️</span>
+                        <span>This vendor does not have an active subscription, so a rating cannot be submitted.</span>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

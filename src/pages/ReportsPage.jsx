@@ -47,7 +47,7 @@ export default function ReportsPage() {
   );
   const [profile, setProfile] = useState({ name: '', email: '', imageUrl: '' });
   const [exportHistory, setExportHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingKey, setLoadingKey] = useState(null);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalVendors: 0,
@@ -116,7 +116,7 @@ export default function ReportsPage() {
       return;
     }
 
-    setLoading(true);
+    setLoadingKey(reportType);
     const loadingToast = toast.loading('Generating report...');
 
     try {
@@ -126,11 +126,11 @@ export default function ReportsPage() {
 
       if (reportType === 'user') {
         const response = await api.get('/admin/vendor-worker', {
-          params: { userType: 'all', status: 'all', limit: 1000 }
+          params: { userType: 'all', status: 'all', limit: 1000, startDate: state.startDate, endDate: state.endDate }
         });
         data = response.data.data || [];
-        headers = ['Name', 'Email', 'Phone', 'User Type', 'Company Name', 'Subscription','Experience','role','Additional SKills','workState', 'City', 'Created Date'];
-        filename = `User_Report_${new Date().toISOString().split('T')[0]}`;
+        headers = ['Name', 'Email', 'Phone', 'User Type', 'Company Name', 'Subscription', 'Experience', 'Role', 'Additional Skills', 'Work State', 'City', 'Verification Status', 'Created Date'];
+        filename = `User_Report_${state.startDate}_to_${state.endDate}`;
         
         data = data.map(u => ([
           u.name || '',
@@ -138,36 +138,54 @@ export default function ReportsPage() {
           u.phone || '',
           u.userType || '',
           u.companyName || '',
-          u.subscription || '',
+          u.subscription ? 'Yes' : 'No',
           u.experience || '',
           u.role || '',
-          u.skills.join(',') ||"",
+          Array.isArray(u.additionalSkills) ? u.additionalSkills.map(s => s.skillName || s).join(', ') : '',
           u.workState || '',
           u.city || '',
           u.verificationStatus || '',
-          new Date(u.createdAt).toLocaleDateString()
+          u.join || ''
         ]));
       } else if (reportType === 'revenue') {
-        headers = ['Date', 'Total Users', 'Vendors', 'Workers', 'Revenue'];
-        filename = `Revenue_Report_${new Date().toISOString().split('T')[0]}`;
-        data = [[
-          new Date().toLocaleDateString(),
-          stats.totalUsers,
-          stats.totalVendors,
-          stats.totalWorkers,
-          '$0.00'
-        ]];
+        const response = await api.get('/stats/revenue-stats/report', {
+          params: { startDate: state.startDate, endDate: state.endDate }
+        });
+        const { subscriptions: subs, totalRevenue } = response.data.data;
+        if (!subs || subs.length === 0) {
+          toast.error('No revenue data found for the selected date range', { id: loadingToast });
+          setLoadingKey(null);
+          return;
+        }
+        const planLabels = { vendor_basic: 'Vendor Basic', vendor_premium: 'Vendor Premium', worker: 'Worker Premium', worker_premium: 'Worker Premium' };
+        headers = ['User Name', 'Company Name', 'User Type', 'Plan', 'Status', 'Amount', 'Start Date', 'End Date'];
+        filename = `Revenue_Report_${state.startDate}_to_${state.endDate}`;
+        data = subs.map(s => [
+          s.userName || 'N/A',
+          s.companyName || 'N/A',
+          s.userType || 'N/A',
+          planLabels[s.plan] || s.plan || 'N/A',
+          s.status || 'N/A',
+          `₹${s.amount || 0}`,
+          s.startDate ? new Date(s.startDate).toLocaleDateString() : 'N/A',
+          s.endDate ? new Date(s.endDate).toLocaleDateString() : 'N/A',
+        ]);
+        data.push(['', '', '', '', 'TOTAL', `₹${totalRevenue}`, '', '']);
       } else if (reportType === 'jobs') {
-        headers = ['Report Type', 'Total Jobs', 'Active Jobs', 'Completed Jobs'];
-        filename = `Jobs_Report_${new Date().toISOString().split('T')[0]}`;
-        data = [['Jobs Summary', stats.totalJobs, 0, 0]];
+        const response = await api.get('/admin/reports/jobs', {
+          params: { startDate: state.startDate, endDate: state.endDate }
+        });
+        const { dayWise, summary, jobs: jobList } = response.data.data;
+
+        // Day-wise breakdown sheet
+        headers = ['Date', 'Total Created', 'Open', 'Filled', 'Closed', 'Cancelled'];
+        filename = `Jobs_Report_${state.startDate}_to_${state.endDate}`;
+        data = dayWise.map(d => [
+          d.date, d.total, d.open, d.filled, d.closed, d.cancelled
+        ]);
       }
 
-      if (state.format.includes('CSV')) {
-        downloadCSV(headers, data, filename);
-      } else if (state.format.includes('Excel')) {
-        downloadCSV(headers, data, filename);
-      } else if (state.format.includes('PDF')) {
+      if (state.format === 'CSV') {
         downloadCSV(headers, data, filename);
       }
 
@@ -184,17 +202,17 @@ export default function ReportsPage() {
       console.error('Error generating report:', error);
       toast.error('Failed to generate report', { id: loadingToast });
     } finally {
-      setLoading(false);
+      setLoadingKey(null);
     }
   };
 
   const downloadCSV = (headers, rows, filename) => {
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -297,10 +315,10 @@ export default function ReportsPage() {
                   type="button" 
                   className="report-download-btn"
                   onClick={() => handleGenerateReport(card.key)}
-                  disabled={loading}
+                  disabled={loadingKey === card.key}
                 >
                   <Download size={14} />
-                  {loading ? 'Generating...' : 'Generate & Download'}
+                  {loadingKey === card.key ? 'Generating...' : 'Generate & Download'}
                 </button>
               </section>
             );

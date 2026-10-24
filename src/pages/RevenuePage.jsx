@@ -62,7 +62,7 @@ export default function RevenuePage() {
         profileImage: sub.user?.profileImage || null,
         companyName: sub.user?.companyName || null,
         companyLogo: sub.user?.companyLogo || null,
-        planType: sub.planType || 'N/A',
+        planType: sub.planType || sub.planName || sub.plan || 'N/A',
         status: sub.status,
         amount: sub.amount,
         startDate: sub.startDate,
@@ -110,7 +110,7 @@ export default function RevenuePage() {
       ...rows.map(row => row.map(cell => `"${cell.toString().replace(/"/g, '""')}"`).join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
