@@ -114,7 +114,7 @@ export default function AdminLogin() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.4 }}
           >
-            SiteLink
+            Sitelink
           </motion.h1>
           <motion.p
             className="brand-subtitle"

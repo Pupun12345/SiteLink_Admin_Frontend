@@ -191,7 +191,7 @@ export default function Sidebar({ onLogout }) {
           <img src="/SiteLinkIcon.png" alt="SiteLink Logo" />
         </div>
         <div className="brand-text">
-          <div className="brand">SiteLink</div>
+          <div className="brand">Sitelink</div>
           <div className="brand-sub">Admin Console</div>
         </div>
       </div>
