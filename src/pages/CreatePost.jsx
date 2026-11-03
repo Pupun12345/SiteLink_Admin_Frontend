@@ -5,7 +5,9 @@ import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
 import './CreatePost.css';
 
-// Compress an image File using Canvas — returns a new File
+const VIDEO_MAX_MB = 100;
+
+// Compress an image File using Canvas before uploading
 const compressImage = (file, maxWidth = 1280, quality = 0.75) =>
   new Promise((resolve) => {
     const img = new window.Image();
@@ -30,7 +32,36 @@ const compressImage = (file, maxWidth = 1280, quality = 0.75) =>
     img.src = url;
   });
 
-const VIDEO_MAX_MB = 50;
+// Step 1: get a signed upload params from our backend
+const getSignature = async (context) => {
+  const res = await api.post('/uploads/signature', { context });
+  return res.data.data;
+};
+
+// Step 2: upload a file directly to Cloudinary, returns secure_url + public_id
+const uploadToCloudinary = async (file, sigData) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('api_key', sigData.api_key);
+  fd.append('timestamp', sigData.timestamp);
+  fd.append('signature', sigData.signature);
+  fd.append('folder', sigData.folder);
+  fd.append('public_id', sigData.public_id);
+  const url = `https://api.cloudinary.com/v1_1/${sigData.cloud_name}/${sigData.resource_type}/upload`;
+  const res = await fetch(url, { method: 'POST', body: fd });
+  if (!res.ok) throw new Error('Cloudinary upload failed');
+  const data = await res.json();
+  // Return secure_url from Cloudinary but keep the bare public_id we signed
+  // (Cloudinary echoes back folder/public_id; the backend confirm check expects
+  // the bare id without the folder prefix)
+  return { secure_url: data.secure_url, public_id: sigData.public_id, resource_type: sigData.resource_type };
+};
+
+// Step 3: confirm the upload with our backend
+const confirmUpload = async (public_id, resource_type, secure_url) => {
+  const res = await api.post('/uploads/confirm', { public_id, resource_type, secure_url });
+  return res.data.data;
+};
 
 const FEELINGS = ['😊 Happy', '🎉 Excited', '💪 Motivated', '🙏 Grateful', '📢 Announcing', '⚠️ Important', '💡 Informative'];
 
@@ -56,6 +87,7 @@ export default function CreatePost() {
   const [amenities, setAmenities] = useState([]);
   const [openCategories, setOpenCategories] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const [compressing, setCompressing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -163,18 +195,40 @@ export default function CreatePost() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(''); setSuccess(''); setSubmitting(true);
+    setError(''); setSuccess(''); setSubmitting(true); setUploadProgress('');
     try {
       if (postType === 'post') {
         if (!content.trim()) { setError('Post content is required.'); setSubmitting(false); return; }
-        const fd = new FormData();
-        fd.append('content', content.trim());
-        if (feeling) fd.append('feeling', feeling);
+
+        // Upload images to Cloudinary directly
+        const imageUrls = [];
+        for (let i = 0; i < images.length; i++) {
+          setUploadProgress(`Uploading image ${i + 1} of ${images.length}...`);
+          const sig = await getSignature('postImage');
+          const result = await uploadToCloudinary(images[i], sig);
+          await confirmUpload(result.public_id, result.resource_type, result.secure_url);
+          imageUrls.push(result.secure_url);
+        }
+
+        // Upload video to Cloudinary directly
+        let videoUrl = null;
+        if (video) {
+          setUploadProgress('Uploading video...');
+          const sig = await getSignature('postVideo');
+          const result = await uploadToCloudinary(video, sig);
+          await confirmUpload(result.public_id, result.resource_type, result.secure_url);
+          videoUrl = result.secure_url;
+        }
+
+        setUploadProgress('Publishing post...');
         const dur = postDuration === 'custom' ? String(customHours) : postDuration;
-        fd.append('postDuration', dur);
-        images.forEach(img => fd.append('images', img));
-        if (video) fd.append('video', video);
-        await api.post('/community/posts', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await api.post('/community/posts', {
+          content: content.trim(),
+          feeling: feeling || undefined,
+          postDuration: dur,
+          images: imageUrls,
+          video: videoUrl || undefined,
+        });
         setSuccess('Post published successfully!');
         setTimeout(() => navigate('/admin/create-post'), 1500);
       } else {
@@ -186,6 +240,7 @@ export default function CreatePost() {
       setError(err.response?.data?.error || err.response?.data?.message || 'Failed to submit. Please try again.');
     } finally {
       setSubmitting(false);
+      setUploadProgress('');
     }
   };
 
@@ -201,7 +256,7 @@ export default function CreatePost() {
         <header className="cp-header">
           <div />
           <div className="profile">
-            <img src={profile.imageUrl} alt="profile" />
+            <img src={profile.imageUrl || null} alt="profile" />
             <div><p>{profile.name}</p><span>Super Admin</span></div>
           </div>
         </header>
@@ -295,6 +350,7 @@ export default function CreatePost() {
               {error && <div className="cp-alert cp-alert-error">{error}</div>}
               {success && <div className="cp-alert cp-alert-success">{success}</div>}
               {compressing && <div className="cp-alert" style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>⏳ Compressing images, please wait...</div>}
+              {uploadProgress && <div className="cp-alert" style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>⏳ {uploadProgress}</div>}
 
               <form onSubmit={handleSubmit} className="cp-form">
 
@@ -504,7 +560,9 @@ export default function CreatePost() {
                 <div className="cp-actions">
                   <button type="button" className="cp-btn-cancel" onClick={resetType}>Cancel</button>
                   <button type="submit" className="cp-btn-submit" disabled={submitting || compressing}>
-                    {submitting ? 'Submitting...' : compressing ? 'Compressing...' : postType === 'job' ? 'Post Job' : 'Publish Post'}
+                    {compressing ? 'Compressing...' : submitting
+                      ? (uploadProgress || 'Submitting...')
+                      : postType === 'job' ? 'Post Job' : 'Publish Post'}
                   </button>
                 </div>
               </form>
