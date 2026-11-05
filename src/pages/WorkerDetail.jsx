@@ -83,13 +83,13 @@ export default function WorkerDetail() {
       const user = data.data;
       if (!user) throw new Error('Worker not found');
 
-      console.log('Raw verificationStatus from backend:', user.verificationStatus);
+      // console.log('Raw verificationStatus from backend:', user.verificationStatus);
 
-      console.log('Raw user data:', {
-        governmentID: user.governmentID,
-        experienceCertificate: user.experienceCertificate,
-        workSamplesPhoto: user.workSamplesPhoto
-      });
+      // console.log('Raw user data:', {
+      //   governmentID: user.governmentID,
+      //   experienceCertificate: user.experienceCertificate,
+      //   workSamplesPhoto: user.workSamplesPhoto
+      // });
 
       const mapped = {
         ...user,
@@ -120,7 +120,7 @@ export default function WorkerDetail() {
           buildDocument('Experience Certificate', 'EXPERIENCE PROOF', user.experienceCertificate),
         ].filter(doc => {
           const isValid = doc !== null && doc.viewLink;
-          console.log('Document:', doc?.name, 'Valid:', isValid, 'ViewLink:', doc?.viewLink);
+          // console.log('Document:', doc?.name, 'Valid:', isValid, 'ViewLink:', doc?.viewLink);
           return isValid;
         }),
         workPhotos: (user.workSamplesPhoto || []).map(photo => {
@@ -138,13 +138,13 @@ export default function WorkerDetail() {
         isBlocked: user.isBlocked || false
       };
 
-      console.log('Worker Data:', {
-        dateOfBirth: user.dateOfBirth,
-        age: user.age,
-        mappedAge: mapped.age,
-        mappedDOB: mapped.dateOfBirth,
-        gender: mapped.gender
-      });
+      // console.log('Worker Data:', {
+      //   dateOfBirth: user.dateOfBirth,
+      //   age: user.age,
+      //   mappedAge: mapped.age,
+      //   mappedDOB: mapped.dateOfBirth,
+      //   gender: mapped.gender
+      // });
 
       setWorker(mapped);
     } catch (err) {
