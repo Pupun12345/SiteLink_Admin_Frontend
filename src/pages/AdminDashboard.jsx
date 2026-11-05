@@ -24,7 +24,7 @@ import { motion } from "framer-motion";
 import Sidebar from "../components/Sidebar";
 import api from "../api/axios";
 import "./AdminDashboard.css";
-const BACKEND_URL = import.meta.env.VITE_API_URL;
+
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -230,6 +230,7 @@ export default function AdminDashboard() {
       <div className="dashboard-content">
         {/* HEADER */}
         <header className="dashboard-header">
+          <div className="header-mobile-spacer" aria-hidden="true" />
           <div className="header-left">
             <div className="header-title">
               <h1>Platform Overview</h1>

@@ -199,10 +199,19 @@ button {
 .main-content {
   flex: 1;
   min-width: 0;
-  margin-left: var(--sidebar-w);
+  margin-left: 260px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+}
+
+@media (max-width: 1080px) {
+  .main-content {
+    margin-left: 0;
+  }
+  .page-body {
+    padding-top: 70px;
+  }
 }
 
 
@@ -815,14 +824,6 @@ button {
 }
 
 @media (max-width: 640px) {
-  .sidebar {
-    display: none;
-  }
-
-  .main-content {
-    margin-left: 0;
-  }
-
   .page-body {
     padding: 16px;
   }
