@@ -30,8 +30,8 @@ export default function VendorDetails() {
       const { data } = await api.get(`/admin/vendors/${id}`);
       const vendorData = data.data;
 
-      console.log('Raw vendor data:', vendorData);
-      console.log('Verification status:', vendorData.verificationStatus);
+      // console.log('Raw vendor data:', vendorData);
+      // console.log('Verification status:', vendorData.verificationStatus);
 
       setVendor(vendorData);
     } catch (err) {

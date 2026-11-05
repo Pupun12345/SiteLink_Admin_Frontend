@@ -71,17 +71,17 @@ export default function WorkerVerification() {
   const fetchAdminProfile = async () => {
     try {
       const response = await api.get('/profile/me');
-      console.log('Profile response:', response.data);
+      // console.log('Profile response:', response.data);
 
       if (response.data.success && response.data.data) {
         const user = response.data.data.user;
-        console.log('User data:', user);
+        // console.log('User data:', user);
 
         const imageUrl = user.profileImage
           ? user.profileImage
           : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin')}&background=2b3f57&color=fff`;
 
-        console.log('Image URL:', imageUrl);
+        // console.log('Image URL:', imageUrl);
 
         setProfile({
           name: user.name || '',
