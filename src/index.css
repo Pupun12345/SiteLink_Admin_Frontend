@@ -47,6 +47,16 @@ body {
   flex: 1;
   margin-left: 260px;
   padding: 40px 40px 60px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 1080px) {
+  .dashboard-content {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 #root {

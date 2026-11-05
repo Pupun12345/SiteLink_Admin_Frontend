@@ -25,6 +25,8 @@ import { useToast } from '../components/ToastProvider';
 import api from '../api/axios';
 import './WorkerDetail.css';
 import Sidebar from '../components/Sidebar';
+import FileViewer from '../components/FileViewer';
+import { useFileDownload } from '../hooks/useFileDownload';
 const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function WorkerDetail() {
@@ -50,6 +52,8 @@ export default function WorkerDetail() {
   const [customSkillName, setCustomSkillName] = useState('');
 
   const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [viewer, setViewer] = useState(null);
+  const { download: downloadFile, downloading: isDownloading } = useFileDownload();
 
   useEffect(() => {
     fetchWorkerDetails();
@@ -120,9 +124,9 @@ export default function WorkerDetail() {
           return isValid;
         }),
         workPhotos: (user.workSamplesPhoto || []).map(photo => {
-            const url = getFileUrl(photo);
-            return { url, path: photo };
-          }).filter(photo => photo.url),
+          const url = getFileUrl(photo);
+          return { url, path: photo };
+        }).filter(photo => photo.url),
         contactInfo: {
           email: user.email || 'N/A',
           phone: user.phone || 'N/A',
@@ -349,8 +353,7 @@ export default function WorkerDetail() {
       toast.showToast('Document not available', { type: 'error' });
       return;
     }
-
-    window.open(doc.viewLink, '_blank');
+    setViewer({ url: doc.viewLink, name: doc.name });
   };
 
   const handleDownloadDocument = (doc) => {
@@ -358,8 +361,8 @@ export default function WorkerDetail() {
       toast.showToast('Document not available for download', { type: 'error' });
       return;
     }
-
-    window.open(doc.downloadLink, '_blank');
+    const label = doc.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')+`-${worker.name}`;
+    downloadFile(doc.downloadLink, label);
   };
 
   const handleViewAllPortfolio = () => {
@@ -738,14 +741,15 @@ export default function WorkerDetail() {
                       </div>
                       <button
                         className="view-document-btn"
-                        onClick={() => window.open(worker.experienceCertificate, '_blank')}
+                        onClick={() => setViewer({ url: worker.experienceCertificate, name: 'Experience Certificate' })}
                         title="View Certificate"
                       >
                         View <ExternalLink size={14} />
                       </button>
                       <button
                         className="download-cert-btn"
-                        onClick={() => window.open(worker.experienceCertificate, '_blank')}
+                        onClick={() => downloadFile(worker.experienceCertificate, `experience-certificate-${worker.name}`)}
+                        disabled={isDownloading}
                         title="Download Certificate"
                       >
                         <Download size={16} />
@@ -846,426 +850,435 @@ export default function WorkerDetail() {
                                 const placeholder = e.target.nextSibling;
                                 if (placeholder) placeholder.style.display = 'flex';
                               }}
-                              onClick={() => window.open(photoUrl, '_blank')}
-                              style={{ cursor: 'pointer' }}
+                              onClick={() => setViewer({ url: photoUrl, name: `Work Photo ${index + 1}` })}
+                      style={{ cursor: 'pointer' }}
                             />
-                            <div className="photo-placeholder" style={{ display: 'none', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9ca3af' }}>
-                              <Wrench size={24} />
-                            </div>
-                          </div>
-                        );
+                      <div className="photo-placeholder" style={{ display: 'none', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9ca3af' }}>
+                        <Wrench size={24} />
+                      </div>
+                    </div>
+                  );
                       })}
-                    </div>
-                  ) : (
-                    <div className="no-data-state">
-                      <Wrench size={48} className="no-data-icon" />
-                      <p className="no-data-text">No work photos available</p>
-                      <p className="no-data-subtext">Worker hasn't uploaded any portfolio images yet</p>
-                    </div>
-                  )}
                 </div>
+                ) : (
+                <div className="no-data-state">
+                  <Wrench size={48} className="no-data-icon" />
+                  <p className="no-data-text">No work photos available</p>
+                  <p className="no-data-subtext">Worker hasn't uploaded any portfolio images yet</p>
+                </div>
+                  )}
               </div>
             </div>
           </div>
         </div>
+    </div>
 
         {
-          showAllPhotos && worker.workPhotos && (
-            <div
-              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
-              onClick={() => setShowAllPhotos(false)}
-            >
-              <div
-                style={{ background: 'white', borderRadius: '12px', padding: '24px', maxWidth: '900px', width: '90%', maxHeight: '85vh', overflowY: 'auto' }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700' }}>Work Photos Portfolio ({worker.workPhotos.length})</h3>
-                  <button onClick={() => setShowAllPhotos(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#6b7280' }}>×</button>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
-                  {worker.workPhotos.map((photo, index) => {
-                    const photoUrl = typeof photo === 'string' ? getFileUrl(photo) : (photo.url || getFileUrl(photo.path));
-                    return (
-                      <img
-                        key={index}
-                        src={photoUrl}
-                        alt={`Work ${index + 1}`}
-                        style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer' }}
-                        onClick={() => window.open(photoUrl, '_blank')}
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        {
-          showApprovalConfirm && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-              <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '500px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Approve Worker</h3>
-                <p style={{ margin: '0 0 24px 0', fontSize: '16px', color: '#6b7280', lineHeight: '1.6' }}>
-                  Are you sure you want to approve <strong>{worker.name}</strong>?
-                  This action will verify the worker and allow them to receive job assignments.
-                </p>
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={() => setShowApprovalConfirm(false)}
-                    style={{ padding: '10px 24px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
-                  >
-                    No, Cancel
-                  </button>
-                  <button
-                    onClick={confirmApproval}
-                    disabled={isProcessing}
-                    style={{ padding: '10px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: isProcessing ? 'not-allowed' : 'pointer', opacity: isProcessing ? 0.6 : 1 }}
-                  >
-                    {isProcessing ? 'Approving...' : 'Yes, Approve'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        {
-          showRejectModal && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-              <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '500px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Reject Worker</h3>
-                <p style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#6b7280' }}>
-                  Please provide a reason for rejecting <strong>{worker.name}</strong>:
-                </p>
-                <textarea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Enter rejection reason..."
-                  rows={4}
-                  style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '15px', fontFamily: 'inherit', resize: 'vertical', marginBottom: '24px', boxSizing: 'border-box' }}
+    showAllPhotos && worker.workPhotos && (
+      <div
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
+        onClick={() => setShowAllPhotos(false)}
+      >
+        <div
+          style={{ background: 'white', borderRadius: '12px', padding: '24px', maxWidth: '900px', width: '90%', maxHeight: '85vh', overflowY: 'auto' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '700' }}>Work Photos Portfolio ({worker.workPhotos.length})</h3>
+            <button onClick={() => setShowAllPhotos(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#6b7280' }}>×</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+            {worker.workPhotos.map((photo, index) => {
+              const photoUrl = typeof photo === 'string' ? getFileUrl(photo) : (photo.url || getFileUrl(photo.path));
+              return (
+                <img
+                  key={index}
+                  src={photoUrl}
+                  alt={`Work ${index + 1}`}
+                  style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer' }}
+                  onClick={() => setViewer({ url: photoUrl, name: `Work Photo ${index + 1}` })}
+                  onError={(e) => { e.target.style.display = 'none'; }}
                 />
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={() => {
-                      setShowRejectModal(false);
-                      setRejectReason('');
-                    }}
-                    style={{ padding: '10px 24px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmReject}
-                    disabled={isProcessing || !rejectReason.trim()}
-                    style={{ padding: '10px 24px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: (isProcessing || !rejectReason.trim()) ? 'not-allowed' : 'pointer', opacity: (isProcessing || !rejectReason.trim()) ? 0.6 : 1 }}
-                  >
-                    {isProcessing ? 'Rejecting...' : 'Confirm Rejection'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        }
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-        {/* Rating Modal */}
-        {
-          showRating && (
-            <div
-              className="rating-modal-backdrop"
-              onMouseDown={(e) => {
-                if (e.target === e.currentTarget) {
-                  setShowRating(false);
-                }
-              }}
+  {
+    showApprovalConfirm && (
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+        <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '500px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Approve Worker</h3>
+          <p style={{ margin: '0 0 24px 0', fontSize: '16px', color: '#6b7280', lineHeight: '1.6' }}>
+            Are you sure you want to approve <strong>{worker.name}</strong>?
+            This action will verify the worker and allow them to receive job assignments.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setShowApprovalConfirm(false)}
+              style={{ padding: '10px 24px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
             >
-              <div className="rating-modal-container">
-                <div className="rating-modal-header">
-                  <h3>Rate Worker</h3>
-                  <button
-                    className="rating-modal-close"
-                    type="button"
-                    onClick={() => setShowRating(false)}
-                  >
-                    ×
-                  </button>
-                </div>
+              No, Cancel
+            </button>
+            <button
+              onClick={confirmApproval}
+              disabled={isProcessing}
+              style={{ padding: '10px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: isProcessing ? 'not-allowed' : 'pointer', opacity: isProcessing ? 0.6 : 1 }}
+            >
+              {isProcessing ? 'Approving...' : 'Yes, Approve'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-                <div className="rating-modal-body">
-                  <p className="rating-modal-description">
-                    Rate <strong>{worker.name}</strong> based on their profile, qualifications, and documentation quality.
-                  </p>
+  {
+    showRejectModal && (
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+        <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '500px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Reject Worker</h3>
+          <p style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#6b7280' }}>
+            Please provide a reason for rejecting <strong>{worker.name}</strong>:
+          </p>
+          <textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="Enter rejection reason..."
+            rows={4}
+            style={{ width: '100%', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '15px', fontFamily: 'inherit', resize: 'vertical', marginBottom: '24px', boxSizing: 'border-box' }}
+          />
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => {
+                setShowRejectModal(false);
+                setRejectReason('');
+              }}
+              style={{ padding: '10px 24px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmReject}
+              disabled={isProcessing || !rejectReason.trim()}
+              style={{ padding: '10px 24px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: (isProcessing || !rejectReason.trim()) ? 'not-allowed' : 'pointer', opacity: (isProcessing || !rejectReason.trim()) ? 0.6 : 1 }}
+            >
+              {isProcessing ? 'Rejecting...' : 'Confirm Rejection'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-                  <div className="rating-input-section">
-                    <div className="rating-display">
-                      <span className="rating-label">Current Rating:</span>
-                      <span className="rating-value">{rating.toFixed(1)}/5.0</span>
-                    </div>
+  {/* Rating Modal */ }
+  {
+    showRating && (
+      <div
+        className="rating-modal-backdrop"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowRating(false);
+          }
+        }}
+      >
+        <div className="rating-modal-container">
+          <div className="rating-modal-header">
+            <h3>Rate Worker</h3>
+            <button
+              className="rating-modal-close"
+              type="button"
+              onClick={() => setShowRating(false)}
+            >
+              ×
+            </button>
+          </div>
 
-                    <div className="rating-stars-container">
-                      {[1, 2, 3, 4, 5].map(starValue => {
-                        const isFilled = starValue <= Math.floor(rating);
-                        const isHalfFilled = starValue > Math.floor(rating) && starValue <= Math.ceil(rating) && rating % 1 >= 0.5;
+          <div className="rating-modal-body">
+            <p className="rating-modal-description">
+              Rate <strong>{worker.name}</strong> based on their profile, qualifications, and documentation quality.
+            </p>
 
-                        return (
-                          <button
-                            key={starValue}
-                            type="button"
-                            className={`rating-star ${isFilled || isHalfFilled ? 'active' : ''}`}
-                            onClick={() => setRating(starValue)}
-                          >
-                            <Star
-                              size={32}
-                              fill={isFilled ? '#fbbf24' : isHalfFilled ? '#fbbf24' : 'transparent'}
-                              stroke={isFilled || isHalfFilled ? '#fbbf24' : '#d1d5db'}
-                              style={{
-                                opacity: isHalfFilled ? 0.6 : 1
-                              }}
-                            />
-                          </button>
-                        );
-                      })}
-                    </div>
+            <div className="rating-input-section">
+              <div className="rating-display">
+                <span className="rating-label">Current Rating:</span>
+                <span className="rating-value">{rating.toFixed(1)}/5.0</span>
+              </div>
 
-                    <div className="rating-slider-section">
-                      <input
-                        type="range"
-                        min="0"
-                        max="5"
-                        step="0.1"
-                        value={rating}
-                        onChange={(e) => setRating(parseFloat(e.target.value))}
-                        className="rating-range-input"
+              <div className="rating-stars-container">
+                {[1, 2, 3, 4, 5].map(starValue => {
+                  const isFilled = starValue <= Math.floor(rating);
+                  const isHalfFilled = starValue > Math.floor(rating) && starValue <= Math.ceil(rating) && rating % 1 >= 0.5;
+
+                  return (
+                    <button
+                      key={starValue}
+                      type="button"
+                      className={`rating-star ${isFilled || isHalfFilled ? 'active' : ''}`}
+                      onClick={() => setRating(starValue)}
+                    >
+                      <Star
+                        size={32}
+                        fill={isFilled ? '#fbbf24' : isHalfFilled ? '#fbbf24' : 'transparent'}
+                        stroke={isFilled || isHalfFilled ? '#fbbf24' : '#d1d5db'}
+                        style={{
+                          opacity: isHalfFilled ? 0.6 : 1
+                        }}
                       />
-                      <div className="rating-scale-labels">
-                        <span className="scale-label">0</span>
-                        <span className="scale-label">1</span>
-                        <span className="scale-label">2</span>
-                        <span className="scale-label">3</span>
-                        <span className="scale-label">4</span>
-                        <span className="scale-label">5</span>
-                      </div>
-                      <div className="rating-decimal-display">
-                        Use slider for precise rating: {rating.toFixed(1)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rating-comment-section">
-                    <label htmlFor="rating-comment" className="comment-label">
-                      Additional Comments (Optional)
-                    </label>
-                    <textarea
-                      id="rating-comment"
-                      className="rating-textarea"
-                      placeholder="Share your thoughts about this worker's profile, qualifications, or documentation..."
-                      value={ratingComment}
-                      onChange={(e) => setRatingComment(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
-                </div>
-
-                <div className="rating-modal-footer">
-                  <button
-                    type="button"
-                    className="rating-btn rating-btn-cancel"
-                    onClick={() => {
-                      setShowRating(false);
-                      setRating(0.0);
-                      setRatingComment('');
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="rating-btn rating-btn-submit"
-                    onClick={handleRateWorker}
-                    disabled={isProcessing || rating < 0.1}
-                  >
-                    {isProcessing ? 'Submitting...' : 'Submit Rating'}
-                  </button>
-                </div>
+                    </button>
+                  );
+                })}
               </div>
-            </div>
-          )
-        }
 
-        {
-          showRequestModal && (
-            <div
-              className="modal-overlay"
-              onMouseDown={(e) => {
-                if (e.target === e.currentTarget) {
-                  setShowRequestModal(false);
-                }
-              }}
-            >
-              <div className="request-modal">
-                <h3>Request Additional Information</h3>
-                <p className="request-description">Send a request to the worker for additional information or clarification.</p>
-                <textarea
-                  className="request-message"
-                  placeholder="Enter your message to the worker..."
-                  value={requestMessage}
-                  onChange={(e) => setRequestMessage(e.target.value)}
-                  rows={4}
+              <div className="rating-slider-section">
+                <input
+                  type="range"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  value={rating}
+                  onChange={(e) => setRating(parseFloat(e.target.value))}
+                  className="rating-range-input"
                 />
-                <div className="request-actions">
-                  <button
-                    className="cancel"
-                    onClick={() => setShowRequestModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="confirm"
-                    onClick={handleRequestInfo}
-                    disabled={isProcessing || !requestMessage.trim()}
-                  >
-                    Send Request
-                  </button>
+                <div className="rating-scale-labels">
+                  <span className="scale-label">0</span>
+                  <span className="scale-label">1</span>
+                  <span className="scale-label">2</span>
+                  <span className="scale-label">3</span>
+                  <span className="scale-label">4</span>
+                  <span className="scale-label">5</span>
+                </div>
+                <div className="rating-decimal-display">
+                  Use slider for precise rating: {rating.toFixed(1)}
                 </div>
               </div>
             </div>
-          )
-        }
 
-        {
-          showAddSkillModal && (
-            <div
-              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
-              onMouseDown={(e) => {
-                if (e.target === e.currentTarget) {
-                  setShowAddSkillModal(false);
-                  setSelectedSkills([]);
-                  setCustomSkillName('');
-                }
+            <div className="rating-comment-section">
+              <label htmlFor="rating-comment" className="comment-label">
+                Additional Comments (Optional)
+              </label>
+              <textarea
+                id="rating-comment"
+                className="rating-textarea"
+                placeholder="Share your thoughts about this worker's profile, qualifications, or documentation..."
+                value={ratingComment}
+                onChange={(e) => setRatingComment(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <div className="rating-modal-footer">
+            <button
+              type="button"
+              className="rating-btn rating-btn-cancel"
+              onClick={() => {
+                setShowRating(false);
+                setRating(0.0);
+                setRatingComment('');
               }}
             >
-              <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Add Skills to Worker</h3>
-                <p style={{ margin: '0 0 24px 0', fontSize: '16px', color: '#6b7280' }}>
-                  Select skills to add to <strong>{worker.name}</strong>'s profile:
-                </p>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rating-btn rating-btn-submit"
+              onClick={handleRateWorker}
+              disabled={isProcessing || rating < 0.1}
+            >
+              {isProcessing ? 'Submitting...' : 'Submit Rating'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-                {/* Custom Skill Input */}
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
-                    Add Custom Skill
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <input
-                      type="text"
-                      value={customSkillName}
-                      onChange={(e) => setCustomSkillName(e.target.value)}
-                      placeholder="Enter custom skill name (e.g., Welding, Plumbing)"
-                      style={{
-                        flex: 1,
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter' && customSkillName.trim()) {
-                          handleAddSkills();
-                        }
-                      }}
-                    />
-                    {customSkillName.trim() && (
-                      <button
-                        onClick={() => setCustomSkillName('')}
-                        style={{
-                          padding: '8px',
-                          background: '#f3f4f6',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}
-                        title="Clear"
-                      >
-                        <XCircle size={18} color="#6b7280" />
-                      </button>
-                    )}
-                  </div>
-                  <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
-                    Type a skill name and click "Add Skills" or press Enter
-                  </p>
-                </div>
+  {
+    showRequestModal && (
+      <div
+        className="modal-overlay"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowRequestModal(false);
+          }
+        }}
+      >
+        <div className="request-modal">
+          <h3>Request Additional Information</h3>
+          <p className="request-description">Send a request to the worker for additional information or clarification.</p>
+          <textarea
+            className="request-message"
+            placeholder="Enter your message to the worker..."
+            value={requestMessage}
+            onChange={(e) => setRequestMessage(e.target.value)}
+            rows={4}
+          />
+          <div className="request-actions">
+            <button
+              className="cancel"
+              onClick={() => setShowRequestModal(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="confirm"
+              onClick={handleRequestInfo}
+              disabled={isProcessing || !requestMessage.trim()}
+            >
+              Send Request
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-                {/* Divider */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                  <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
-                  <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>OR SELECT FROM LIST</span>
-                  <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
-                </div>
+  {
+    showAddSkillModal && (
+      <div
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowAddSkillModal(false);
+            setSelectedSkills([]);
+            setCustomSkillName('');
+          }
+        }}
+      >
+        <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Add Skills to Worker</h3>
+          <p style={{ margin: '0 0 24px 0', fontSize: '16px', color: '#6b7280' }}>
+            Select skills to add to <strong>{worker.name}</strong>'s profile:
+          </p>
 
-                {/* Existing Skills Checkboxes */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}>
-                  {availableSkills
-                    .filter(skill => !worker.skills.some(ws => ws.skillId === skill.id))
-                    .map(skill => (
-                      <label
-                        key={skill.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '12px',
-                          border: selectedSkills.includes(skill.id) ? '2px solid #10b981' : '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          background: selectedSkills.includes(skill.id) ? '#f0fdf4' : 'white',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedSkills.includes(skill.id)}
-                          onChange={() => handleToggleSkill(skill.id)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: '14px', fontWeight: '500' }}>{skill.name}</span>
-                      </label>
-                    ))
+          {/* Custom Skill Input */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+              Add Custom Skill
+            </label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={customSkillName}
+                onChange={(e) => setCustomSkillName(e.target.value)}
+                placeholder="Enter custom skill name (e.g., Welding, Plumbing)"
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && customSkillName.trim()) {
+                    handleAddSkills();
                   }
-                </div>
-                {availableSkills.filter(skill => !worker.skills.some(ws => ws.skillId === skill.id)).length === 0 && (
-                  <p style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>All available skills have been added to this worker.</p>
-                )}
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={() => {
-                      setShowAddSkillModal(false);
-                      setSelectedSkills([]);
-                      setCustomSkillName('');
-                    }}
-                    style={{ padding: '10px 24px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAddSkills}
-                    disabled={isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())}
-                    style={{ padding: '10px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: (isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())) ? 'not-allowed' : 'pointer', opacity: (isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())) ? 0.6 : 1 }}
-                  >
-                    {isProcessing ? 'Adding...' : customSkillName.trim() ? `Add ${selectedSkills.length + 1} Skill${selectedSkills.length + 1 !== 1 ? 's' : ''}` : `Add ${selectedSkills.length} Skill${selectedSkills.length !== 1 ? 's' : ''}`}
-                  </button>
-                </div>
-              </div>
+                }}
+              />
+              {customSkillName.trim() && (
+                <button
+                  onClick={() => setCustomSkillName('')}
+                  style={{
+                    padding: '8px',
+                    background: '#f3f4f6',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                  title="Clear"
+                >
+                  <XCircle size={18} color="#6b7280" />
+                </button>
+              )}
             </div>
-          )
-        }
+            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
+              Type a skill name and click "Add Skills" or press Enter
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+            <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>OR SELECT FROM LIST</span>
+            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+          </div>
+
+          {/* Existing Skills Checkboxes */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}>
+            {availableSkills
+              .filter(skill => !worker.skills.some(ws => ws.skillId === skill.id))
+              .map(skill => (
+                <label
+                  key={skill.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px',
+                    border: selectedSkills.includes(skill.id) ? '2px solid #10b981' : '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    background: selectedSkills.includes(skill.id) ? '#f0fdf4' : 'white',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedSkills.includes(skill.id)}
+                    onChange={() => handleToggleSkill(skill.id)}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>{skill.name}</span>
+                </label>
+              ))
+            }
+          </div>
+          {availableSkills.filter(skill => !worker.skills.some(ws => ws.skillId === skill.id)).length === 0 && (
+            <p style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>All available skills have been added to this worker.</p>
+          )}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => {
+                setShowAddSkillModal(false);
+                setSelectedSkills([]);
+                setCustomSkillName('');
+              }}
+              style={{ padding: '10px 24px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAddSkills}
+              disabled={isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())}
+              style={{ padding: '10px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: (isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())) ? 'not-allowed' : 'pointer', opacity: (isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())) ? 0.6 : 1 }}
+            >
+              {isProcessing ? 'Adding...' : customSkillName.trim() ? `Add ${selectedSkills.length + 1} Skill${selectedSkills.length + 1 !== 1 ? 's' : ''}` : `Add ${selectedSkills.length} Skill${selectedSkills.length !== 1 ? 's' : ''}`}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
 
       </main >
+
+    { viewer && (
+      <FileViewer
+        url={viewer.url}
+        name={viewer.name}
+        onClose={() => setViewer(null)}
+      />
+    )
+}
     </div >
   );
 }

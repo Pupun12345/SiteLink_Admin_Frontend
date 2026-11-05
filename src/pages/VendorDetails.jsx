@@ -4,8 +4,9 @@ import { CheckCircle, XCircle, FileText, Download, Building } from 'lucide-react
 import Sidebar from '../components/Sidebar';
 import { useToast } from '../components/ToastProvider';
 import api from '../api/axios';
+import FileViewer from '../components/FileViewer';
+import { useFileDownload } from '../hooks/useFileDownload';
 import './VendorDetails.css';
-const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function VendorDetails() {
   const { id } = useParams();
@@ -19,7 +20,9 @@ export default function VendorDetails() {
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState(0.0);
   const [ratingComment, setRatingComment] = useState('');
+  const [viewer, setViewer] = useState(null); // { url, name }
   const toast = useToast();
+  const { download: downloadFile, downloading: isDownloading } = useFileDownload();
 
   const fetchVendor = useCallback(async () => {
     try {
@@ -124,28 +127,20 @@ export default function VendorDetails() {
     }
   };
 
-  const handleDownloadFile = (fileUrl, fileName) => {
+  const handleDownloadFile = (fileUrl, label) => {
     if (!fileUrl) {
       toast.showToast('File not available', { type: 'error' });
       return;
     }
-
-    const a = document.createElement('a');
-    a.href = fileUrl;
-    a.target = '_blank';
-    a.download = fileName || 'document';
-
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    downloadFile(fileUrl, label);
   };
 
-  const handleViewFile = (fileUrl) => {
+  const handleViewFile = (fileUrl, fileName) => {
     if (!fileUrl) {
       toast.showToast('File not available', { type: 'error' });
       return;
     }
-    window.open(fileUrl, '_blank');
+    setViewer({ url: fileUrl, name: fileName || 'Document' });
   };
 
   const getStatus = () => {
@@ -433,16 +428,17 @@ export default function VendorDetails() {
                       <div className="doc-actions">
                         <button
                           className="doc-action"
-                          onClick={() => handleViewFile(vendor.panCardImage)}
+                          onClick={() => handleViewFile(vendor.panCardImage, 'PAN Card')}
                         >
                           View
                         </button>
                         <button
                           className="doc-action"
-                          onClick={() => handleDownloadFile(vendor.panCardImage, 'pan-card')}
+                          onClick={() => handleDownloadFile(vendor.panCardImage, `pan-card-${vendor.name}-${vendor.companyName}`)}
+                          disabled={isDownloading}
                         >
                           <Download size={16} />
-                          Download
+                          {isDownloading ? 'Downloading…' : 'Download'}
                         </button>
                       </div>
                     </div>
@@ -462,16 +458,17 @@ export default function VendorDetails() {
                       <div className="doc-actions">
                         <button
                           className="doc-action"
-                          onClick={() => handleViewFile(vendor.gstCertificate)}
+                          onClick={() => handleViewFile(vendor.gstCertificate, 'GST Certificate')}
                         >
                           View
                         </button>
                         <button
                           className="doc-action"
-                          onClick={() => handleDownloadFile(vendor.gstCertificate, 'gst-certificate')}
+                          onClick={() => handleDownloadFile(vendor.gstCertificate, `gst-certificate-${vendor.name}-${vendor.companyName}`)}
+                          disabled={isDownloading}
                         >
                           <Download size={16} />
-                          Download
+                          {isDownloading ? 'Downloading…' : 'Download'}
                         </button>
                       </div>
                     </div>
@@ -630,6 +627,14 @@ export default function VendorDetails() {
           </div>
         )}
       </div>
+
+      {viewer && (
+        <FileViewer
+          url={viewer.url}
+          name={viewer.name}
+          onClose={() => setViewer(null)}
+        />
+      )}
     </div>
   );
 }

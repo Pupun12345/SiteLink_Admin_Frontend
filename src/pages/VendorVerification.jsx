@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
@@ -15,6 +15,7 @@ import api from '../api/axios';
 import Sidebar from '../components/Sidebar';
 import './VendorVerification.css';
 import { hasPermission, usePermissions } from '../hooks/usePermissions';
+import FileViewer from '../components/FileViewer';
 const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function VendorVerification() {
@@ -51,6 +52,7 @@ export default function VendorVerification() {
   const [gstCertificate, setGstCertificate] = useState(null);
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
+  const [viewer, setViewer] = useState(null); // { url, name }
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -73,10 +75,8 @@ export default function VendorVerification() {
           imageUrl: imageUrl
         });
       }
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching profile:', error);
-      setLoading(false);
     }
   };
 
@@ -145,6 +145,8 @@ export default function VendorVerification() {
     document.body.removeChild(a);
   };
 
+  const [filePicker, setFilePicker] = useState(null); // array of { name, url }
+
   const handleViewFiles = (vendor) => {
     const files = [];
     if (vendor.profileImage) files.push({ name: 'Profile Image', url: vendor.profileImage });
@@ -157,14 +159,11 @@ export default function VendorVerification() {
       return;
     }
 
-    files.forEach(file => {
-      const fileUrl = file.url;
-      if (!fileUrl) {
-        toast.error('File not found');
-        return;
-      }
-      window.open(fileUrl, '_blank');
-    });
+    if (files.length === 1) {
+      setViewer(files[0]);
+    } else {
+      setFilePicker(files);
+    }
   };
 
   //Permissions to Access
@@ -299,6 +298,7 @@ export default function VendorVerification() {
 
   const fetchVendors = useCallback(async () => {
     try {
+      setLoading(true);
       const { data } = await api.get('/admin/vendor-worker', {
         params: {
           userType: 'vendor',
@@ -334,12 +334,12 @@ export default function VendorVerification() {
     } catch (err) {
       console.error('Failed to fetch vendors:', err);
       if (err.response?.status === 401 || err.response?.status === 403) {
-        console.error(err);
-      }
+        localStorage.removeItem('adminToken'); navigate('/admin/login');
+      } else { toast.error('Failed to load vendors'); }
     } finally {
       setLoading(false);
     }
-  }, [navigate, statusFilter]);
+  }, [navigate]);
 
   const fetchStats = async () => {
     try {
@@ -423,69 +423,24 @@ export default function VendorVerification() {
   }
 
 
-  return (
-    !canAccess ? (
-      <div
-        style={{
-          display: 'flex',
-          minHeight: '100vh',
-          background: '#f5f7fa',
-        }}
-      >
+
+  if (!canAccess) {
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', background: '#f5f7fa' }}>
         <Sidebar />
-
-        <main
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginLeft: "180px"
-          }}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              padding: '40px 50px',
-              borderRadius: '12px',
-              boxShadow: '0 8px 25px rgba(0,0,0,0.08)',
-              textAlign: 'center',
-              maxWidth: '500px',
-              width: '100%',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '40px',
-                marginBottom: '15px',
-              }}
-            >
-              🚫
-            </div>
-
-            <h2
-              style={{
-                color: '#ff4d4f',
-                marginBottom: '10px',
-                fontWeight: '600',
-              }}
-            >
-              Access Denied
-            </h2>
-
-            <p
-              style={{
-                color: '#555',
-                fontSize: '16px',
-                lineHeight: '1.6',
-              }}
-            >
-              You do not have permission to access the Vendor Verification Page.
-            </p>
+        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '180px' }}>
+          <div style={{ background: '#ffffff', padding: '40px 50px', borderRadius: '12px', boxShadow: '0 8px 25px rgba(0,0,0,0.08)', textAlign: 'center', maxWidth: '500px', width: '100%' }}>
+            <div style={{ fontSize: '40px', marginBottom: '15px' }}>&#x1F6AB;</div>
+            <h2 style={{ color: '#ff4d4f', marginBottom: '10px', fontWeight: '600' }}>Access Denied</h2>
+            <p style={{ color: '#555', fontSize: '16px', lineHeight: '1.6' }}>You do not have permission to access the Vendor Verification Page.</p>
           </div>
         </main>
       </div>
-    ) : (
+    );
+  }
+
+  return (
+    <>
       <div className="verification-page">
         <Toaster position="top-right" reverseOrder={false} />
         <Sidebar onLogout={handleLogout} />
@@ -501,7 +456,6 @@ export default function VendorVerification() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-
             <div className="topbar-actions">
               <button className="icon-btn">
                 <Bell size={20} />
@@ -509,7 +463,13 @@ export default function VendorVerification() {
               </button>
               <div className="user-menu">
                 <div className="user-avatar">
-                  <img src={`${profile.imageUrl}`} alt="Admin" />
+                  {profile.imageUrl ? (
+                    <img src={profile.imageUrl} alt="Admin" />
+                  ) : (
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#2b3f57', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '14px', fontWeight: '600' }}>
+                      {profile.name ? profile.name[0].toUpperCase() : 'A'}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -522,9 +482,7 @@ export default function VendorVerification() {
                 <p className="page-subtitle">Review and manage vendor certifications for construction projects.</p>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button className="export-btn" onClick={() => { setLoading(true); fetchVendors(); }}>
-                  ↻ Refresh
-                </button>
+                <button className="export-btn" onClick={() => { setLoading(true); fetchVendors(); }}>â†» Refresh</button>
                 <button className="export-btn" onClick={handleExportCSV}>
                   <Download size={18} />
                   Export CSV
@@ -537,357 +495,93 @@ export default function VendorVerification() {
             </div>
 
             {showAddForm && (
-              <div style={{
-                background: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '12px',
-                padding: '24px',
-                marginBottom: '24px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-              }}>
+              <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                 <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '700' }}>Add New Vendor</h3>
                 <form onSubmit={handleAddVendor}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Enter Name"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Enter Name" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Company Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.companyName}
-                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                        placeholder="Enter Company Name"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <input type="text" required value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} placeholder="Enter Company Name" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Email *</label>
-                      <input
-                        type="email"
-                        required
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        placeholder="Enter email address"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="Enter email address" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Phone Number *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.phone}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                          setFormData({ ...formData, phone: value });
-                        }}
-                        placeholder="Enter 10-digit phone (start with 6-9)"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
-                      {formData.phone && !/^[6-9]\d{9}$/.test(formData.phone) && (
-                        <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px' }}>
-                          Phone must start with 6-9 and be 10 digits
-                        </p>
-                      )}
+                      <input type="text" required value={formData.phone} onChange={(e) => { const value = e.target.value.replace(/\D/g, '').slice(0, 10); setFormData({ ...formData, phone: value }); }} placeholder="Enter 10-digit phone (start with 6-9)" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
+                      {formData.phone && !/^[6-9]\d{9}$/.test(formData.phone) && <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px' }}>Phone must start with 6-9 and be 10 digits</p>}
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>WhatsApp Number *</label>
-                      <input
-                        type="tel"
-                        required
-                        value={formData.whatsappNumber}
-                        onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
-                        placeholder="Enter WhatsApp number"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <input type="tel" required value={formData.whatsappNumber} onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })} placeholder="Enter WhatsApp number" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Pan Number *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.panNumber}
-                        onChange={(e) => setFormData({ ...formData, panNumber: e.target.value })}
-                        placeholder="Enter Pan Number"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <input type="text" required value={formData.panNumber} onChange={(e) => setFormData({ ...formData, panNumber: e.target.value })} placeholder="Enter Pan Number" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Designation *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.designation}
-                        onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                        placeholder="Enter Designation"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <input type="text" required value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })} placeholder="Enter Designation" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>GST Number *</label>
+                      <input type="text" required value={formData.gstNumber} onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })} placeholder="Enter GST number" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Website </label>
-                      <input
-                        type="text"
-                        value={formData.website}
-                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                        placeholder="Enter website URL (e.g., https://example.com)"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Website</label>
+                      <input type="text" value={formData.website} onChange={(e) => setFormData({ ...formData, website: e.target.value })} placeholder="Enter website URL (e.g., https://example.com)" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Work State *</label>
-                      <select
-                        value={formData.workStateID}
-                        onChange={(e) => {
-                          setFormData({ ...formData, workStateID: e.target.value, workCityID: '' });
-                          fetchCities(e.target.value);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      >
+                      <select value={formData.workStateID} onChange={(e) => { setFormData({ ...formData, workStateID: e.target.value, workCityID: '' }); fetchCities(e.target.value); }} style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }}>
                         <option value="">Select State</option>
-                        {states.map(state => (
-                          <option key={state.id} value={state.id}>{state.name}</option>
-                        ))}
+                        {states.map(state => <option key={state.id} value={state.id}>{state.name}</option>)}
                       </select>
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Work City *</label>
-                      <select
-                        value={formData.workCityID}
-                        onChange={(e) => setFormData({ ...formData, workCityID: e.target.value })}
-                        disabled={!formData.workStateID}
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          opacity: !formData.workStateID ? 0.5 : 1
-                        }}
-                      >
+                      <select value={formData.workCityID} onChange={(e) => setFormData({ ...formData, workCityID: e.target.value })} disabled={!formData.workStateID} style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', opacity: !formData.workStateID ? 0.5 : 1 }}>
                         <option value="">Select City</option>
-                        {cities.map(city => (
-                          <option key={city.id} value={city.id}>{city.name}</option>
-                        ))}
+                        {cities.map(city => <option key={city.id} value={city.id}>{city.name}</option>)}
                       </select>
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Work Area *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.workArea}
-                        onChange={(e) => setFormData({ ...formData, workArea: e.target.value })}
-                        placeholder="Enter Work Area"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>GST Number *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.gstNumber}
-                        onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
-                        placeholder="Enter GST number"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <input type="text" required value={formData.workArea} onChange={(e) => setFormData({ ...formData, workArea: e.target.value })} placeholder="Enter Work Area" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Rating (1-5)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="5"
-                        step="0.1"
-                        value={formData.adminRating}
-                        onChange={(e) => setFormData({ ...formData, adminRating: e.target.value })}
-                        placeholder="Enter rating"
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <input type="number" min="1" max="5" step="0.1" value={formData.adminRating} onChange={(e) => setFormData({ ...formData, adminRating: e.target.value })} placeholder="Enter rating" style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Profile Image (Optional)</label>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={(e) => setProfileImage(e.target.files[0])}
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <input type="file" accept="image/*,.pdf" onChange={(e) => setProfileImage(e.target.files[0])} style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                       {profileImage && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {profileImage.name}</p>}
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Company Logo (Optional)</label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setCompanyLogoFile(e.target.files[0])}
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <input type="file" accept="image/*" onChange={(e) => setCompanyLogoFile(e.target.files[0])} style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                       {companyLogoFile && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {companyLogoFile.name}</p>}
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>GST Certificate*</label>
-                      <input
-                        type="file"
-                        required
-                        accept="image/*"
-                        onChange={(e) => setGstCertificate(e.target.files[0])}
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>GST Certificate *</label>
+                      <input type="file" required accept="image/*" onChange={(e) => setGstCertificate(e.target.files[0])} style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                       {gstCertificate && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {gstCertificate.name}</p>}
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>PanCard Image*</label>
-                      <input
-                        type="file"
-                        required
-                        accept="image/*"
-                        onChange={(e) => setPanCardImage(e.target.files[0])}
-                        style={{
-                          width: '100%',
-                          padding: '10px 14px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>PanCard Image *</label>
+                      <input type="file" required accept="image/*" onChange={(e) => setPanCardImage(e.target.files[0])} style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px' }} />
                       {panCardImage && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>Selected: {panCardImage.name}</p>}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
-                    <button
-                      type="button"
-                      onClick={handleCancelAdd}
-                      style={{
-                        padding: '10px 20px',
-                        background: '#f3f4f6',
-                        color: '#374151',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      style={{
-                        padding: '10px 20px',
-                        background: '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        cursor: submitting ? 'not-allowed' : 'pointer',
-                        opacity: submitting ? 0.6 : 1
-                      }}
-                    >
-                      {submitting ? 'Adding...' : 'Add Vendor'}
-                    </button>
+                    <button type="button" onClick={handleCancelAdd} style={{ padding: '10px 20px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                    <button type="submit" disabled={submitting} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.6 : 1 }}>{submitting ? 'Adding...' : 'Add Vendor'}</button>
                   </div>
                 </form>
               </div>
@@ -899,13 +593,11 @@ export default function VendorVerification() {
                 <div className="stat-box-value">{vendors.length.toLocaleString()}</div>
                 <p className="stat-box-change success">Total registered</p>
               </div>
-
               <div className="stat-box highlight-orange">
                 <p className="stat-box-label">PENDING REVIEW</p>
                 <div className="stat-box-value">{vendors.filter(v => (v.verificationStatus || '').toLowerCase() === 'pending').length}</div>
                 <p className="stat-box-change warning">Requires action</p>
               </div>
-
               <div className="stat-box">
                 <p className="stat-box-label">APPROVED VENDORS</p>
                 <div className="stat-box-value">{vendors.filter(v => ['verified', 'approved'].includes((v.verificationStatus || '').toLowerCase())).length.toLocaleString()}</div>
@@ -913,11 +605,14 @@ export default function VendorVerification() {
                   <div className="progress-fill" style={{ width: vendors.length > 0 ? `${(vendors.filter(v => ['verified', 'approved'].includes((v.verificationStatus || '').toLowerCase())).length / vendors.length * 100).toFixed(0)}%` : '0%' }}></div>
                 </div>
               </div>
-
               <div className="stat-box">
                 <p className="stat-box-label">SUBSCRIPTIONS</p>
                 <div className="stat-box-value">{vendors.filter(v => v.subscription === true).length.toLocaleString()}</div>
-                <p className="stat-box-change success">{vendors.length > 0 && vendors.filter(v => v.subscription === true).length > 0 ? `${((vendors.filter(v => v.subscription === true).length / vendors.length) * 100).toFixed(0)}% of total` : 'No active subscriptions'}</p>
+                <p className="stat-box-change success">
+                  {vendors.length > 0 && vendors.filter(v => v.subscription === true).length > 0
+                    ? `${((vendors.filter(v => v.subscription === true).length / vendors.length) * 100).toFixed(0)}% of total`
+                    : 'No active subscriptions'}
+                </p>
               </div>
             </div>
 
@@ -950,9 +645,7 @@ export default function VendorVerification() {
                   )}
                 </div>
               </div>
-              <div className="results-count">
-                SHOWING {paginatedVendors.length} OF {filteredVendors.length}
-              </div>
+              <div className="results-count">SHOWING {paginatedVendors.length} OF {filteredVendors.length}</div>
             </div>
 
             <div className="table-container">
@@ -972,141 +665,144 @@ export default function VendorVerification() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedVendors.map((vendor) => (
-                    <tr key={vendor._id}>
-                      <td>
-                        <div className="vendor-cell" onClick={() => navigate(`/admin/vendors/${vendor._id}`)} style={{ cursor: 'pointer',display:'flex' }}>
-                          <img
-                            src={
-                              vendor.companyLogo
-                                ? vendor.companyLogo
-                                : vendor.profileImage
-                                  ? vendor.profileImage
-                                  : `https://ui-avatars.com/api/?name=${encodeURIComponent(vendor.companyName || vendor.name || 'Vendor')}&background=3b82f6&color=fff`
-                            }
-                            alt={vendor.companyName || vendor.name}
-                            className="vendor-table-avatar"
-                            onError={(e) => {
-                              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(vendor.companyName || vendor.name || 'Vendor')}&background=3b82f6&color=fff`;
-                            }}
-                          />
-                          <div>
-                            <div className="vendor-name" style={{ fontSize: "1.2rem" }}>{vendor.companyName}</div>
-                            <div className="vendor">Vendor Name: {vendor.name}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ minWidth: '140px' }}>{vendor.designation || 'N/A'}</td>
-                      <td style={{ minWidth: '120px' }}>{vendor.city || 'N/A'}</td>
-                      <td style={{ minWidth: '150px', fontSize: '13px' }}>{vendor.gstNumber || 'N/A'}</td>
-                      <td style={{ minWidth: '130px', fontSize: '13px' }}>{vendor.panNumber || 'N/A'}</td>
-                      <td style={{ maxWidth: '130px' }}>
-                        {vendor.adminRating && vendor.subscription ? (
-                          <div className="rating-cell">
-                            {[1, 2, 3, 4, 5].map((star) => {
-                              const rating = parseFloat(vendor.adminRating);
-                              const isFilled = star <= Math.floor(rating);
-                              const isHalfFilled = star > Math.floor(rating) && star <= Math.ceil(rating) && rating % 1 >= 0.5;
-
-                              return (
-                                <Star
-                                  key={star}
-                                  size={14}
-                                  fill={isFilled ? '#fbbf24' : isHalfFilled ? '#fbbf24' : '#e5e7eb'}
-                                  stroke={isFilled || isHalfFilled ? '#fbbf24' : '#e5e7eb'}
-                                  style={{
-                                    opacity: isHalfFilled ? 0.6 : 1
-                                  }}
-                                />
-                              );
-                            })}
-                            <span>{parseFloat(vendor.adminRating).toFixed(1)}/5</span>
-                          </div>
-                        ) : (
-                          <span className="no-rating" style={{ color: '#9ca3af', fontSize: '0.75rem', display: 'block', whiteSpace: 'normal', lineHeight: '1.4' }}>
-                            {!vendor.subscription
-                              ? 'No active subscription'
-                              : (vendor.verificationStatus || '').toLowerCase() === 'rejected'
-                                ? 'Vendor rejected'
-                                : (vendor.verificationStatus || '').toLowerCase() !== 'verified'
-                                  ? 'Not verified yet'
-                                  : !vendor.adminRating
-                                    ? 'No rating given yet'
-                                    : ''}
-                          </span>
-                        )}
-                      </td>
-                      <td>
-                        {vendor.subscription ? (
-                          <span className="subscription-badge active">
-                            ✓ {'Active'}
-                          </span>
-                        ) : (
-                          <span className="subscription-badge inactive">✕ Not Subscribed</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className={`subscription-badge ${vendor.isBlocked ? 'inactive' : 'active'}`}>
-                          {vendor.isBlocked ? '🔒 Blocked' : '🔓 Active'}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          className="view-files-btn"
-                          onClick={() => handleViewFiles(vendor)}
-                        >
-                          <FileText size={16} />
-                          VIEW {(vendor.profileImage ? 1 : 0) + (vendor.companyLogo ? 1 : 0) + (vendor.gstCertificate ? 1 : 0) + (vendor.panCardImage ? 1 : 0)} FILES
-                        </button>
-                      </td>
-                      <td>
-                        <span className={`status-badge ${getStatusBadgeClass(vendor.verificationStatus)}`}>
-                          {getStatusText(vendor)}
-                        </span>
-                      </td>
+                  {paginatedVendors.length === 0 ? (
+                    <tr>
+                      <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>No vendors found</td>
                     </tr>
-                  ))}
+                  ) : (
+                    paginatedVendors.map((vendor) => (
+                      <tr key={vendor._id}>
+                        <td>
+                          <div className="vendor-cell" onClick={() => navigate(`/admin/vendors/${vendor._id}`)} style={{ cursor: 'pointer', display: 'flex' }}>
+                            <img
+                              src={
+                                vendor.companyLogo || vendor.profileImage ||
+                                `https://ui-avatars.com/api/?name=${encodeURIComponent(vendor.companyName || vendor.name || 'Vendor')}&background=3b82f6&color=fff`
+                              }
+                              alt={vendor.companyName || vendor.name}
+                              className="vendor-table-avatar"
+                              onError={(e) => {
+                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(vendor.companyName || vendor.name || 'Vendor')}&background=3b82f6&color=fff`;
+                              }}
+                            />
+                            <div>
+                              <div className="vendor-name" style={{ fontSize: '1.2rem' }}>{vendor.companyName}</div>
+                              <div className="vendor">Vendor Name: {vendor.name}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ minWidth: '140px' }}>{vendor.designation || 'N/A'}</td>
+                        <td style={{ minWidth: '120px' }}>{vendor.city || 'N/A'}</td>
+                        <td style={{ minWidth: '150px', fontSize: '13px' }}>{vendor.gstNumber || 'N/A'}</td>
+                        <td style={{ minWidth: '130px', fontSize: '13px' }}>{vendor.panNumber || 'N/A'}</td>
+                        <td style={{ maxWidth: '130px' }}>
+                          {vendor.adminRating && vendor.subscription ? (
+                            <div className="rating-cell">
+                              {[1, 2, 3, 4, 5].map((star) => {
+                                const rating = parseFloat(vendor.adminRating);
+                                const isFilled = star <= Math.floor(rating);
+                                const isHalfFilled = star > Math.floor(rating) && star <= Math.ceil(rating) && rating % 1 >= 0.5;
+                                return (
+                                  <Star key={star} size={14}
+                                    fill={isFilled ? '#fbbf24' : isHalfFilled ? '#fbbf24' : '#e5e7eb'}
+                                    stroke={isFilled || isHalfFilled ? '#fbbf24' : '#e5e7eb'}
+                                    style={{ opacity: isHalfFilled ? 0.6 : 1 }}
+                                  />
+                                );
+                              })}
+                              <span>{parseFloat(vendor.adminRating).toFixed(1)}/5</span>
+                            </div>
+                          ) : (
+                            <span className="no-rating" style={{ color: '#9ca3af', fontSize: '0.75rem', display: 'block', whiteSpace: 'normal', lineHeight: '1.4' }}>
+                              {!vendor.subscription
+                                ? 'No active subscription'
+                                : (vendor.verificationStatus || '').toLowerCase() === 'rejected'
+                                  ? 'Vendor rejected'
+                                  : (vendor.verificationStatus || '').toLowerCase() !== 'verified'
+                                    ? 'Not verified yet'
+                                    : 'No rating given yet'}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {vendor.subscription
+                            ? <span className="subscription-badge active">âœ“ Active</span>
+                            : <span className="subscription-badge inactive">âœ• Not Subscribed</span>}
+                        </td>
+                        <td>
+                          <span className={`subscription-badge ${vendor.isBlocked ? 'inactive' : 'active'}`}>
+                            {vendor.isBlocked ? 'ðŸ”’ Blocked' : 'ðŸ”“ Active'}
+                          </span>
+                        </td>
+                        <td>
+                          <button className="view-files-btn" onClick={() => handleViewFiles(vendor)}>
+                            <FileText size={16} />
+                            VIEW {(vendor.profileImage ? 1 : 0) + (vendor.companyLogo ? 1 : 0) + (vendor.gstCertificate ? 1 : 0) + (vendor.panCardImage ? 1 : 0)} FILES
+                          </button>
+                        </td>
+                        <td>
+                          <span className={`status-badge ${getStatusBadgeClass(vendor.verificationStatus)}`}>
+                            {getStatusText(vendor)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
 
             <div className="pagination">
               <div className="pagination-info">
-                Showing <strong>{((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong>{Math.min(currentPage * itemsPerPage, filteredVendors.length)}</strong> of <strong>{filteredVendors.length}</strong> entries
+                Showing <strong>{filteredVendors.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}</strong> to <strong>{Math.min(currentPage * itemsPerPage, filteredVendors.length)}</strong> of <strong>{filteredVendors.length}</strong> entries
               </div>
               <div className="pagination-controls">
-                <button
-                  className="page-btn"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  &lt;
-                </button>
+                <button className="page-btn" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>&lt;</button>
                 {[...Array(Math.min(3, totalPages))].map((_, i) => {
                   const pageNum = i + 1;
                   return (
-                    <button
-                      key={pageNum}
-                      className={`page-btn ${currentPage === pageNum ? 'active' : ''}`}
-                      onClick={() => setCurrentPage(pageNum)}
-                    >
+                    <button key={pageNum} className={`page-btn ${currentPage === pageNum ? 'active' : ''}`} onClick={() => setCurrentPage(pageNum)}>
                       {pageNum}
                     </button>
                   );
                 })}
                 {totalPages > 3 && <span className="page-ellipsis">...</span>}
-                <button
-                  className="page-btn"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  &gt;
-                </button>
+                <button className="page-btn" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0}>&gt;</button>
               </div>
             </div>
           </div>
         </main>
       </div>
-    )
+
+      {/* File picker modal â€” select which file to view */}
+      {filePicker && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '16px' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setFilePicker(null); }}
+        >
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', minWidth: '280px', maxWidth: '400px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700' }}>Select File to View</h3>
+              <button onClick={() => setFilePicker(null)} style={{ background: '#f3f4f6', border: 'none', borderRadius: '6px', width: '30px', height: '30px', cursor: 'pointer', fontSize: '16px' }}>âœ•</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {filePicker.map((file, i) => (
+                <button
+                  key={i}
+                  onClick={() => { setViewer(file); setFilePicker(null); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', textAlign: 'left' }}
+                >
+                  <FileText size={16} color="#3b82f6" />
+                  {file.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* In-app file viewer */}
+      {viewer && <FileViewer url={viewer.url} name={viewer.name} onClose={() => setViewer(null)} />}
+    </>
   );
 }

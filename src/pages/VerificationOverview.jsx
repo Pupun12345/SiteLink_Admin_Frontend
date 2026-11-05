@@ -141,7 +141,7 @@ export default function VerificationOverview() {
               className="chart-link-btn-worker"
               onClick={() => navigate('/admin/vendors')}
             >
-              Open Worker Verification
+              Open Vendor Verification
               <ArrowRight size={16} />
             </button>
 
