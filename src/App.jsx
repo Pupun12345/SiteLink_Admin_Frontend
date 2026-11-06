@@ -10,7 +10,7 @@ import UserDetail from './pages/UserDetail';
 import VerificationOverview from './pages/VerificationOverview';
 import RequirementsDashboard from './pages/Requirements';
 import JobRequirements from './pages/JobRequirements';
-import UserProfilePage from './pages/UserProfilePage';
+import DirectSupportPage from "./pages/direct_access_support_page"
 import ReportsPage from './pages/ReportsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import SystemMonitoring from './pages/SystemMonitoring';
@@ -46,6 +46,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/admin/direct-access-support"
+          element={
+            <DirectSupportPage />
+          }
+        />
+
         <Route
           path="/admin/requirements"
           element={

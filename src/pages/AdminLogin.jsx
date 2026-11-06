@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, Mail, AlertCircle, ArrowRight, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, Lock, Mail, X } from 'lucide-react';
 import api from '../api/axios';
 import './AdminLogin.css';
 
@@ -22,7 +22,7 @@ export default function AdminLogin() {
     setError('');
     setLoading(true);
 
-    // First, try Super Admin login
+    // First, try Super Admin login.
     try {
       const response = await api.post('/auth/admin/login', {
         email,
@@ -35,7 +35,7 @@ export default function AdminLogin() {
         return;
       }
     } catch (superAdminErr) {
-      // Super admin login failed, try admin user login
+      // If Super Admin login fails, try Admin User login.
       try {
         const response = await api.post('/admin-users/login', {
           email,
@@ -64,23 +64,25 @@ export default function AdminLogin() {
       const response = await api.post('/auth/admin-forgot-password', {
         email: forgotEmail,
       });
-      
-      setForgotMessage(response.data.message || 'Temporary password sent to your email');
-      
-      // Close modal after 2 seconds on success
+
+      setForgotMessage(
+        response.data.message || 'Temporary password sent to your email'
+      );
+
+      // Close the modal after 2 seconds on success.
       setTimeout(() => {
         setShowForgotPassword(false);
         setForgotEmail('');
         setForgotMessage('');
       }, 2000);
     } catch (err) {
-      setForgotMessage(err.response?.data?.message || 'Failed to send temporary password');
+      setForgotMessage(
+        err.response?.data?.message || 'Failed to send temporary password'
+      );
     } finally {
       setForgotLoading(false);
     }
   };
-
-
 
   const closeForgotModal = () => {
     setShowForgotPassword(false);
@@ -90,248 +92,210 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="login-container">
-      <motion.div
-        className="login-card"
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+    <main className="login-container">
+      <motion.section
+        className="login-shell"
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
       >
-        <div className="brand-header" style={{ display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
-          <motion.div
-            className="brand-logo"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-          >
-            <div className="logo-icon">
-              <img src="../SiteLinkIcon.png" alt="" style={{ height: "32px", width: "32px" }} />
+        <section className="login-welcome-panel">
+          <div className="welcome-decoration welcome-decoration-one" />
+          <div className="welcome-decoration welcome-decoration-two" />
+          <div className="welcome-decoration welcome-decoration-three" />
+
+          <div className="welcome-brand">
+            <img src="/SiteLinkIcon.png" alt="SiteLink logo" />
+          </div>
+
+          <div className="welcome-copy">
+            <span className="welcome-hello">Hello</span>
+            <h1>Sitelink!</h1>
+            <p>
+              Manage your workforce, streamline operations, and keep your
+              projects moving forward — all from one place.
+            </p>
+          </div>
+
+          <div className="welcome-footer">
+            © {new Date().getFullYear()} Sitelink. All rights reserved.
+          </div>
+        </section>
+
+        <section className="login-form-panel">
+          <div className="form-panel-content">
+            <header className="form-brand">
+              <img src="/SiteLinkIcon.png" alt="SiteLink logo" />
+              <span>Sitelink</span>
+            </header>
+
+            <div className="login-header">
+              <h2>Welcome Back!</h2>
+              <p>Sign in to access your admin dashboard.</p>
             </div>
-          </motion.div>
-          <motion.h1
-            className="brand-title"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, duration: 0.4 }}
-          >
-            Sitelink
-          </motion.h1>
-          <motion.p
-            className="brand-subtitle"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
-          >
-            Workforce Management Platform
-          </motion.p>
-        </div>
 
-        <motion.div
-          className="login-header"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35, duration: 0.4 }}
-        >
-          <h2>Admin Login</h2>
-          <p>Enter your credentials to access the dashboard</p>
-        </motion.div>
-
-        {error && (
-          <motion.div
-            className="error-alert"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-          >
-            <AlertCircle size={20} />
-            <span>{error}</span>
-          </motion.div>
-        )}
-
-        <form onSubmit={handleSignIn}>
-          <motion.div
-            className="form-field"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-          >
-            <label htmlFor="email">Email Address</label>
-            <div className="input-wrapper">
-              <Mail className="input-icon" size={18} />
-              <input
-                id="email"
-                type="email"
-                placeholder="admin@sitelink.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-          </motion.div>
-
-          <motion.div
-            className="form-field"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <div className="field-header">
-              <label htmlFor="password">Password</label>
-              <a href="#" className="forgot-password" onClick={(e) => { e.preventDefault(); setShowForgotPassword(true); }}>Forgot Password?</a>
-            </div>
-            <div className="input-wrapper">
-              <Lock className="input-icon" size={18} />
-              <input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-          </motion.div>
-
-          <motion.button
-            type="submit"
-            className="login-btn"
-            disabled={loading}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.55 }}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-          >
-            {loading ? (
-              <span>Signing in...</span>
-            ) : (
-              <>
-                Sign In
-                <ArrowRight size={18} />
-              </>
+            {error && (
+              <motion.div
+                className="error-alert"
+                role="alert"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <AlertCircle size={18} />
+                <span>{error}</span>
+              </motion.div>
             )}
-          </motion.button>
-        </form>
 
-        <motion.div
-          className="support-footer"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-        >
-          Need help? <a href="#" className="support-link">Contact Support</a>
-        </motion.div>
+            <form className="login-form" onSubmit={handleSignIn}>
+              <div className="form-field">
+                <label htmlFor="email">Email Address</label>
+                <div className="input-wrapper">
+                  <Mail className="input-icon" size={17} />
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="username"
+                    required
+                  />
+                </div>
+              </div>
 
-        <motion.div
-          className="status-footer"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.65 }}
-        >
-          <div className="status-indicator"></div>
-          ALL SYSTEMS OPERATIONAL
-        </motion.div>
+              <div className="form-field">
+                <label htmlFor="password">Password</label>
+                <div className="input-wrapper">
+                  <Lock className="input-icon" size={17} />
+                  <input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+              </div>
 
-        <motion.div
-          className="login-smartnex-footer"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
-        >
-          <span className="login-powered-label">Powered by</span>
-          <img src="/smartnexLogo.png" alt="Smartnex Technologies" className="login-smartnex-logo" />
-          <span className="login-smartnex-name">Smartnex Technologies Pvt Ltd</span>
-        </motion.div>
-      </motion.div>
+              <button
+                type="submit"
+                className="login-btn"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="login-loading">
+                    <span className="login-spinner" />
+                    Signing in...
+                  </span>
+                ) : (
+                  <>
+                    Login Now
+                    <ArrowRight size={17} />
+                  </>
+                )}
+              </button>
+
+              <div className="forgot-row">
+                <span>Forgot password?</span>
+                <button
+                  type="button"
+                  className="forgot-password"
+                  onClick={() => setShowForgotPassword(true)}
+                >
+                  Click here
+                </button>
+              </div>
+            </form>
+
+            <div className="login-bottom">
+              <div className="status-footer">
+                <span className="status-indicator" />
+                <span>ALL SYSTEMS OPERATIONAL</span>
+              </div>
+
+              <div className="support-footer">
+                Need help?{' '}
+                <a href="/admin/direct-access-support">Contact Support</a>
+              </div>
+
+              <footer className="login-smartnex-footer">
+                <span className="login-powered-label">POWERED BY</span>
+                <img
+                  src="/smartnexLogo.png"
+                  alt="Smartnex Technologies"
+                  className="login-smartnex-logo"
+                />
+                <span className="login-smartnex-name">
+                  Smartnex Technologies Pvt Ltd
+                </span>
+              </footer>
+            </div>
+          </div>
+        </section>
+      </motion.section>
 
       {showForgotPassword && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
+        <div className="forgot-modal-overlay">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            style={{
-              background: 'white',
-              borderRadius: '12px',
-              padding: '32px',
-              maxWidth: '400px',
-              width: '90%',
-              position: 'relative'
-            }}
+            className="forgot-modal"
+            initial={{ opacity: 0, scale: 0.94, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
           >
             <button
+              type="button"
+              className="forgot-close-btn"
               onClick={closeForgotModal}
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#6b7280'
-              }}
+              aria-label="Close"
             >
-              <X size={20} />
+              <X size={19} />
             </button>
 
             {forgotStep === 1 ? (
               <>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '600' }}>Forgot Password</h3>
-                <p style={{ margin: '0 0 24px 0', color: '#6b7280', fontSize: '14px' }}>Enter your email to receive your password</p>
+                <div className="forgot-modal-icon">
+                  <Lock size={22} />
+                </div>
+                <h3>Forgot Password?</h3>
+                <p className="forgot-modal-description">
+                  Enter your registered email address to receive your
+                  temporary password.
+                </p>
 
                 {forgotMessage && (
-                  <div style={{
-                    padding: '12px',
-                    background: forgotMessage.includes('Failed') ? '#fee2e2' : '#d1fae5',
-                    color: forgotMessage.includes('Failed') ? '#991b1b' : '#065f46',
-                    borderRadius: '8px',
-                    marginBottom: '16px',
-                    fontSize: '14px'
-                  }}>
+                  <div
+                    className={`forgot-message ${
+                      forgotMessage.includes('Failed')
+                        ? 'forgot-message-error'
+                        : 'forgot-message-success'
+                    }`}
+                    role="status"
+                  >
                     {forgotMessage}
                   </div>
                 )}
 
                 <form onSubmit={handleSendOTP}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>Email Address</label>
-                    <input
-                      type="email"
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
-                      placeholder="admin@sitelink.com"
-                      required
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px'
-                      }}
-                    />
+                  <div className="form-field">
+                    <label htmlFor="forgot-email">Email Address</label>
+                    <div className="input-wrapper">
+                      <Mail className="input-icon" size={17} />
+                      <input
+                        id="forgot-email"
+                        type="email"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="Enter your email address"
+                        required
+                      />
+                    </div>
                   </div>
+
                   <button
                     type="submit"
+                    className="forgot-submit-btn"
                     disabled={forgotLoading}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      background: '#2563eb',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: forgotLoading ? 'not-allowed' : 'pointer',
-                      opacity: forgotLoading ? 0.6 : 1
-                    }}
                   >
                     {forgotLoading ? 'Sending...' : 'Send Password'}
                   </button>
@@ -341,6 +305,6 @@ export default function AdminLogin() {
           </motion.div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

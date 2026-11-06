@@ -1,0 +1,353 @@
+.support-content {
+  margin-left: 260px;
+  padding: 28px 28px 48px;
+  min-height: 100vh;
+  background: #f4f7fc;
+}
+
+/* ── HERO ── */
+.support-hero {
+  background: linear-gradient(135deg, #0f1f44 0%, #1a3a6e 100%);
+  border-radius: 16px;
+  padding: 32px 32px 28px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.support-hero-text h1 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+
+.support-hero-text p {
+  margin: 0;
+  color: rgba(214, 227, 251, 0.78);
+  font-size: 15px;
+  max-width: 480px;
+  line-height: 1.6;
+}
+
+.support-hero-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.support-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #c8daff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ── SECTION LABEL ── */
+.support-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #8fa3c0;
+  margin-bottom: 12px;
+}
+
+/* ── CONTACT CARDS ── */
+.support-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.support-card {
+  background: #fff;
+  border: 1px solid #d4ddeb;
+  border-radius: 14px;
+  padding: 22px 20px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.support-card:hover {
+  box-shadow: 0 6px 22px rgba(47, 99, 219, 0.11);
+  border-color: #b0c4e8;
+  transform: translateY(-2px);
+}
+
+.support-card-icon-wrap {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.support-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.support-card-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #8fa3c0;
+}
+
+.support-card-value {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1b2944;
+}
+
+.support-card-action {
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 6px;
+  display: inline-block;
+}
+
+.support-card-action.indigo { color: #4f46e5; }
+.support-card-action.green  { color: #059669; }
+.support-card-action.blue   { color: #0a66c2; }
+
+/* ── TWO COLUMN PANELS ── */
+.support-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.support-panel {
+  background: #fff;
+  border: 1px solid #d4ddeb;
+  border-radius: 14px;
+  padding: 22px 24px;
+}
+
+.support-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.support-panel-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1b2944;
+}
+
+/* Response times */
+.support-response-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.support-response-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.support-response-dot {
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+  border-radius: 50%;
+  margin-top: 5px;
+}
+
+.support-response-item strong {
+  font-size: 14px;
+  color: #1b2944;
+  display: block;
+}
+
+.support-response-item p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #7083a3;
+}
+
+/* Tips list */
+.support-tips-list {
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.support-tips-list li {
+  font-size: 14px;
+  color: #4a5e7a;
+  line-height: 1.5;
+}
+
+/* ── FAQ ── */
+.support-faq {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.faq-item {
+  background: #fff;
+  border: 1px solid #d4ddeb;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.faq-item.open {
+  border-color: #b0c4e8;
+}
+
+.faq-question {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1b2944;
+  transition: background 0.15s;
+}
+
+.faq-question:hover {
+  background: #f8fafc;
+}
+
+.faq-question svg {
+  flex-shrink: 0;
+  color: #7083a3;
+}
+
+.faq-answer {
+  padding: 0 20px 16px;
+  font-size: 14px;
+  color: #4a5e7a;
+  line-height: 1.65;
+  border-top: 1px solid #edf1f8;
+  padding-top: 12px;
+}
+
+/* ── SMARTNEX FOOTER ── */
+.support-smartnex-footer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, #0f1f44 0%, #1a3a6e 100%);
+  border-radius: 14px;
+}
+
+.smartnex-footer-logo {
+  height: 38px;
+  object-fit: contain;
+  opacity: 0.92;
+}
+
+.smartnex-footer-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.smartnex-powered-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(200, 218, 255, 0.65);
+}
+
+.smartnex-company-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1080px) {
+  .support-content {
+    margin-left: 0;
+    padding: 70px 16px 40px;
+  }
+
+  .support-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .support-two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .support-hero {
+    flex-direction: column;
+  }
+
+  .support-hero-badges {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 600px) {
+  .support-hero {
+    padding: 22px 18px;
+  }
+
+  .support-hero-text h1 {
+    font-size: 24px;
+  }
+
+  .support-panel {
+    padding: 18px 16px;
+  }
+
+  .support-smartnex-footer {
+    padding: 14px 16px;
+  }
+
+  .smartnex-footer-logo {
+    height: 30px;
+  }
+}
