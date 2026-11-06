@@ -115,7 +115,8 @@ export default function WorkerDetail() {
         ],
         documents: (Array.isArray(user.documents) && user.documents.length > 0
           ? user.documents.map((d) => {
-              const url = getFileUrl(d.url || d.viewLink || d.filePath || d);
+              const rawSource = d.url || d.viewLink || d.filePath || (typeof d === 'string' ? d : null);
+              const url = rawSource ? getFileUrl(rawSource) : '';
               return {
                 name: d.name || 'Document',
                 type: d.type || 'IDENTITY PROOF',
