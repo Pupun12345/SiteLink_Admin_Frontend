@@ -61,17 +61,17 @@ export const getFileUrl = (fileSource) => {
  * @returns {string}
  */
 export const getFileName = (fileSource, fallback = 'Document') => {
-  if (!fileSource) return fallback;
-
-  // If the object itself has a valid filename property (e.g. { name: 'pan.pdf' })
-  if (typeof fileSource === 'object' && typeof fileSource.name === 'string' && fileSource.name.includes('.')) {
-    return fileSource.name;
-  }
-
-  const url = getFileUrl(fileSource);
-  if (!url || typeof url !== 'string') return fallback;
-
   try {
+    if (!fileSource) return fallback;
+
+    // If the object itself has a valid filename property (e.g. { name: 'pan.pdf' })
+    if (typeof fileSource === 'object' && fileSource !== null && typeof fileSource.name === 'string' && fileSource.name.includes('.')) {
+      return fileSource.name;
+    }
+
+    const url = getFileUrl(fileSource);
+    if (!url || typeof url !== 'string') return fallback;
+
     const cleanUrl = url.split('?')[0].split('#')[0];
     const segments = cleanUrl.split('/').filter(Boolean);
     const lastSegment = segments.pop();

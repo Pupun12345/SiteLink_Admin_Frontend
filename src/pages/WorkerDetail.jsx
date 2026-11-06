@@ -115,14 +115,14 @@ export default function WorkerDetail() {
         ],
         documents: (Array.isArray(user.documents) && user.documents.length > 0
           ? user.documents.map((d) => {
-              const rawSource = d.url || d.viewLink || d.filePath || (typeof d === 'string' ? d : null);
-              const url = rawSource ? getFileUrl(rawSource) : '';
+              // d can be a string URL or an object — handle both
+              const url = typeof d === 'string' ? d.trim() : getFileUrl(d.url || d.viewLink || d.filePath || d.secure_url || '');
               return {
-                name: d.name || 'Document',
-                type: d.type || 'IDENTITY PROOF',
-                verified: d.verified || 'Uploaded',
-                viewLink: url,
-                downloadLink: url,
+                name: (typeof d === 'object' && d?.name) ? d.name : 'Document',
+                type: (typeof d === 'object' && d?.type) ? d.type : 'IDENTITY PROOF',
+                verified: (typeof d === 'object' && d?.verified) ? d.verified : 'Uploaded',
+                viewLink: typeof url === 'string' ? url : '',
+                downloadLink: typeof url === 'string' ? url : '',
               };
             })
           : [
@@ -699,7 +699,7 @@ export default function WorkerDetail() {
                             <div className="document-name">{doc.name}</div>
                             <div className="document-type">{doc.type}</div>
                             <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>
-                              {getFileName(doc?.viewLink, 'No file')}
+                              {getFileName(typeof doc?.viewLink === 'string' ? doc.viewLink : '', 'No file')}
                             </div>
                           </div>
                           <div className="document-actions">
