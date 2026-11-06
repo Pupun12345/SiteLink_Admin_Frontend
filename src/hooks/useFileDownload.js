@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import api from '../api/axios';
+import { getFileUrl } from '../utils/fileUtils';
 
 export function useFileDownload() {
   const [downloading, setDownloading] = useState(false);
@@ -7,7 +8,8 @@ export function useFileDownload() {
   const inFlightRef = useRef(false);
 
   const download = async (fileUrl, label) => {
-    if (!fileUrl) {
+    const rawUrl = getFileUrl(fileUrl);
+    if (!rawUrl) {
       setError('File not available');
       return;
     }
@@ -23,7 +25,7 @@ export function useFileDownload() {
       const response = await api.get('/files/download', {
         params: {
           // Axios automatically encodes query parameters
-          url: fileUrl,
+          url: rawUrl,
           ...(label ? { label } : {}),
         },
         responseType: 'blob',

@@ -27,6 +27,7 @@ import './WorkerDetail.css';
 import Sidebar from '../components/Sidebar';
 import FileViewer from '../components/FileViewer';
 import { useFileDownload } from '../hooks/useFileDownload';
+import { getFileUrl, getFileName } from '../utils/fileUtils';
 const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function WorkerDetail() {
@@ -60,18 +61,15 @@ export default function WorkerDetail() {
     fetchAvailableSkills();
   }, [id]);
 
-  const getFileUrl = (filePath) => {
-    return filePath || null;
-  };
-
   const buildDocument = (name, type, filePath) => {
-    if (!filePath) return null;
+    const url = getFileUrl(filePath);
+    if (!url) return null;
     return {
       name,
       type,
       verified: 'Uploaded',
-      viewLink: getFileUrl(filePath),
-      downloadLink: getFileUrl(filePath),
+      viewLink: url,
+      downloadLink: url,
     };
   };
 
@@ -115,17 +113,25 @@ export default function WorkerDetail() {
           ...(user.workState && user.city ? [{ name: `${user.city}, ${user.workState}`, isPrimary: true }] : []),
           ...(user.location && user.location !== 'N/A' ? [{ name: user.location, isPrimary: false }] : [])
         ],
-        documents: [
-          buildDocument('Government ID', 'IDENTITY PROOF', user.governmentID),
-          buildDocument('Experience Certificate', 'EXPERIENCE PROOF', user.experienceCertificate),
-        ].filter(doc => {
-          const isValid = doc !== null && doc.viewLink;
-          // console.log('Document:', doc?.name, 'Valid:', isValid, 'ViewLink:', doc?.viewLink);
-          return isValid;
-        }),
+        documents: (Array.isArray(user.documents) && user.documents.length > 0
+          ? user.documents.map((d) => {
+              const url = getFileUrl(d.url || d.viewLink || d.filePath || d);
+              return {
+                name: d.name || 'Document',
+                type: d.type || 'IDENTITY PROOF',
+                verified: d.verified || 'Uploaded',
+                viewLink: url,
+                downloadLink: url,
+              };
+            })
+          : [
+              buildDocument('Government ID', 'IDENTITY PROOF', user.governmentID),
+              buildDocument('Experience Certificate', 'EXPERIENCE PROOF', user.experienceCertificate),
+            ]
+        ).filter(doc => doc !== null && Boolean(doc.viewLink)),
         workPhotos: (user.workSamplesPhoto || []).map(photo => {
           const url = getFileUrl(photo);
-          return { url, path: photo };
+          return { url, path: typeof photo === 'string' ? photo : (photo?.path || url) };
         }).filter(photo => photo.url),
         contactInfo: {
           email: user.email || 'N/A',
@@ -349,20 +355,22 @@ export default function WorkerDetail() {
   };
 
   const handleViewDocument = (doc) => {
-    if (!doc.viewLink) {
+    const url = getFileUrl(doc?.viewLink || doc?.url);
+    if (!url) {
       toast.showToast('Document not available', { type: 'error' });
       return;
     }
-    setViewer({ url: doc.viewLink, name: doc.name });
+    setViewer({ url, name: doc?.name || 'Document' });
   };
 
   const handleDownloadDocument = (doc) => {
-    if (!doc.downloadLink) {
+    const url = getFileUrl(doc?.downloadLink || doc?.viewLink || doc?.url);
+    if (!url) {
       toast.showToast('Document not available for download', { type: 'error' });
       return;
     }
-    const label = doc.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')+`-${worker.name}`;
-    downloadFile(doc.downloadLink, label);
+    const label = `${(doc?.name || 'document').toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')}-${worker?.name || 'worker'}`;
+    downloadFile(url, label);
   };
 
   const handleViewAllPortfolio = () => {
@@ -690,7 +698,7 @@ export default function WorkerDetail() {
                             <div className="document-name">{doc.name}</div>
                             <div className="document-type">{doc.type}</div>
                             <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>
-                              {doc.viewLink ? doc.viewLink.split('/').pop() : 'No file'}
+                              {getFileName(doc?.viewLink, 'No file')}
                             </div>
                           </div>
                           <div className="document-actions">
@@ -736,19 +744,27 @@ export default function WorkerDetail() {
                       <div className="cert-info">
                         <div className="cert-name">Experience Certificate</div>
                         <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
-                          {worker.experienceCertificate.split('/').pop()}
+                          {getFileName(worker.experienceCertificate, 'Certificate')}
                         </div>
                       </div>
                       <button
                         className="view-document-btn"
-                        onClick={() => setViewer({ url: worker.experienceCertificate, name: 'Experience Certificate' })}
+                        onClick={() => {
+                          const url = getFileUrl(worker.experienceCertificate);
+                          if (url) setViewer({ url, name: 'Experience Certificate' });
+                          else toast.showToast('Certificate not available', { type: 'error' });
+                        }}
                         title="View Certificate"
                       >
                         View <ExternalLink size={14} />
                       </button>
                       <button
                         className="download-cert-btn"
-                        onClick={() => downloadFile(worker.experienceCertificate, `experience-certificate-${worker.name}`)}
+                        onClick={() => {
+                          const url = getFileUrl(worker.experienceCertificate);
+                          if (url) downloadFile(url, `experience-certificate-${worker?.name || 'worker'}`);
+                          else toast.showToast('Certificate not available for download', { type: 'error' });
+                        }}
                         disabled={isDownloading}
                         title="Download Certificate"
                       >
@@ -838,7 +854,7 @@ export default function WorkerDetail() {
                   {worker.workPhotos && worker.workPhotos.length > 0 ? (
                     <div className="portfolio-gallery">
                       {worker.workPhotos.slice(0, 4).map((photo, index) => {
-                        const photoUrl = typeof photo === 'string' ? getFileUrl(photo) : (photo.url || getFileUrl(photo.path));
+                        const photoUrl = getFileUrl(photo);
                         return (
                           <div key={index} className="portfolio-photo">
                             <img
@@ -889,7 +905,7 @@ export default function WorkerDetail() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
             {worker.workPhotos.map((photo, index) => {
-              const photoUrl = typeof photo === 'string' ? getFileUrl(photo) : (photo.url || getFileUrl(photo.path));
+              const photoUrl = getFileUrl(photo);
               return (
                 <img
                   key={index}

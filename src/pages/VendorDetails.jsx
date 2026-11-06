@@ -6,6 +6,7 @@ import { useToast } from '../components/ToastProvider';
 import api from '../api/axios';
 import FileViewer from '../components/FileViewer';
 import { useFileDownload } from '../hooks/useFileDownload';
+import { getFileUrl, getFileName } from '../utils/fileUtils';
 import './VendorDetails.css';
 
 export default function VendorDetails() {
@@ -128,19 +129,21 @@ export default function VendorDetails() {
   };
 
   const handleDownloadFile = (fileUrl, label) => {
-    if (!fileUrl) {
+    const url = getFileUrl(fileUrl);
+    if (!url) {
       toast.showToast('File not available', { type: 'error' });
       return;
     }
-    downloadFile(fileUrl, label);
+    downloadFile(url, label);
   };
 
   const handleViewFile = (fileUrl, fileName) => {
-    if (!fileUrl) {
+    const url = getFileUrl(fileUrl);
+    if (!url) {
       toast.showToast('File not available', { type: 'error' });
       return;
     }
-    setViewer({ url: fileUrl, name: fileName || 'Document' });
+    setViewer({ url, name: fileName || 'Document' });
   };
 
   const getStatus = () => {

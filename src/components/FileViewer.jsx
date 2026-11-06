@@ -1,17 +1,20 @@
 import { useEffect } from 'react';
 import { Download } from 'lucide-react';
 import { useFileDownload } from '../hooks/useFileDownload';
+import { getFileUrl } from '../utils/fileUtils';
 import './FileViewer.css';
 
 /**
  * FileViewer — in-app modal for images and PDFs.
  * Props:
- *   url     : string — Cloudinary (or any) URL
- *   name    : string — display title / download label
- *   onClose : fn     — called when user closes
+ *   url     : string | object — Cloudinary (or any) URL or object containing url
+ *   name    : string          — display title / download label
+ *   onClose : fn              — called when user closes
  */
 export default function FileViewer({ url, name, onClose }) {
   const { download, downloading } = useFileDownload();
+
+  const fileUrl = getFileUrl(url);
 
   // Close on Escape key + lock body scroll
   useEffect(() => {
@@ -25,19 +28,19 @@ export default function FileViewer({ url, name, onClose }) {
     };
   }, [onClose]);
 
-  if (!url) return null;
+  if (!fileUrl) return null;
 
   const isPdf =
-    url.toLowerCase().includes('.pdf') ||
-    url.toLowerCase().includes('/pdf') ||
-    url.toLowerCase().includes('raw/upload');
+    fileUrl.toLowerCase().includes('.pdf') ||
+    fileUrl.toLowerCase().includes('/pdf') ||
+    fileUrl.toLowerCase().includes('raw/upload');
 
   const handleDownload = () => {
     // Build a clean label from the name prop (e.g. "PAN Card" → "pan-card")
     const label = name
       ? name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')
       : undefined;
-    download(url, label);
+    download(fileUrl, label);
   };
 
   return (
@@ -62,13 +65,13 @@ export default function FileViewer({ url, name, onClose }) {
         <div className="fv-body">
           {isPdf ? (
             <iframe
-              src={url}
+              src={fileUrl}
               title={name || 'Document'}
               className="fv-iframe"
             />
           ) : (
             <div className="fv-image-scroll">
-              <img src={url} alt={name || 'Preview'} className="fv-image" />
+              <img src={fileUrl} alt={name || 'Preview'} className="fv-image" />
             </div>
           )}
         </div>
