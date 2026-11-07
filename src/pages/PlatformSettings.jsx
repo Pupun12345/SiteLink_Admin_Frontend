@@ -221,9 +221,16 @@ export default function PlatformSettings() {
       const nextState = {};
       for (const policyType of POLICY_TYPES) {
         const versions = all.filter(p => p.policyType === policyType).sort((a, b) => b.version - a.version);
+        // Box me abhi live wala poora text pehle se — admin wahi badal ke
+        // ek saath publish kare, shuru se type na karna pade.
+        const active = versions.find(v => v.isActive) || versions[0];
         nextState[policyType] = {
           allVersions: versions,
-          form: { title: '', content: '', summary: '', changelog: '', effectiveDate: '', version: '' },
+          form: {
+            title: active?.title || POLICY_LABELS[policyType],
+            content: active?.content || '',
+            summary: '', changelog: '', effectiveDate: '', version: '',
+          },
           publishing: false,
         };
       }
@@ -881,63 +888,17 @@ export default function PlatformSettings() {
                     )}
                   </div>
 
+                  {/* Ek hi bada box — poora document ek saath paste/edit karo.
+                      App headings ("1. Introduction", "7.1 ...") khud bold karti hai. */}
                   <div className="legal-policy-form">
-                    <label>
-                      <span>Title</span>
-                      <input
-                        type="text"
-                        value={policyState.form.title}
-                        onChange={(e) => updateLegalForm(policyType, 'title', e.target.value)}
-                        placeholder={`Enter ${POLICY_LABELS[policyType]} title`}
-                      />
-                    </label>
-
-                    <label>
-                      <span>Version</span>
-                      <input
-                        type="text"
-                        value={policyState.form.version}
-                        onChange={(e) => updateLegalForm(policyType, 'version', e.target.value)}
-                        placeholder="e.g. 1 (optional)"
-                      />
-                    </label>
-
-                    <label>
-                      <span>Summary</span>
-                      <input
-                        type="text"
-                        value={policyState.form.summary}
-                        onChange={(e) => updateLegalForm(policyType, 'summary', e.target.value)}
-                        placeholder="Brief summary"
-                      />
-                    </label>
-
                     <label className="legal-full">
-                      <span>Content (Markdown supported — # Heading, **bold**, - list, --- divider)</span>
+                      <span>Full {POLICY_LABELS[policyType]} text — paste the complete document here</span>
                       <textarea
-                        rows={8}
+                        rows={22}
                         value={policyState.form.content}
                         onChange={(e) => updateLegalForm(policyType, 'content', e.target.value)}
-                        placeholder="Paste the full document content. Markdown formatting (# Heading, **bold**, - list) is rendered in the app."
-                      />
-                    </label>
-
-                    <label>
-                      <span>Change Log</span>
-                      <input
-                        type="text"
-                        value={policyState.form.changelog}
-                        onChange={(e) => updateLegalForm(policyType, 'changelog', e.target.value)}
-                        placeholder="What changed in this version?(Optional)"
-                      />
-                    </label>
-
-                    <label>
-                      <span>Effective Date</span>
-                      <input
-                        type="date"
-                        value={policyState.form.effectiveDate}
-                        onChange={(e) => updateLegalForm(policyType, 'effectiveDate', e.target.value)}
+                        placeholder={`Paste the complete ${POLICY_LABELS[policyType]} here. Headings like "1. Introduction" or "7.1 ..." are shown in bold in the app automatically.`}
+                        style={{ minHeight: '420px', fontFamily: 'inherit', lineHeight: 1.5, resize: 'vertical' }}
                       />
                     </label>
                   </div>
@@ -951,7 +912,7 @@ export default function PlatformSettings() {
                       style={{ opacity: policyState.publishing ? 0.7 : 1, cursor: policyState.publishing ? 'not-allowed' : 'pointer' }}
                     >
                       <Plus size={14} />
-                      {policyState.publishing ? 'Publishing...' : 'Publish new version'}
+                      {policyState.publishing ? 'Updating...' : `Update ${POLICY_LABELS[policyType]}`}
                     </button>
                   </div>
 
