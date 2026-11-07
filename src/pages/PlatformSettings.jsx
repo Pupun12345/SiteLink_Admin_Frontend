@@ -628,7 +628,7 @@ export default function PlatformSettings() {
                         ₹{plan.amount}
                         {plan.introAmount > 0 && (
                           <div style={{ fontSize: '11px', fontWeight: '500', color: '#f97316' }}>
-                            First {plan.frequency === 'yearly' ? 'year' : 'month'}: ₹{plan.introAmount}
+                            First month: ₹{plan.introAmount}
                           </div>
                         )}
                       </td>
@@ -824,11 +824,11 @@ export default function PlatformSettings() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>
-                    First {planForm.frequency === 'yearly' ? 'year' : 'month'} offer price (₹)
+                    First month offer price (₹)
                   </label>
                   <input type="number" min="0" value={planForm.introAmount} onChange={e => setPlanForm(p => ({ ...p, introAmount: e.target.value }))} placeholder="e.g. 5 (0 = no offer)" style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
                   <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
-                    User pays this now with auto-pay; after one {planForm.frequency === 'yearly' ? 'year' : 'month'} the full Amount is charged automatically every {planForm.frequency === 'yearly' ? 'year' : 'month'}. Each user gets the offer only once. Leave 0 for no offer.
+                    User pays this now with auto-pay; after one month the full Amount is charged automatically every {planForm.frequency === 'yearly' ? 'year' : 'month'}. Each user gets the offer only once. Leave 0 for no offer.
                   </p>
                 </div>
 
