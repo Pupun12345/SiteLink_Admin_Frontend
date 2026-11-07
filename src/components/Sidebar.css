@@ -218,6 +218,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    top: 18px;
+    left: 18px;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+  }
+
+  .hamburger-menu-btn.menu-open {
+    left: calc(min(260px, 82vw) - 46px);
   }
 
   .sidebar-overlay {
@@ -225,6 +234,9 @@
   }
 
   .app-sidebar {
+    width: min(260px, 82vw);
+    max-width: 82vw;
+    min-width: unset;
     transform: translateX(-100%);
     opacity: 0;
     pointer-events: none;
@@ -260,4 +272,18 @@
 @keyframes sidebarAlertPulse {
   0%, 100% { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25); }
   50% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.12); }
+}
+
+@media (max-width: 640px) {
+  .hamburger-menu-btn {
+    top: 14px;
+    left: 14px;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+  }
+
+  .hamburger-menu-btn.menu-open {
+    left: calc(min(260px, 82vw) - 42px);
+  }
 }

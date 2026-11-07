@@ -25,6 +25,9 @@ import { useToast } from '../components/ToastProvider';
 import api from '../api/axios';
 import './WorkerDetail.css';
 import Sidebar from '../components/Sidebar';
+import FileViewer from '../components/FileViewer';
+import { useFileDownload } from '../hooks/useFileDownload';
+import { getFileUrl, getFileName } from '../utils/fileUtils';
 const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function WorkerDetail() {
@@ -51,24 +54,23 @@ export default function WorkerDetail() {
   const [customSkillName, setCustomSkillName] = useState('');
 
   const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [viewer, setViewer] = useState(null);
+  const { download: downloadFile, downloading: isDownloading } = useFileDownload();
 
   useEffect(() => {
     fetchWorkerDetails();
     fetchAvailableSkills();
   }, [id]);
 
-  const getFileUrl = (filePath) => {
-    return filePath || null;
-  };
-
   const buildDocument = (name, type, filePath) => {
-    if (!filePath) return null;
+    const url = getFileUrl(filePath);
+    if (!url) return null;
     return {
       name,
       type,
       verified: 'Uploaded',
-      viewLink: getFileUrl(filePath),
-      downloadLink: getFileUrl(filePath),
+      viewLink: url,
+      downloadLink: url,
     };
   };
 
@@ -80,13 +82,13 @@ export default function WorkerDetail() {
       const user = data.data;
       if (!user) throw new Error('Worker not found');
 
-      console.log('Raw verificationStatus from backend:', user.verificationStatus);
+      // console.log('Raw verificationStatus from backend:', user.verificationStatus);
 
-      console.log('Raw user data:', {
-        governmentID: user.governmentID,
-        experienceCertificate: user.experienceCertificate,
-        workSamplesPhoto: user.workSamplesPhoto
-      });
+      // console.log('Raw user data:', {
+      //   governmentID: user.governmentID,
+      //   experienceCertificate: user.experienceCertificate,
+      //   workSamplesPhoto: user.workSamplesPhoto
+      // });
 
       // Ek se zyada certificate ho sakte hain — purane records me single
       // string thi, dono ko array bana lo.
@@ -123,21 +125,34 @@ export default function WorkerDetail() {
         ],
         // Backend har document ka review status bhejta hai:
         // 'approved' | 'rejected' | 'pending' (naya upload, review baaki).
-        documents: (user.documents || [])
-          .filter(d => d && d.url)
-          .map(d => ({
-            ...buildDocument(d.name, d.type, d.url),
-            path: d.url,
-            // Sirf Government ID ka review hota hai; certificates sirf vendor
-            // ko dikhane ke liye hain (reviewable: false, koi badge nahi).
-            reviewable: d.reviewable !== false && d.docType !== 'experienceCertificate',
-            reviewStatus: d.reviewStatus || 'pending',
-            rejectionReason: d.rejectionReason || null,
-          })),
+        // Purana data kabhi seedha URL string bhi hota hai — dono handle.
+        documents: (Array.isArray(user.documents) && user.documents.length > 0
+          ? user.documents
+              .filter(Boolean)
+              .map((d) => {
+                const doc = typeof d === 'string' ? { url: d.trim() } : d;
+                const raw = doc.url || doc.viewLink || doc.filePath || doc.secure_url || '';
+                const base = buildDocument(doc.name || 'Document', doc.type || 'IDENTITY PROOF', raw);
+                if (!base) return null;
+                return {
+                  ...base,
+                  path: raw,
+                  // Sirf Government ID ka review hota hai; certificates sirf vendor
+                  // ko dikhane ke liye hain (reviewable: false, koi badge nahi).
+                  reviewable: doc.reviewable !== false && doc.docType !== 'experienceCertificate',
+                  reviewStatus: doc.reviewStatus || 'pending',
+                  rejectionReason: doc.rejectionReason || null,
+                };
+              })
+          : [
+              buildDocument('Government ID', 'IDENTITY PROOF', user.governmentID),
+              buildDocument('Experience Certificate', 'EXPERIENCE PROOF', user.experienceCertificate),
+            ]
+        ).filter(doc => doc !== null && Boolean(doc.viewLink)),
         workPhotos: (user.workSamplesPhoto || []).map(photo => {
-            const url = getFileUrl(photo);
-            return { url, path: photo };
-          }).filter(photo => photo.url),
+          const url = getFileUrl(photo);
+          return { url, path: typeof photo === 'string' ? photo : (photo?.path || url) };
+        }).filter(photo => photo.url),
         contactInfo: {
           email: user.email || 'N/A',
           phone: user.phone || 'N/A',
@@ -149,13 +164,13 @@ export default function WorkerDetail() {
         isBlocked: user.isBlocked || false
       };
 
-      console.log('Worker Data:', {
-        dateOfBirth: user.dateOfBirth,
-        age: user.age,
-        mappedAge: mapped.age,
-        mappedDOB: mapped.dateOfBirth,
-        gender: mapped.gender
-      });
+      // console.log('Worker Data:', {
+      //   dateOfBirth: user.dateOfBirth,
+      //   age: user.age,
+      //   mappedAge: mapped.age,
+      //   mappedDOB: mapped.dateOfBirth,
+      //   gender: mapped.gender
+      // });
 
       setWorker(mapped);
     } catch (err) {
@@ -389,21 +404,22 @@ export default function WorkerDetail() {
   };
 
   const handleViewDocument = (doc) => {
-    if (!doc.viewLink) {
+    const url = getFileUrl(doc?.viewLink || doc?.url);
+    if (!url) {
       toast.showToast('Document not available', { type: 'error' });
       return;
     }
-
-    window.open(doc.viewLink, '_blank');
+    setViewer({ url, name: doc?.name || 'Document' });
   };
 
   const handleDownloadDocument = (doc) => {
-    if (!doc.downloadLink) {
+    const url = getFileUrl(doc?.downloadLink || doc?.viewLink || doc?.url);
+    if (!url) {
       toast.showToast('Document not available for download', { type: 'error' });
       return;
     }
-
-    window.open(doc.downloadLink, '_blank');
+    const label = `${(doc?.name || 'document').toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')}-${worker?.name || 'worker'}`;
+    downloadFile(url, label);
   };
 
   const handleViewAllPortfolio = () => {
@@ -748,7 +764,7 @@ export default function WorkerDetail() {
                               </div>
                             )}
                             <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>
-                              {doc.viewLink ? doc.viewLink.split('/').pop() : 'No file'}
+                              {getFileName(typeof doc?.viewLink === 'string' ? doc.viewLink : '', 'No file')}
                             </div>
                           </div>
                           <div className="document-actions">
@@ -789,35 +805,45 @@ export default function WorkerDetail() {
                 </div>
                 <div className="certifications-content">
                   {worker.experienceCertificate.length > 0 ? (
-                    worker.experienceCertificate.map((cert, i) => (
-                      <div className="certification-item" key={cert}>
-                        <div className="cert-icon">
-                          <Award size={20} />
-                        </div>
-                        <div className="cert-info">
-                          <div className="cert-name">
-                            Experience Certificate{worker.experienceCertificate.length > 1 ? ` ${i + 1}` : ''}
+                    worker.experienceCertificate.map((cert, i) => {
+                      const certName = `Experience Certificate${worker.experienceCertificate.length > 1 ? ` ${i + 1}` : ''}`;
+                      return (
+                        <div className="certification-item" key={cert}>
+                          <div className="cert-icon">
+                            <Award size={20} />
                           </div>
-                          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
-                            {cert.split('/').pop()}
+                          <div className="cert-info">
+                            <div className="cert-name">{certName}</div>
+                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
+                              {getFileName(cert, 'Certificate')}
+                            </div>
                           </div>
+                          <button
+                            className="view-document-btn"
+                            onClick={() => {
+                              const url = getFileUrl(cert);
+                              if (url) setViewer({ url, name: certName });
+                              else toast.showToast('Certificate not available', { type: 'error' });
+                            }}
+                            title="View Certificate"
+                          >
+                            View <ExternalLink size={14} />
+                          </button>
+                          <button
+                            className="download-cert-btn"
+                            onClick={() => {
+                              const url = getFileUrl(cert);
+                              if (url) downloadFile(url, `experience-certificate-${i + 1}-${worker?.name || 'worker'}`);
+                              else toast.showToast('Certificate not available for download', { type: 'error' });
+                            }}
+                            disabled={isDownloading}
+                            title="Download Certificate"
+                          >
+                            <Download size={16} />
+                          </button>
                         </div>
-                        <button
-                          className="view-document-btn"
-                          onClick={() => window.open(getFileUrl(cert), '_blank')}
-                          title="View Certificate"
-                        >
-                          View <ExternalLink size={14} />
-                        </button>
-                        <button
-                          className="download-cert-btn"
-                          onClick={() => window.open(getFileUrl(cert), '_blank')}
-                          title="Download Certificate"
-                        >
-                          <Download size={16} />
-                        </button>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="no-data-state">
                       <Award size={48} className="no-data-icon" />
@@ -901,7 +927,7 @@ export default function WorkerDetail() {
                   {worker.workPhotos && worker.workPhotos.length > 0 ? (
                     <div className="portfolio-gallery">
                       {worker.workPhotos.slice(0, 4).map((photo, index) => {
-                        const photoUrl = typeof photo === 'string' ? getFileUrl(photo) : (photo.url || getFileUrl(photo.path));
+                        const photoUrl = getFileUrl(photo);
                         return (
                           <div key={index} className="portfolio-photo">
                             <img
@@ -913,28 +939,28 @@ export default function WorkerDetail() {
                                 const placeholder = e.target.nextSibling;
                                 if (placeholder) placeholder.style.display = 'flex';
                               }}
-                              onClick={() => window.open(photoUrl, '_blank')}
-                              style={{ cursor: 'pointer' }}
+                              onClick={() => setViewer({ url: photoUrl, name: `Work Photo ${index + 1}` })}
+                      style={{ cursor: 'pointer' }}
                             />
-                            <div className="photo-placeholder" style={{ display: 'none', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9ca3af' }}>
-                              <Wrench size={24} />
-                            </div>
-                          </div>
-                        );
+                      <div className="photo-placeholder" style={{ display: 'none', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9ca3af' }}>
+                        <Wrench size={24} />
+                      </div>
+                    </div>
+                  );
                       })}
-                    </div>
-                  ) : (
-                    <div className="no-data-state">
-                      <Wrench size={48} className="no-data-icon" />
-                      <p className="no-data-text">No work photos available</p>
-                      <p className="no-data-subtext">Worker hasn't uploaded any portfolio images yet</p>
-                    </div>
-                  )}
                 </div>
+                ) : (
+                <div className="no-data-state">
+                  <Wrench size={48} className="no-data-icon" />
+                  <p className="no-data-text">No work photos available</p>
+                  <p className="no-data-subtext">Worker hasn't uploaded any portfolio images yet</p>
+                </div>
+                  )}
               </div>
             </div>
           </div>
         </div>
+    </div>
 
         {
           showAllPhotos && worker.workPhotos && (
@@ -959,7 +985,7 @@ export default function WorkerDetail() {
                         src={photoUrl}
                         alt={`Work ${index + 1}`}
                         style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer' }}
-                        onClick={() => window.open(photoUrl, '_blank')}
+                        onClick={() => setViewer({ url: photoUrl, name: `Work Photo ${index + 1}` })}
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     );
@@ -1083,302 +1109,311 @@ export default function WorkerDetail() {
           )
         }
 
-        {/* Rating Modal */}
-        {
-          showRating && (
-            <div
-              className="rating-modal-backdrop"
-              onMouseDown={(e) => {
-                if (e.target === e.currentTarget) {
-                  setShowRating(false);
-                }
-              }}
+  {/* Rating Modal */ }
+  {
+    showRating && (
+      <div
+        className="rating-modal-backdrop"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowRating(false);
+          }
+        }}
+      >
+        <div className="rating-modal-container">
+          <div className="rating-modal-header">
+            <h3>Rate Worker</h3>
+            <button
+              className="rating-modal-close"
+              type="button"
+              onClick={() => setShowRating(false)}
             >
-              <div className="rating-modal-container">
-                <div className="rating-modal-header">
-                  <h3>Rate Worker</h3>
-                  <button
-                    className="rating-modal-close"
-                    type="button"
-                    onClick={() => setShowRating(false)}
-                  >
-                    ×
-                  </button>
-                </div>
+              ×
+            </button>
+          </div>
 
-                <div className="rating-modal-body">
-                  <p className="rating-modal-description">
-                    Rate <strong>{worker.name}</strong> based on their profile, qualifications, and documentation quality.
-                  </p>
+          <div className="rating-modal-body">
+            <p className="rating-modal-description">
+              Rate <strong>{worker.name}</strong> based on their profile, qualifications, and documentation quality.
+            </p>
 
-                  <div className="rating-input-section">
-                    <div className="rating-display">
-                      <span className="rating-label">Current Rating:</span>
-                      <span className="rating-value">{rating.toFixed(1)}/5.0</span>
-                    </div>
+            <div className="rating-input-section">
+              <div className="rating-display">
+                <span className="rating-label">Current Rating:</span>
+                <span className="rating-value">{rating.toFixed(1)}/5.0</span>
+              </div>
 
-                    <div className="rating-stars-container">
-                      {[1, 2, 3, 4, 5].map(starValue => {
-                        const isFilled = starValue <= Math.floor(rating);
-                        const isHalfFilled = starValue > Math.floor(rating) && starValue <= Math.ceil(rating) && rating % 1 >= 0.5;
+              <div className="rating-stars-container">
+                {[1, 2, 3, 4, 5].map(starValue => {
+                  const isFilled = starValue <= Math.floor(rating);
+                  const isHalfFilled = starValue > Math.floor(rating) && starValue <= Math.ceil(rating) && rating % 1 >= 0.5;
 
-                        return (
-                          <button
-                            key={starValue}
-                            type="button"
-                            className={`rating-star ${isFilled || isHalfFilled ? 'active' : ''}`}
-                            onClick={() => setRating(starValue)}
-                          >
-                            <Star
-                              size={32}
-                              fill={isFilled ? '#fbbf24' : isHalfFilled ? '#fbbf24' : 'transparent'}
-                              stroke={isFilled || isHalfFilled ? '#fbbf24' : '#d1d5db'}
-                              style={{
-                                opacity: isHalfFilled ? 0.6 : 1
-                              }}
-                            />
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="rating-slider-section">
-                      <input
-                        type="range"
-                        min="0"
-                        max="5"
-                        step="0.1"
-                        value={rating}
-                        onChange={(e) => setRating(parseFloat(e.target.value))}
-                        className="rating-range-input"
+                  return (
+                    <button
+                      key={starValue}
+                      type="button"
+                      className={`rating-star ${isFilled || isHalfFilled ? 'active' : ''}`}
+                      onClick={() => setRating(starValue)}
+                    >
+                      <Star
+                        size={32}
+                        fill={isFilled ? '#fbbf24' : isHalfFilled ? '#fbbf24' : 'transparent'}
+                        stroke={isFilled || isHalfFilled ? '#fbbf24' : '#d1d5db'}
+                        style={{
+                          opacity: isHalfFilled ? 0.6 : 1
+                        }}
                       />
-                      <div className="rating-scale-labels">
-                        <span className="scale-label">0</span>
-                        <span className="scale-label">1</span>
-                        <span className="scale-label">2</span>
-                        <span className="scale-label">3</span>
-                        <span className="scale-label">4</span>
-                        <span className="scale-label">5</span>
-                      </div>
-                      <div className="rating-decimal-display">
-                        Use slider for precise rating: {rating.toFixed(1)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rating-comment-section">
-                    <label htmlFor="rating-comment" className="comment-label">
-                      Additional Comments (Optional)
-                    </label>
-                    <textarea
-                      id="rating-comment"
-                      className="rating-textarea"
-                      placeholder="Share your thoughts about this worker's profile, qualifications, or documentation..."
-                      value={ratingComment}
-                      onChange={(e) => setRatingComment(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
-                </div>
-
-                <div className="rating-modal-footer">
-                  <button
-                    type="button"
-                    className="rating-btn rating-btn-cancel"
-                    onClick={() => {
-                      setShowRating(false);
-                      setRating(0.0);
-                      setRatingComment('');
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="rating-btn rating-btn-submit"
-                    onClick={handleRateWorker}
-                    disabled={isProcessing || rating < 0.1}
-                  >
-                    {isProcessing ? 'Submitting...' : 'Submit Rating'}
-                  </button>
-                </div>
+                    </button>
+                  );
+                })}
               </div>
-            </div>
-          )
-        }
 
-        {
-          showRequestModal && (
-            <div
-              className="modal-overlay"
-              onMouseDown={(e) => {
-                if (e.target === e.currentTarget) {
-                  setShowRequestModal(false);
-                }
-              }}
-            >
-              <div className="request-modal">
-                <h3>Request Additional Information</h3>
-                <p className="request-description">Send a request to the worker for additional information or clarification.</p>
-                <textarea
-                  className="request-message"
-                  placeholder="Enter your message to the worker..."
-                  value={requestMessage}
-                  onChange={(e) => setRequestMessage(e.target.value)}
-                  rows={4}
+              <div className="rating-slider-section">
+                <input
+                  type="range"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  value={rating}
+                  onChange={(e) => setRating(parseFloat(e.target.value))}
+                  className="rating-range-input"
                 />
-                <div className="request-actions">
-                  <button
-                    className="cancel"
-                    onClick={() => setShowRequestModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="confirm"
-                    onClick={handleRequestInfo}
-                    disabled={isProcessing || !requestMessage.trim()}
-                  >
-                    Send Request
-                  </button>
+                <div className="rating-scale-labels">
+                  <span className="scale-label">0</span>
+                  <span className="scale-label">1</span>
+                  <span className="scale-label">2</span>
+                  <span className="scale-label">3</span>
+                  <span className="scale-label">4</span>
+                  <span className="scale-label">5</span>
+                </div>
+                <div className="rating-decimal-display">
+                  Use slider for precise rating: {rating.toFixed(1)}
                 </div>
               </div>
             </div>
-          )
-        }
 
-        {
-          showAddSkillModal && (
-            <div
-              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
-              onMouseDown={(e) => {
-                if (e.target === e.currentTarget) {
-                  setShowAddSkillModal(false);
-                  setSelectedSkills([]);
-                  setCustomSkillName('');
-                }
+            <div className="rating-comment-section">
+              <label htmlFor="rating-comment" className="comment-label">
+                Additional Comments (Optional)
+              </label>
+              <textarea
+                id="rating-comment"
+                className="rating-textarea"
+                placeholder="Share your thoughts about this worker's profile, qualifications, or documentation..."
+                value={ratingComment}
+                onChange={(e) => setRatingComment(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <div className="rating-modal-footer">
+            <button
+              type="button"
+              className="rating-btn rating-btn-cancel"
+              onClick={() => {
+                setShowRating(false);
+                setRating(0.0);
+                setRatingComment('');
               }}
             >
-              <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Add Skills to Worker</h3>
-                <p style={{ margin: '0 0 24px 0', fontSize: '16px', color: '#6b7280' }}>
-                  Select skills to add to <strong>{worker.name}</strong>'s profile:
-                </p>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rating-btn rating-btn-submit"
+              onClick={handleRateWorker}
+              disabled={isProcessing || rating < 0.1}
+            >
+              {isProcessing ? 'Submitting...' : 'Submit Rating'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-                {/* Custom Skill Input */}
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
-                    Add Custom Skill
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <input
-                      type="text"
-                      value={customSkillName}
-                      onChange={(e) => setCustomSkillName(e.target.value)}
-                      placeholder="Enter custom skill name (e.g., Welding, Plumbing)"
-                      style={{
-                        flex: 1,
-                        padding: '10px 14px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter' && customSkillName.trim()) {
-                          handleAddSkills();
-                        }
-                      }}
-                    />
-                    {customSkillName.trim() && (
-                      <button
-                        onClick={() => setCustomSkillName('')}
-                        style={{
-                          padding: '8px',
-                          background: '#f3f4f6',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center'
-                        }}
-                        title="Clear"
-                      >
-                        <XCircle size={18} color="#6b7280" />
-                      </button>
-                    )}
-                  </div>
-                  <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
-                    Type a skill name and click "Add Skills" or press Enter
-                  </p>
-                </div>
+  {
+    showRequestModal && (
+      <div
+        className="modal-overlay"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowRequestModal(false);
+          }
+        }}
+      >
+        <div className="request-modal">
+          <h3>Request Additional Information</h3>
+          <p className="request-description">Send a request to the worker for additional information or clarification.</p>
+          <textarea
+            className="request-message"
+            placeholder="Enter your message to the worker..."
+            value={requestMessage}
+            onChange={(e) => setRequestMessage(e.target.value)}
+            rows={4}
+          />
+          <div className="request-actions">
+            <button
+              className="cancel"
+              onClick={() => setShowRequestModal(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="confirm"
+              onClick={handleRequestInfo}
+              disabled={isProcessing || !requestMessage.trim()}
+            >
+              Send Request
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-                {/* Divider */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                  <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
-                  <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>OR SELECT FROM LIST</span>
-                  <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
-                </div>
+  {
+    showAddSkillModal && (
+      <div
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowAddSkillModal(false);
+            setSelectedSkills([]);
+            setCustomSkillName('');
+          }
+        }}
+      >
+        <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Add Skills to Worker</h3>
+          <p style={{ margin: '0 0 24px 0', fontSize: '16px', color: '#6b7280' }}>
+            Select skills to add to <strong>{worker.name}</strong>'s profile:
+          </p>
 
-                {/* Existing Skills Checkboxes */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}>
-                  {availableSkills
-                    .filter(skill => !worker.skills.some(ws => ws.skillId === skill.id))
-                    .map(skill => (
-                      <label
-                        key={skill.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '12px',
-                          border: selectedSkills.includes(skill.id) ? '2px solid #10b981' : '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          background: selectedSkills.includes(skill.id) ? '#f0fdf4' : 'white',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedSkills.includes(skill.id)}
-                          onChange={() => handleToggleSkill(skill.id)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: '14px', fontWeight: '500' }}>{skill.name}</span>
-                      </label>
-                    ))
+          {/* Custom Skill Input */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+              Add Custom Skill
+            </label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={customSkillName}
+                onChange={(e) => setCustomSkillName(e.target.value)}
+                placeholder="Enter custom skill name (e.g., Welding, Plumbing)"
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && customSkillName.trim()) {
+                    handleAddSkills();
                   }
-                </div>
-                {availableSkills.filter(skill => !worker.skills.some(ws => ws.skillId === skill.id)).length === 0 && (
-                  <p style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>All available skills have been added to this worker.</p>
-                )}
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={() => {
-                      setShowAddSkillModal(false);
-                      setSelectedSkills([]);
-                      setCustomSkillName('');
-                    }}
-                    style={{ padding: '10px 24px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAddSkills}
-                    disabled={isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())}
-                    style={{ padding: '10px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: (isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())) ? 'not-allowed' : 'pointer', opacity: (isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())) ? 0.6 : 1 }}
-                  >
-                    {isProcessing ? 'Adding...' : customSkillName.trim() ? `Add ${selectedSkills.length + 1} Skill${selectedSkills.length + 1 !== 1 ? 's' : ''}` : `Add ${selectedSkills.length} Skill${selectedSkills.length !== 1 ? 's' : ''}`}
-                  </button>
-                </div>
-              </div>
+                }}
+              />
+              {customSkillName.trim() && (
+                <button
+                  onClick={() => setCustomSkillName('')}
+                  style={{
+                    padding: '8px',
+                    background: '#f3f4f6',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                  title="Clear"
+                >
+                  <XCircle size={18} color="#6b7280" />
+                </button>
+              )}
             </div>
-          )
-        }
+            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
+              Type a skill name and click "Add Skills" or press Enter
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+            <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600' }}>OR SELECT FROM LIST</span>
+            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+          </div>
+
+          {/* Existing Skills Checkboxes */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}>
+            {availableSkills
+              .filter(skill => !worker.skills.some(ws => ws.skillId === skill.id))
+              .map(skill => (
+                <label
+                  key={skill.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px',
+                    border: selectedSkills.includes(skill.id) ? '2px solid #10b981' : '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    background: selectedSkills.includes(skill.id) ? '#f0fdf4' : 'white',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedSkills.includes(skill.id)}
+                    onChange={() => handleToggleSkill(skill.id)}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>{skill.name}</span>
+                </label>
+              ))
+            }
+          </div>
+          {availableSkills.filter(skill => !worker.skills.some(ws => ws.skillId === skill.id)).length === 0 && (
+            <p style={{ textAlign: 'center', color: '#6b7280', padding: '20px' }}>All available skills have been added to this worker.</p>
+          )}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => {
+                setShowAddSkillModal(false);
+                setSelectedSkills([]);
+                setCustomSkillName('');
+              }}
+              style={{ padding: '10px 24px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAddSkills}
+              disabled={isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())}
+              style={{ padding: '10px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: (isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())) ? 'not-allowed' : 'pointer', opacity: (isProcessing || (selectedSkills.length === 0 && !customSkillName.trim())) ? 0.6 : 1 }}
+            >
+              {isProcessing ? 'Adding...' : customSkillName.trim() ? `Add ${selectedSkills.length + 1} Skill${selectedSkills.length + 1 !== 1 ? 's' : ''}` : `Add ${selectedSkills.length} Skill${selectedSkills.length !== 1 ? 's' : ''}`}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
 
       </main >
+
+    { viewer && (
+      <FileViewer
+        url={viewer.url}
+        name={viewer.name}
+        onClose={() => setViewer(null)}
+      />
+    )
+}
     </div >
   );
 }

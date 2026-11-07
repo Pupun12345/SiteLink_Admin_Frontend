@@ -16,6 +16,7 @@ import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
 import './WorkerVerification.css';
 import { hasPermission, usePermissions } from '../hooks/usePermissions';
+import FileViewer from '../components/FileViewer';
 const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function WorkerVerification() {
@@ -57,22 +58,33 @@ export default function WorkerVerification() {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [skills, setSkills] = useState([]);
+  const [viewer, setViewer] = useState(null);
+  const [filePicker, setFilePicker] = useState(null);
   const navigate = useNavigate();
+
+  const handleViewFiles = (worker) => {
+    const files = [];
+    if (worker.profileImage) files.push({ name: 'Profile Image', url: worker.profileImage });
+    if (worker.governmentID) files.push({ name: 'Government ID', url: worker.governmentID });
+    if (worker.experienceCertificate) files.push({ name: 'Experience Certificate', url: worker.experienceCertificate });
+    if (files.length === 0) { toast.error('No files available for this worker'); return; }
+    if (files.length === 1) { setViewer(files[0]); } else { setFilePicker(files); }
+  };
 
   const fetchAdminProfile = async () => {
     try {
       const response = await api.get('/profile/me');
-      console.log('Profile response:', response.data);
+      // console.log('Profile response:', response.data);
 
       if (response.data.success && response.data.data) {
         const user = response.data.data.user;
-        console.log('User data:', user);
+        // console.log('User data:', user);
 
         const imageUrl = user.profileImage
           ? user.profileImage
           : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin')}&background=2b3f57&color=fff`;
 
-        console.log('Image URL:', imageUrl);
+        // console.log('Image URL:', imageUrl);
 
         setProfile({
           name: user.name || '',
@@ -368,7 +380,8 @@ export default function WorkerVerification() {
   }
 
   return (
-    !canAccess ? (
+    <>
+    {!canAccess ? (
       <div
         style={{
           display: 'flex',
@@ -1036,9 +1049,12 @@ export default function WorkerVerification() {
                         </span>
                       </td>
                       <td>
-                        <button className="view-files-btn">
+                        <button
+                          className="view-files-btn"
+                          onClick={(e) => { e.stopPropagation(); handleViewFiles(worker); }}
+                        >
                           <FileText size={16} />
-                          VIEW FILES
+                          VIEW {(worker.profileImage ? 1 : 0) + (worker.governmentID ? 1 : 0) + (worker.experienceCertificate ? 1 : 0)} FILES
                         </button>
                       </td>
                       <td>
@@ -1089,7 +1105,7 @@ export default function WorkerVerification() {
           </div>
         </main>
       </div>
-    )
+    )}
+    </>
   );
 }
-

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import Sidebar from '../components/Sidebar';
 import './AdminSettings.css';
-const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function AdminSettings() {
   const navigate = useNavigate();
