@@ -20,7 +20,7 @@ export default function PlatformSettings() {
   const [plansError, setPlansError] = useState('');
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [editingPlanData, setEditingPlanData] = useState(null);
-  const [planForm, setPlanForm] = useState({ planName: 'basic', userType: 'worker', planType: 'basic', frequency: 'monthly', amount: '', features: [''], maxWorkers: '' });
+  const [planForm, setPlanForm] = useState({ planName: 'basic', userType: 'worker', planType: 'basic', frequency: 'monthly', amount: '', features: [''], maxWorkers: '', introAmount: '' });
   const [planSaving, setPlanSaving] = useState(false);
 
   const [workerRules, setWorkerRules] = useState([
@@ -327,7 +327,7 @@ export default function PlatformSettings() {
 
   const openAddPlan = () => {
     setEditingPlanData(null);
-    setPlanForm({ planName: 'basic', userType: 'worker', planType: 'basic', frequency: 'monthly', amount: '', features: [''], maxWorkers: '' });
+    setPlanForm({ planName: 'basic', userType: 'worker', planType: 'basic', frequency: 'monthly', amount: '', features: [''], maxWorkers: '', introAmount: '' });
     setShowPlanModal(true);
   };
 
@@ -341,6 +341,7 @@ export default function PlatformSettings() {
       amount: plan.amount,
       features: plan.features?.length ? plan.features : [''],
       maxWorkers: plan.maxWorkers || '',
+      introAmount: plan.introAmount || '',
     });
     setShowPlanModal(true);
   };
@@ -371,6 +372,7 @@ export default function PlatformSettings() {
         planType: planForm.planType,
         frequency: planForm.frequency,
         amount: parseFloat(planForm.amount),
+        introAmount: Math.max(parseFloat(planForm.introAmount) || 0, 0),
         features: planForm.features.filter(f => f.trim()),
         maxWorkers: planForm.userType === 'vendor'
           ? Math.max(parseInt(planForm.maxWorkers, 10) || 0, 0)
@@ -615,7 +617,14 @@ export default function PlatformSettings() {
                       <td><span className={`status-pill ${plan.userType === 'vendor' ? 'vendor-pill' : 'worker-pill'}`}>{plan.userType}</span></td>
                       <td><span className={`status-pill ${plan.planType === 'premium' ? 'premium-pill' : 'basic-pill'}`} style={{ textTransform: 'capitalize' }}>{plan.planType || 'basic'}</span></td>
                       <td style={{ textTransform: 'capitalize' }}>{plan.frequency}</td>
-                      <td style={{ fontWeight: '600', color: '#10b981' }}>₹{plan.amount}</td>
+                      <td style={{ fontWeight: '600', color: '#10b981' }}>
+                        ₹{plan.amount}
+                        {plan.introAmount > 0 && (
+                          <div style={{ fontSize: '11px', fontWeight: '500', color: '#f97316' }}>
+                            First {plan.frequency === 'yearly' ? 'year' : 'month'}: ₹{plan.introAmount}
+                          </div>
+                        )}
+                      </td>
                       <td>
                         {plan.features?.length ? (
                           <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '12px', color: '#6b7280' }}>
@@ -804,6 +813,16 @@ export default function PlatformSettings() {
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>Amount (₹) *</label>
                   <input type="number" min="0" value={planForm.amount} onChange={e => setPlanForm(p => ({ ...p, amount: e.target.value }))} placeholder="e.g. 999" style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>
+                    First {planForm.frequency === 'yearly' ? 'year' : 'month'} offer price (₹)
+                  </label>
+                  <input type="number" min="0" value={planForm.introAmount} onChange={e => setPlanForm(p => ({ ...p, introAmount: e.target.value }))} placeholder="e.g. 5 (0 = no offer)" style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
+                  <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
+                    User pays this now with auto-pay; after one {planForm.frequency === 'yearly' ? 'year' : 'month'} the full Amount is charged automatically every {planForm.frequency === 'yearly' ? 'year' : 'month'}. Each user gets the offer only once. Leave 0 for no offer.
+                  </p>
                 </div>
 
                 {planForm.userType === 'vendor' && (
