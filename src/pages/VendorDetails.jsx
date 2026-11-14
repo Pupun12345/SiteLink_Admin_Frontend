@@ -9,6 +9,30 @@ import { useFileDownload } from '../hooks/useFileDownload';
 import { getFileUrl, getFileName } from '../utils/fileUtils';
 import './VendorDetails.css';
 
+// Vendor ke verification documents — admin inme se chun ke reject karta hai.
+const VENDOR_DOCS = [
+  { docType: 'panCardImage', label: 'PAN Card' },
+  { docType: 'gstCertificate', label: 'GST Certificate' },
+];
+const EMPTY_REJECT_DOCS = {
+  panCardImage: { checked: false, reason: '' },
+  gstCertificate: { checked: false, reason: '' },
+};
+
+function DocReviewBadge({ status }) {
+  const map = {
+    approved: { label: 'Approved', color: '#16a34a', bg: '#dcfce7' },
+    rejected: { label: 'Rejected', color: '#dc2626', bg: '#fee2e2' },
+    pending: { label: 'Needs review', color: '#b45309', bg: '#fef3c7' },
+  };
+  const s = map[status] || map.pending;
+  return (
+    <span style={{ fontSize: '11px', fontWeight: 600, color: s.color, background: s.bg, padding: '2px 8px', borderRadius: '999px', marginLeft: '8px' }}>
+      {s.label}
+    </span>
+  );
+}
+
 export default function VendorDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -17,6 +41,7 @@ export default function VendorDetails() {
   const [error, setError] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showReject, setShowReject] = useState(false);
+  const [rejectDocs, setRejectDocs] = useState(EMPTY_REJECT_DOCS);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState(0.0);
@@ -66,8 +91,16 @@ export default function VendorDetails() {
   };
 
   const handleReject = async () => {
-    if (!rejectionReason.trim()) {
-      toast.showToast('Please provide a rejection reason', { type: 'error' });
+    // Kaunse document reject — vendor sirf wahi dobara upload karega.
+    const documents = Object.entries(rejectDocs)
+      .filter(([, v]) => v.checked)
+      .map(([docType, v]) => ({ docType, reason: v.reason.trim() }));
+    if (!rejectionReason.trim() && documents.length === 0) {
+      toast.showToast('Select a document or give a rejection reason', { type: 'error' });
+      return;
+    }
+    if (documents.some((d) => !d.reason) && !rejectionReason.trim()) {
+      toast.showToast('Write a reason for each selected document', { type: 'error' });
       return;
     }
 
@@ -75,9 +108,10 @@ export default function VendorDetails() {
 
     setIsProcessing(true);
     try {
-      await api.put(`/admin/vendors/${id}/reject`, { reason: rejectionReason });
+      await api.put(`/admin/vendors/${id}/reject`, { reason: rejectionReason, documents });
       setShowReject(false);
       setRejectionReason('');
+      setRejectDocs(EMPTY_REJECT_DOCS);
       await fetchVendor();
       toast.showToast('Vendor rejected', { type: 'success' });
     } catch (err) {
@@ -417,65 +451,47 @@ export default function VendorDetails() {
                   <h3>Legal Documents</h3>
                 </div>
                 <div className="card-body">
-                  {vendor.panCardImage && (
-                    <div className="document-row">
-                      <div className="document-meta">
-                        <div className="doc-icon">
-                          <FileText size={18} />
+                  {/* Har document ka alag review — kaunsa reject hua aur kyun */}
+                  {VENDOR_DOCS.filter((d) => vendor[d.docType]).map((d) => {
+                    const review = (vendor.vendorDocuments || []).find((x) => x.docType === d.docType);
+                    const slug = d.label.toLowerCase().replace(/\s+/g, '-');
+                    return (
+                      <div className="document-row" key={d.docType}>
+                        <div className="document-meta">
+                          <div className="doc-icon">
+                            <FileText size={18} />
+                          </div>
+                          <div>
+                            <div className="doc-title">
+                              {d.label}
+                              {review && <DocReviewBadge status={review.reviewStatus} />}
+                            </div>
+                            <div className="doc-size">
+                              {review?.reviewStatus === 'rejected' && review.rejectionReason
+                                ? <span style={{ color: '#dc2626' }}>Reason: {review.rejectionReason}</span>
+                                : 'Document'}
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="doc-title">PAN Card</div>
-                          <div className="doc-size">Document</div>
-                        </div>
-                      </div>
-                      <div className="doc-actions">
-                        <button
-                          className="doc-action"
-                          onClick={() => handleViewFile(vendor.panCardImage, 'PAN Card')}
-                        >
-                          View
-                        </button>
-                        <button
-                          className="doc-action"
-                          onClick={() => handleDownloadFile(vendor.panCardImage, `pan-card-${vendor.name}-${vendor.companyName}`)}
-                          disabled={isDownloading}
-                        >
-                          <Download size={16} />
-                          {isDownloading ? 'Downloading…' : 'Download'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {vendor.gstCertificate && (
-                    <div className="document-row">
-                      <div className="document-meta">
-                        <div className="doc-icon">
-                          <FileText size={18} />
-                        </div>
-                        <div>
-                          <div className="doc-title">GST Certificate</div>
-                          <div className="doc-size">Document</div>
+                        <div className="doc-actions">
+                          <button
+                            className="doc-action"
+                            onClick={() => handleViewFile(vendor[d.docType], d.label)}
+                          >
+                            View
+                          </button>
+                          <button
+                            className="doc-action"
+                            onClick={() => handleDownloadFile(vendor[d.docType], `${slug}-${vendor.name}-${vendor.companyName}`)}
+                            disabled={isDownloading}
+                          >
+                            <Download size={16} />
+                            {isDownloading ? 'Downloading…' : 'Download'}
+                          </button>
                         </div>
                       </div>
-                      <div className="doc-actions">
-                        <button
-                          className="doc-action"
-                          onClick={() => handleViewFile(vendor.gstCertificate, 'GST Certificate')}
-                        >
-                          View
-                        </button>
-                        <button
-                          className="doc-action"
-                          onClick={() => handleDownloadFile(vendor.gstCertificate, `gst-certificate-${vendor.name}-${vendor.companyName}`)}
-                          disabled={isDownloading}
-                        >
-                          <Download size={16} />
-                          {isDownloading ? 'Downloading…' : 'Download'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })}
 
                   {!vendor.panCardImage&& !vendor.gstCertificate && (
                     <div className="no-documents">
@@ -498,11 +514,35 @@ export default function VendorDetails() {
             }}
           >
             <div className="reject-modal">
-              <h3>Rejection Reason</h3>
+              <h3>Reject Vendor Documents</h3>
+              <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 12px' }}>
+                Select the document(s) that are wrong. The vendor will be asked to re-upload only those.
+              </p>
+              {VENDOR_DOCS.filter((d) => vendor?.[d.docType]).map((d) => (
+                <div key={d.docType} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', marginBottom: '10px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={rejectDocs[d.docType].checked}
+                      onChange={(e) => setRejectDocs((p) => ({ ...p, [d.docType]: { ...p[d.docType], checked: e.target.checked } }))}
+                    />
+                    {d.label}
+                  </label>
+                  {rejectDocs[d.docType].checked && (
+                    <input
+                      type="text"
+                      value={rejectDocs[d.docType].reason}
+                      onChange={(e) => setRejectDocs((p) => ({ ...p, [d.docType]: { ...p[d.docType], reason: e.target.value } }))}
+                      placeholder={`Why is the ${d.label} rejected? (e.g. photo is blurry)`}
+                      style={{ width: '100%', marginTop: '8px', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  )}
+                </div>
+              ))}
               <textarea
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="Enter reason for rejection..."
+                placeholder="General reason (optional if a document is selected)..."
               />
               <div className="reject-actions">
                 <button className="cancel" onClick={() => setShowReject(false)}>
