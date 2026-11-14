@@ -726,12 +726,12 @@ export default function VendorVerification() {
                         </td>
                         <td>
                           {vendor.subscription
-                            ? <span className="subscription-badge active">âœ“ Active</span>
-                            : <span className="subscription-badge inactive">âœ• Not Subscribed</span>}
+                            ? <span className="subscription-badge active">Active</span>
+                            : <span className="subscription-badge inactive">Not Subscribed</span>}
                         </td>
                         <td>
                           <span className={`subscription-badge ${vendor.isBlocked ? 'inactive' : 'active'}`}>
-                            {vendor.isBlocked ? 'ðŸ”’ Blocked' : 'ðŸ”“ Active'}
+                            {vendor.isBlocked ? 'Blocked' : 'Active'}
                           </span>
                         </td>
                         <td>
