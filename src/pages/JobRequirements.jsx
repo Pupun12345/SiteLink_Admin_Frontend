@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./JobRequirements.css";
 import Sidebar from "../components/Sidebar";
@@ -50,6 +50,7 @@ export default function JobRequirements() {
   const [loadingApplicant, setLoadingApplicant] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedApplicantIds, setSelectedApplicantIds] = useState([]);
+  const [actionPopup, setActionPopup] = useState({ open: false, type: '', applicantId: null, reason: '' });
 
   // Edit / Delete state
   const [editOpen, setEditOpen] = useState(false);
@@ -86,12 +87,23 @@ export default function JobRequirements() {
           const jobData = response.data.data || {};
           setJob(jobData);
 
-          const actualApplicants = (jobData.applicants || []).map(app => ({
-            ...app,
-            applied: formatDate(app.applied),
-            avatar: app.profileImage || app.avatar || app.img || 'https://via.placeholder.com/40',
-            img: app.profileImage || app.avatar || app.img || 'https://via.placeholder.com/40'
-          }));
+          console.log('RAW applicants[0]:', JSON.stringify(jobData.applicants?.[0], null, 2));
+          const actualApplicants = (jobData.applicants || []).map(app => {
+            const worker = app.worker || app.user || {};
+            return {
+              ...app,
+              applied: formatDate(app.applied),
+              avatar: app.profileImage || worker.profileImage || app.avatar || app.img || 'https://via.placeholder.com/40',
+              img: app.profileImage || worker.profileImage || app.avatar || app.img || 'https://via.placeholder.com/40',
+              workerId: app.workerId || worker._id || worker.id || app._id || app.id,
+              phone: app.phone || worker.phone || '',
+              email: app.email || worker.email || '',
+              name: app.name || worker.name || '',
+              location: app.location || worker.location || worker.city || '',
+              experience: app.experience || worker.experience || '',
+              skills: app.skills || worker.skills || [],
+            };
+          });
           setApplicants(actualApplicants);
 
           // Generate map URL for location
@@ -221,27 +233,19 @@ export default function JobRequirements() {
   };
 
   const generateCSV = (data) => {
-    const headers = ['Name', 'Phone', 'Email', 'Role', 'Experience', 'Salary Type', 'Salary', 'Work State', 'Work City', 'Skills', 'Location'];
+    const headers = ['Name', 'Phone', 'Email', 'Experience', 'Location', 'Skills'];
     const rows = data.map(app => [
       app.name || '',
       app.phone || '',
       app.email || '',
-      app.role || '',
       app.experience || '',
-      app.salaryType || '',
-      app.salary || '',
-      app.workState || '',
-      app.city || '',
-      (app.skills || []).join('; '),
-      app.location
+      app.location || '',
+      (app.skills || []).map(s => (typeof s === 'object' ? s.skillName : s)).join('; '),
     ]);
-
-    const csvContent = [
+    return [
       headers.join(','),
       ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
     ].join('\n');
-
-    return csvContent;
   };
 
   const handleShareWhatsApp = () => {
@@ -285,26 +289,31 @@ export default function JobRequirements() {
     }
   };
 
-  const handleApplicantAction = async (applicantId, action) => {
+  const DEFAULT_APPROVE_MSG = 'Congratulations! Your application has been approved. Our team will contact you shortly with further details.';
+
+  const openActionPopup = (applicantId, type) => {
+    setActionPopup({
+      open: true,
+      type,
+      applicantId,
+      reason: type === 'approved' ? DEFAULT_APPROVE_MSG : '',
+    });
+  };
+
+  const handleApplicantAction = async (applicantId, action, reason) => {
     setActionLoading(true);
     try {
       const response = await api.put(`/jobs/${id}/applications/${applicantId}`, {
         status: action,
-        notes: `Status updated to ${action}`
+        notes: reason || `Status updated to ${action}`
       });
 
       if (response.data.success) {
         setApplicants(prev => prev.map(app =>
           app.id === applicantId ? { ...app, status: action } : app
         ));
-
-        // Refresh job data to update counts
         const jobResponse = await api.get(`/jobs/${id}`);
-        if (jobResponse.data.success) {
-          setJob(jobResponse.data.data);
-        }
-
-        alert(`Application ${action} successfully!`);
+        if (jobResponse.data.success) setJob(jobResponse.data.data);
       }
     } catch (error) {
       console.error(`Failed to ${action} applicant:`, error);
@@ -312,6 +321,11 @@ export default function JobRequirements() {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const submitActionPopup = () => {
+    handleApplicantAction(actionPopup.applicantId, actionPopup.type, actionPopup.reason);
+    setActionPopup({ open: false, type: '', applicantId: null, reason: '' });
   };
 
   const handleJobStatusUpdate = async (newStatus) => {
@@ -748,11 +762,15 @@ export default function JobRequirements() {
                     <span className="stat-label">Total Applications</span>
                   </div>
                   <div className="stat-item">
-                    <span className="stat-number">{applicants.filter(a => a.status === 'shortlisted').length}</span>
-                    <span className="stat-label">Shortlisted</span>
+                    <span className="stat-number" style={{ color: 'var(--green)' }}>{applicants.filter(a => a.status === 'approved').length}</span>
+                    <span className="stat-label">Approved</span>
                   </div>
                   <div className="stat-item">
-                    <span className="stat-number">{applicants.filter(a => a.status === 'pending').length}</span>
+                    <span className="stat-number" style={{ color: 'var(--red-text)' }}>{applicants.filter(a => a.status === 'rejected').length}</span>
+                    <span className="stat-label">Rejected</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-number">{applicants.filter(a => a.status === 'pending' || !a.status).length}</span>
                     <span className="stat-label">Pending Review</span>
                   </div>
                 </div>
@@ -807,7 +825,9 @@ export default function JobRequirements() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredApplicants.map((applicant) => (
+                      {filteredApplicants.map((applicant) => {
+                        const isDone = applicant.status === 'approved' || applicant.status === 'rejected';
+                        return (
                         <tr key={applicant.id} className="modal-applicant-row">
                           <td>
                             <input
@@ -851,14 +871,30 @@ export default function JobRequirements() {
                           <td><StatusBadge status={applicant.status} /></td>
                           <td>
                             <div className="modal-actions">
+                              {!isDone && (
+                                <>
+                                  <button
+                                    className="modal-action-btn hire-btn"
+                                    onClick={(e) => { e.stopPropagation(); openActionPopup(applicant.id, 'approved'); }}
+                                    title="Approve"
+                                    disabled={actionLoading}
+                                  >
+                                    <span className="material-symbols-outlined">check</span>
+                                  </button>
+                                  <button
+                                    className="modal-action-btn reject-btn"
+                                    onClick={(e) => { e.stopPropagation(); openActionPopup(applicant.id, 'rejected'); }}
+                                    title="Reject"
+                                    disabled={actionLoading}
+                                  >
+                                    <span className="material-symbols-outlined">close</span>
+                                  </button>
+                                </>
+                              )}
                               <button
                                 className="modal-action-btn view-btn"
                                 onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  window.location.href = `/admin/workers`;
-                                }}
+                                onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.location.href = `/admin/workers/${applicant.id}`; }}
                                 title="View Full Profile"
                               >
                                 <span className="material-symbols-outlined">open_in_new</span>
@@ -866,7 +902,8 @@ export default function JobRequirements() {
                             </div>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -881,6 +918,42 @@ export default function JobRequirements() {
             </div>
           </div>
         ) : null}
+
+        {/* ── Approve / Reject Popup ── */}
+        {actionPopup.open && (
+          <div className="jr-modal-overlay" onClick={() => setActionPopup({ open: false, type: '', applicantId: null, reason: '' })}>
+            <div className="jr-modal jr-modal-sm" onClick={e => e.stopPropagation()}>
+              <div className="jr-modal-head">
+                <h2>{actionPopup.type === 'approved' ? '✅ Approve Application' : '❌ Reject Application'}</h2>
+                <button className="modal-close" onClick={() => setActionPopup({ open: false, type: '', applicantId: null, reason: '' })}>
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div className="jr-modal-body">
+                <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>
+                  {actionPopup.type === 'approved' ? 'Approval Message' : 'Reason for Rejection'}
+                </label>
+                <textarea
+                  rows={4}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 7, fontSize: 14, fontFamily: 'inherit', resize: 'vertical', background: 'var(--bg)' }}
+                  value={actionPopup.reason}
+                  onChange={e => setActionPopup(p => ({ ...p, reason: e.target.value }))}
+                  placeholder={actionPopup.type === 'approved' ? 'Enter approval message...' : 'Enter reason for rejection...'}
+                />
+              </div>
+              <div className="jr-modal-foot">
+                <button className="jr-btn-cancel" onClick={() => setActionPopup({ open: false, type: '', applicantId: null, reason: '' })}>Cancel</button>
+                <button
+                  style={{ padding: '9px 22px', background: actionPopup.type === 'approved' ? 'var(--green)' : 'var(--red-text)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                  onClick={submitActionPopup}
+                  disabled={actionLoading || !actionPopup.reason.trim()}
+                >
+                  {actionLoading ? 'Processing...' : actionPopup.type === 'approved' ? 'Approve' : 'Reject'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Delete Confirm Modal ── */}
         {deleteOpen && (
