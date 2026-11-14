@@ -56,12 +56,12 @@ export default function RevenuePage() {
 
       const subscriptionsData = raw.map(sub => ({
         _id: sub._id,
-        userId: sub.user?._id,
-        name: sub.user?.name || 'N/A',
-        userType: sub.user?.userType || 'N/A',
-        profileImage: sub.user?.profileImage || null,
-        companyName: sub.user?.companyName || null,
-        companyLogo: sub.user?.companyLogo || null,
+        userId: sub.userId,
+        name: sub.name,
+        userType: sub.userType,
+        profileImage: sub.profileImage || null,
+        companyName: sub.companyName || null,
+        companyLogo: sub.companyLogo || null,
         planType: sub.planType || sub.planName || sub.plan || 'N/A',
         status: sub.status,
         amount: sub.amount,
@@ -331,14 +331,15 @@ export default function RevenuePage() {
                       <img
                         src={
                           subscription.userType?.toLowerCase() === "vendor"
-                            ? (subscription.companyLogo ||
-                              subscription.profileImage ||
-                              `https://ui-avatars.com/api/?name=${encodeURIComponent(subscription.name || "User")}&background=3b82f6&color=fff`)
-                            : (subscription.profileImage ||
-                              `https://ui-avatars.com/api/?name=${encodeURIComponent(subscription.name || "User")}&background=3b82f6&color=fff`)
+                            ? (subscription.companyLogo || subscription.profileImage)
+                            : subscription.profileImage
                         }
                         alt={subscription.name || "User"}
                         className="user-avatar"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(subscription.name || 'User')}&background=3b82f6&color=fff`;
+                        }}
                       />
                       <div>
                         <div className="user-name">{subscription.userType?.toLowerCase() === "vendor" ? subscription.companyName : subscription.name || 'N/A'}</div>

@@ -191,6 +191,7 @@ export default function AdminDashboard() {
       icon: Clock,
       accent: "#f59e0b",
       badge: "Action Needed",
+      path: "/admin/verifications",
     },
     {
       title: "Active Jobs",
@@ -198,6 +199,7 @@ export default function AdminDashboard() {
       delta: "Stable",
       icon: TrendingUp,
       accent: "#22c55e",
+      path: "/admin/jobs",
     },
     {
       title: "Active Subscriptions",
@@ -205,6 +207,7 @@ export default function AdminDashboard() {
       delta: `${overview?.activeSubscriptions || 0} users subscribed`,
       icon: CreditCard,
       accent: "#7c3aed",
+      path: "/admin/revenue",
     },
     {
       title: "Total Revenue",
@@ -215,7 +218,7 @@ export default function AdminDashboard() {
       icon: BarChart2,
       accent: "#0ea5e9",
       highlight: true,
-      path: "/admin/reports",
+      path: "/admin/revenue",
     },
   ];
 
