@@ -191,7 +191,7 @@ export default function AdminDashboard() {
       icon: Clock,
       accent: "#f59e0b",
       badge: "Action Needed",
-      path: "/admin/verifications",
+      path: "/admin/pending-verifications",
     },
     {
       title: "Active Jobs",

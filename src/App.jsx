@@ -8,6 +8,7 @@ import VendorDetails from './pages/VendorDetails';
 import WorkerDetail from './pages/WorkerDetail';
 import UserDetail from './pages/UserDetail';
 import VerificationOverview from './pages/VerificationOverview';
+import PendingVerifications from './pages/PendingVerifications';
 import RequirementsDashboard from './pages/Requirements';
 import JobRequirements from './pages/JobRequirements';
 import DirectSupportPage from "./pages/direct_access_support_page"
@@ -123,6 +124,14 @@ function App() {
           element={
             <ProtectedRoute>
               <WorkerDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/pending-verifications"
+          element={
+            <ProtectedRoute>
+              <PendingVerifications />
             </ProtectedRoute>
           }
         />
