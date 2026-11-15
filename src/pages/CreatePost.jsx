@@ -107,6 +107,7 @@ export default function CreatePost() {
     // Kis vendor ke liye — worker ko usi ka naam / company / WhatsApp dikhe
     postedFor: '', contactName: '', contactWhatsapp: '',
     latitude: null, longitude: null,
+    startDate: '',
   });
   // Registered vendors (dropdown) — chuno to company / contact apne aap bhare
   const [vendors, setVendors] = useState([]);
@@ -529,7 +530,7 @@ export default function CreatePost() {
                     </div>
 
                     <div className="cp-section-label">Compensation</div>
-                    <div className="cp-grid-4">
+                    <div className="cp-grid-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
                       <div className="cp-field">
                         <label>Salary (₹)</label>
                         <input name="salary" type="number" value={job.salary} onChange={handleJob} placeholder="e.g. 500" />
@@ -545,6 +546,16 @@ export default function CreatePost() {
                       <div className="cp-field">
                         <label>Duration</label>
                         <input name="duration" value={job.duration} onChange={handleJob} placeholder="e.g. 3 months" />
+                      </div>
+                      <div className="cp-field">
+                        <label>Start Date</label>
+                        <input
+                          name="startDate"
+                          type="date"
+                          value={job.startDate}
+                          min={new Date().toISOString().slice(0, 10)}
+                          onChange={handleJob}
+                        />
                       </div>
                       <div className="cp-field">
                         <label>Quantity</label>
