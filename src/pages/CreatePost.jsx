@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, FileText, Image, Video, Tag, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
+import LocationPicker from '../components/LocationPicker';
 import api from '../api/axios';
 import './CreatePost.css';
 
@@ -100,10 +101,31 @@ export default function CreatePost() {
   const [videoPreview, setVideoPreview] = useState('');
 
   const [job, setJob] = useState({
-    title: '', company: 'SiteLink', location: '', quantity: '1',
+    title: '', company: 'Sitelink', location: '', quantity: '1',
     salary: '', salaryType: 'daily', duration: '', description: '',
     experience: '', isUrgent: false, amenities: [],
+    // Kis vendor ke liye — worker ko usi ka naam / company / WhatsApp dikhe
+    postedFor: '', contactName: '', contactWhatsapp: '',
+    latitude: null, longitude: null,
   });
+  // Registered vendors (dropdown) — chuno to company / contact apne aap bhare
+  const [vendors, setVendors] = useState([]);
+  useEffect(() => {
+    api.get('/admin/vendors', { params: { status: 'all' } })
+      .then((r) => setVendors((r.data?.data || []).filter((v) => !v.isBlocked)))
+      .catch(() => {});
+  }, []);
+
+  const selectVendor = (id) => {
+    const v = vendors.find((x) => x._id === id);
+    setJob((p) => ({
+      ...p,
+      postedFor: id,
+      company: v ? (v.companyName || v.name || p.company) : 'Sitelink',
+      contactName: v ? (v.name || '') : '',
+      contactWhatsapp: v ? String(v.whatsappNumber || v.phone || '').replace(/\D/g, '').slice(-10) : '',
+    }));
+  };
 
   useEffect(() => {
     api.get('/profile/me').then(res => {
@@ -232,6 +254,10 @@ export default function CreatePost() {
         setSuccess('Post published successfully!');
         setTimeout(() => navigate('/admin/create-post'), 1500);
       } else {
+        if (job.contactWhatsapp && !/^[6-9]\d{9}$/.test(job.contactWhatsapp)) {
+          setError('Enter a valid 10-digit WhatsApp number (or leave it empty).');
+          return;
+        }
         await api.post('/jobs', job);
         setSuccess('Job post created successfully!');
         setTimeout(() => navigate('/admin/requirements'), 1500);
@@ -441,6 +467,37 @@ export default function CreatePost() {
                 {/* ── JOB POST ── */}
                 {postType === 'job' && (
                   <>
+                    <div className="cp-section-label">Posting For (Vendor &amp; Contact)</div>
+                    <div className="cp-field">
+                      <label>Vendor</label>
+                      <select value={job.postedFor} onChange={(e) => selectVendor(e.target.value)}>
+                        <option value="">Sitelink (own job / not a registered vendor)</option>
+                        {vendors.map((v) => (
+                          <option key={v._id} value={v._id}>
+                            {(v.companyName || v.name || 'Vendor')}{v.city ? ` — ${v.city}` : ''}{v.verificationStatus === 'verified' ? ' ✓' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <small className="cp-help">Workers will see this vendor's company, contact person and WhatsApp — not the admin's.</small>
+                    </div>
+                    <div className="cp-grid-2">
+                      <div className="cp-field">
+                        <label>Contact Person</label>
+                        <input name="contactName" value={job.contactName} onChange={handleJob} placeholder="e.g. Ramesh Kumar" />
+                      </div>
+                      <div className="cp-field">
+                        <label>WhatsApp Number</label>
+                        <input
+                          name="contactWhatsapp"
+                          value={job.contactWhatsapp}
+                          onChange={(e) => setJob((p) => ({ ...p, contactWhatsapp: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                          placeholder="10-digit mobile, e.g. 9876543210"
+                          inputMode="numeric"
+                        />
+                        <small className="cp-help">Shown to the worker after their application is approved.</small>
+                      </div>
+                    </div>
+
                     <div className="cp-section-label">Basic Info</div>
                     <div className="cp-grid-3">
                       <div className="cp-field">
@@ -455,6 +512,20 @@ export default function CreatePost() {
                         <label>Location *</label>
                         <input name="location" value={job.location} onChange={handleJob} placeholder="e.g. Mumbai, Maharashtra" required />
                       </div>
+                    </div>
+
+                    <div className="cp-section-label">Job Site on Map</div>
+                    <div className="cp-field">
+                      <LocationPicker
+                        value={job.latitude != null ? { lat: job.latitude, lng: job.longitude } : null}
+                        onChange={(loc) => setJob((p) => ({
+                          ...p,
+                          latitude: loc ? loc.lat : null,
+                          longitude: loc ? loc.lng : null,
+                          // Location khaali ho to pin ka pata bhar do
+                          location: loc && loc.address && !p.location.trim() ? loc.address : p.location,
+                        }))}
+                      />
                     </div>
 
                     <div className="cp-section-label">Compensation</div>
