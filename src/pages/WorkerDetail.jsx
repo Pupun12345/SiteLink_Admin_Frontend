@@ -28,6 +28,7 @@ import Sidebar from '../components/Sidebar';
 import FileViewer from '../components/FileViewer';
 import { useFileDownload } from '../hooks/useFileDownload';
 import { getFileUrl, getFileName } from '../utils/fileUtils';
+import { experienceText } from '../components/ExperienceField';
 const BACKEND_URL = import.meta.env.VITE_API_URL;
 
 export default function WorkerDetail() {
@@ -108,7 +109,7 @@ export default function WorkerDetail() {
           ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
           : 'N/A',
         expectedWage: user.salary ? `₹${user.salary}/${user.salaryType || 'day'}` : 'N/A',
-        experience: user.experience || 'N/A',
+        experience: experienceText(user.experience) || 'N/A',
         dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A',
         age: user.dateOfBirth ? Math.floor((new Date() - new Date(user.dateOfBirth)) / (365.25 * 24 * 60 * 60 * 1000)) : (user.age || 'N/A'),
         gender: user.gender || 'N/A',

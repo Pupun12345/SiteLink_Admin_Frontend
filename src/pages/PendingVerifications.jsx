@@ -7,6 +7,7 @@ import { useToast } from '../components/ToastProvider';
 import { getFileUrl } from '../utils/fileUtils';
 import { hasPermission, usePermissions } from '../hooks/usePermissions';
 import './PendingVerifications.css';
+import { experienceText } from '../components/ExperienceField';
 
 // ═══════════════════════════════════════════════════════════════════
 //  PENDING VERIFICATIONS — dashboard card se khulta hai
@@ -47,7 +48,7 @@ export default function PendingVerifications() {
         id: u._id,
         type: 'worker',
         title: u.name || 'Worker',
-        subtitle: [u.primarySkill || u.role, u.experience ? `${u.experience} yrs` : null].filter(Boolean).join(' · '),
+        subtitle: [u.primarySkill || u.role, experienceText(u.experience) || null].filter(Boolean).join(' · '),
         phone: u.phone,
         place: [u.city, u.workState].filter(Boolean).join(', '),
         image: u.profileImage,

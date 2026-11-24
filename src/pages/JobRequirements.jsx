@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import "./JobRequirements.css";
 import Sidebar from "../components/Sidebar";
 import api from "../api/axios";
+import ExperienceField, { experienceText } from '../components/ExperienceField';
 
 const CATEGORY_META = {
   'Financial Benefits':   { emoji: '💰', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
@@ -540,7 +541,7 @@ export default function JobRequirements() {
                               </div>
                             </td>
                             <td onClick={() => navigate(`/admin/workers`)} className="applicant-role">{a.role}</td>
-                            <td onClick={() => navigate(`/admin/workers`)} className="applicant-experience">{a.experience || 'N/A'}</td>
+                            <td onClick={() => navigate(`/admin/workers`)} className="applicant-experience">{experienceText(a.experience) || 'N/A'}</td>
                             <td onClick={() => navigate(`/admin/workers`)} className="applicant-location">{a.location || 'N/A'}</td>
                             <td onClick={() => navigate(`/admin/workers`)} className="applied-time">{a.applied}</td>
                             <td onClick={() => navigate(`/admin/workers`)}>
@@ -593,7 +594,7 @@ export default function JobRequirements() {
                   <div className="req-grid">
                     <div className="req-section">
                       <p className="label-upper">Experience Required</p>
-                      <p className="req-value">{job.experience || "N/A"}</p>
+                      <p className="req-value">{experienceText(job.experience, { plus: true }) || "N/A"}</p>
                     </div>
                     <div className="req-section">
                       <p className="label-upper">Quantity</p>
@@ -851,7 +852,7 @@ export default function JobRequirements() {
                               </div>
                             </div>
                           </td>
-                          <td className="modal-experience">{applicant.experience || 'Not specified'}</td>
+                          <td className="modal-experience">{experienceText(applicant.experience) || 'Not specified'}</td>
                           <td className="modal-location">{applicant.location || 'Not specified'}</td>
                           <td>
                             <div className="modal-skills-list">
@@ -1035,7 +1036,7 @@ export default function JobRequirements() {
                   <div className="jr-edit-grid-2">
                     <div className="jr-edit-field">
                       <label>Experience Required *</label>
-                      <input name="experience" value={editForm.experience} onChange={handleEditChange} required />
+                      <ExperienceField value={editForm.experience} onChange={(v) => setEditForm((p) => ({ ...p, experience: v }))} />
                     </div>
                     <div className="jr-edit-field">
                       <label>Status</label>
@@ -1172,7 +1173,7 @@ export default function JobRequirements() {
                       <div className="detail-grid">
                         <div className="detail-item">
                           <span className="detail-label">Experience:</span>
-                          <span className="detail-value">{selectedApplicant.experience || 'Not specified'}</span>
+                          <span className="detail-value">{experienceText(selectedApplicant.experience) || 'Not specified'}</span>
                         </div>
                         <div className="detail-item">
                           <span className="detail-label">Salary:</span>

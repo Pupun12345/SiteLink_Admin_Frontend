@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Briefcase, FileText, Image, Video, Tag, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import LocationPicker from '../components/LocationPicker';
+import ExperienceField from '../components/ExperienceField';
 import api from '../api/axios';
 import './CreatePost.css';
 
@@ -567,7 +568,10 @@ export default function CreatePost() {
                     <div className="cp-grid-2">
                       <div className="cp-field">
                         <label>Experience Required *</label>
-                        <input name="experience" value={job.experience} onChange={handleJob} placeholder="e.g. 2+ years" required />
+                        <ExperienceField
+                          value={job.experience}
+                          onChange={(v) => setJob((p) => ({ ...p, experience: v }))}
+                        />
                       </div>
                       <div className="cp-field cp-urgent-field">
                         <label>Urgency</label>
