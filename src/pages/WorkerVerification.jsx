@@ -66,7 +66,7 @@ export default function WorkerVerification() {
     const files = [];
     if (worker.profileImage) files.push({ name: 'Profile Image', url: worker.profileImage });
     if (worker.governmentID) files.push({ name: 'Government ID', url: worker.governmentID });
-    if (worker.experienceCertificate) files.push({ name: 'Experience Certificate', url: worker.experienceCertificate });
+    if (worker.experienceCertificate) files.push({ name: 'Experience Certificate / Resume', url: worker.experienceCertificate });
     if (files.length === 0) { toast.error('No files available for this worker'); return; }
     if (files.length === 1) { setViewer(files[0]); } else { setFilePicker(files); }
   };
@@ -787,7 +787,7 @@ export default function WorkerVerification() {
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                        Experience Certificates ({experienceCertificates.length}/{MAX_CERTS})
+                        Experience Certificates / Resume ({experienceCertificates.length}/{MAX_CERTS})
                       </label>
                       {/* Har baar chune gaye certificate list me JUDTE hain — ek ek
                           karke ya ek saath kai chun sakte hain. */}

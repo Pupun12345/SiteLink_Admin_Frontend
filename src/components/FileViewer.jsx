@@ -35,12 +35,18 @@ export default function FileViewer({ url, name, onClose }) {
     fileUrl.toLowerCase().includes('/pdf') ||
     fileUrl.toLowerCase().includes('raw/upload');
 
+  // Cloudinary (free account) PDF ka seedha link band rakhta hai (401) —
+  // resume / certificate khaali dikhta tha. Wahi file ".jpg" se maango to
+  // pehla page photo ban ke aata hai; use dikhate hain.
+  const cloudinaryPdf = isPdf && /res\.cloudinary\.com\/[^/]+\/image\/upload\//.test(fileUrl);
+  const shownUrl = cloudinaryPdf ? fileUrl.split('?')[0].replace(/\.pdf$/i, '.jpg') : fileUrl;
+
   const handleDownload = () => {
     // Build a clean label from the name prop (e.g. "PAN Card" → "pan-card")
     const label = name
       ? name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')
       : undefined;
-    download(fileUrl, label);
+    download(shownUrl, label);
   };
 
   return (
@@ -63,7 +69,7 @@ export default function FileViewer({ url, name, onClose }) {
           </div>
         </div>
         <div className="fv-body">
-          {isPdf ? (
+          {isPdf && !cloudinaryPdf ? (
             <iframe
               src={fileUrl}
               title={name || 'Document'}
@@ -71,7 +77,12 @@ export default function FileViewer({ url, name, onClose }) {
             />
           ) : (
             <div className="fv-image-scroll">
-              <img src={fileUrl} alt={name || 'Preview'} className="fv-image" />
+              {cloudinaryPdf && (
+                <p style={{ margin: '0 0 8px', fontSize: 12, color: '#6b7280' }}>
+                  PDF — showing page 1.
+                </p>
+              )}
+              <img src={shownUrl} alt={name || 'Preview'} className="fv-image" />
             </div>
           )}
         </div>

@@ -147,7 +147,7 @@ export default function WorkerDetail() {
               })
           : [
               buildDocument('Government ID', 'IDENTITY PROOF', user.governmentID),
-              buildDocument('Experience Certificate', 'EXPERIENCE PROOF', user.experienceCertificate),
+              buildDocument('Experience Certificate / Resume', 'EXPERIENCE PROOF', user.experienceCertificate),
             ]
         ).filter(doc => doc !== null && Boolean(doc.viewLink)),
         workPhotos: (user.workSamplesPhoto || []).map(photo => {
@@ -801,13 +801,13 @@ export default function WorkerDetail() {
               <div className="card certifications-card">
                 <div className="card-header">
                   <div className="card-title">
-                    EXPERIENCE CERTIFICATE{worker.experienceCertificate.length > 1 ? `S (${worker.experienceCertificate.length})` : ''}
+                    EXPERIENCE CERTIFICATE / RESUME{worker.experienceCertificate.length > 1 ? ` (${worker.experienceCertificate.length})` : ''}
                   </div>
                 </div>
                 <div className="certifications-content">
                   {worker.experienceCertificate.length > 0 ? (
                     worker.experienceCertificate.map((cert, i) => {
-                      const certName = `Experience Certificate${worker.experienceCertificate.length > 1 ? ` ${i + 1}` : ''}`;
+                      const certName = `Experience Certificate / Resume${worker.experienceCertificate.length > 1 ? ` ${i + 1}` : ''}`;
                       return (
                         <div className="certification-item" key={cert}>
                           <div className="cert-icon">
@@ -848,8 +848,8 @@ export default function WorkerDetail() {
                   ) : (
                     <div className="no-data-state">
                       <Award size={48} className="no-data-icon" />
-                      <p className="no-data-text">No experience certificate uploaded</p>
-                      <p className="no-data-subtext">Worker hasn't uploaded an experience certificate yet</p>
+                      <p className="no-data-text">No experience certificate / resume uploaded</p>
+                      <p className="no-data-subtext">Worker hasn't uploaded an experience certificate or resume yet</p>
                     </div>
                   )}
                 </div>
